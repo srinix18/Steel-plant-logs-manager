@@ -1,33 +1,36 @@
 services:
-  mongodb:
-    image: mongo:7
-    container_name: logbook-mongodb
+  postgres:
+    image: postgres:16
+    container_name: moi-postgres
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moi_platform
     volumes:
-      - mongodb_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
     build: ./backend
-    container_name: logbook-backend
+    container_name: moi-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      MONGODB_URL: mongodb://mongodb:27017
-      MONGODB_DB_NAME: logbook_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/moi_platform
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-change-in-production}
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
       SEED_ADMIN_EMAIL: admin@logbook.app
       SEED_ADMIN_PASSWORD: admin123
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
 
   frontend:
@@ -35,7 +38,7 @@ services:
       context: ./frontend
       args:
         VITE_API_URL: http://localhost:8000/api/v1
-    container_name: logbook-frontend
+    container_name: moi-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -43,4 +46,4 @@ services:
       - backend
 
 volumes:
-  mongodb_data:
+  postgres_data:

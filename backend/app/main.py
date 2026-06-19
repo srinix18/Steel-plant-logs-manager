@@ -5,16 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.database import close_mongo_connection, connect_to_mongo
-from app.utils.seed import seed_data
+from app.db.session import async_session_factory, init_db
+from app.utils.seed_moi import seed_all
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await connect_to_mongo()
-    await seed_data()
+    await init_db()
+    async with async_session_factory() as session:
+        await seed_all(session)
+        await session.commit()
     yield
-    await close_mongo_connection()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)

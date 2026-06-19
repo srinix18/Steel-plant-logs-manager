@@ -1,182 +1,89 @@
-# Dynamic Logbook Management System
+# Manufacturing Operations Intelligence Platform
 
-A production-quality MVP for creating customizable logbook templates, collecting structured form data, and enforcing role-based access control.
+Production-grade platform for steel plant operations — digitizing logbooks, process runs, workflows, events, and corrective actions.
 
-## Features
+## Stack
 
-- **Dynamic forms** — Admin-defined templates with configurable field types (text, number, email, date, boolean, dropdown, textarea)
-- **Role-based access** — Admin, Department, and Member roles with scoped permissions
-- **Normalized data model** — MongoDB collections mirroring relational tables for future ML/analytics
-- **JWT authentication** — Secure login with protected API routes
-- **Dashboard metrics** — Users, departments, templates, and records counts
-- **CSV export** — Admin and department users can export records
+| Layer | Technology |
+|-------|------------|
+| Backend | FastAPI, SQLAlchemy 2.0, PostgreSQL 16, asyncpg |
+| Frontend | React 18, TypeScript, Vite, TailwindCSS |
+| Real-time | WebSocket event streams |
 
-## Architecture
+## Hierarchy
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full design documentation including database schema, API contracts, and folder structure.
+```
+Organisation → Plant → Department → Process → Process Instance → Template → TemplateVersion → Process Run
+```
 
-## Quick Start (Windows — no Docker)
+## Quick Start
 
-Docker is **optional**. Use these scripts on Windows instead:
-
-### 1. One-time setup
+### 1. PostgreSQL
 
 ```powershell
-.\scripts\setup.ps1
+docker compose up postgres -d
 ```
 
-Or double-click **`setup.bat`**
+Or install PostgreSQL locally and create database `moi_platform`.
 
-This installs Python/Node dependencies and creates `.env` files.
-
-### 2. Install MongoDB (one-time, if not installed)
+### 2. Environment
 
 ```powershell
-.\scripts\install-mongodb.ps1
+copy .env.example .env
 ```
 
-Or manually:
+Set `DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/moi_platform`
 
-```powershell
-winget install MongoDB.Server
-net start MongoDB
-```
-
-### 3. Start the app
-
-```powershell
-.\scripts\start.ps1
-```
-
-Or double-click **`start.bat`**
-
-This opens two terminal windows (backend + frontend).
-
-| Service   | URL                          |
-|-----------|------------------------------|
-| Frontend  | http://localhost:5173        |
-| Backend   | http://localhost:8000        |
-| API Docs  | http://localhost:8000/docs   |
-
-**Default admin:** `admin@logbook.app` / `admin123`
-
-### Prerequisites
-
-| Tool     | Install                                      |
-|----------|----------------------------------------------|
-| Python 3.12+ | https://www.python.org/downloads/          |
-| Node.js 20+  | https://nodejs.org/                        |
-| MongoDB 7+   | `.\scripts\install-mongodb.ps1` or winget |
-
-## Quick Start (Docker — optional)
-
-Only if you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed:
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-| Service   | URL                          |
-|-----------|------------------------------|
-| Frontend  | http://localhost:3000        |
-| Backend   | http://localhost:8000        |
-
-## Manual Local Development
-
-### Backend
+### 3. Backend
 
 ```powershell
 cd backend
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
-copy ..\.env.example .env
 .\venv\Scripts\uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend
+On first start, tables are created and **Chandan Steel SMS** seed data is loaded:
+- EAF Process with **EAF #1, #2, #3**
+- Furnace Log Sheet **F/PRD/02 Rev 02** (published) + Rev 03 (draft)
+- SMS Heat workflow, materials, grades, telemetry bindings, KPI definitions
+- Additional processes: LF, CCM, Rolling Mill, QC, Maintenance
+
+### 4. Frontend
 
 ```powershell
 cd frontend
 npm install
-echo VITE_API_URL=http://localhost:8000/api/v1 > .env
 npm run dev
 ```
 
 Open http://localhost:5173
 
-## User Roles
+## Seed Users
 
-| Role       | Capabilities                                              |
-|-----------|-----------------------------------------------------------|
-| Admin     | Full system management, all records, export, dashboard    |
-| Department| Department-scoped records, reports, export                |
-| Member    | View assigned templates, create/submit records, own view  |
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | admin@logbook.app | admin123 |
+| Supervisor | supervisor@chandansteel.com | supervisor123 |
+| Worker | melter@chandansteel.com | worker123 |
 
-## API Overview
+## Key API Endpoints
 
-Base URL: `http://localhost:8000/api/v1`
+| Area | Endpoints |
+|------|-----------|
+| Auth | `POST /auth/login`, `GET /auth/me` |
+| Platform | `/plants`, `/processes`, `/process-instances`, `/assets` |
+| Templates | `/templates/{id}`, `/templates/versions/{id}` |
+| Process Runs | `POST /process-instances/{id}/runs`, `/process-runs/{id}/transitions` |
+| Operations | `/observations`, `/corrective-actions`, `/integrations/events` |
+| Analytics | `/dashboard`, `/kpis/definitions`, `/assets/{id}/health` |
+| WebSocket | `/ws/plants/{id}/runs`, `/ws/process-runs/{id}` |
 
-| Group        | Endpoints                                      |
-|-------------|------------------------------------------------|
-| Auth        | `POST /auth/login`, `GET /auth/me`             |
-| Users       | `GET/POST /users`, `GET/PUT/DELETE /users/{id}`|
-| Departments | `GET/POST /departments`, ...                   |
-| Templates   | `GET/POST /templates`, field CRUD              |
-| Records     | `GET/POST /records`, `GET /records/export`     |
-| Dashboard   | `GET /dashboard`                               |
+API docs: http://localhost:8000/docs
 
-Interactive docs: http://localhost:8000/docs
+## Worker UX
 
-## Project Structure
-
-```
-Log_Project/
-├── ARCHITECTURE.md
-├── start.bat              # Double-click to start (Windows)
-├── setup.bat              # Double-click to set up (Windows)
-├── scripts/
-│   ├── setup.ps1          # Install dependencies
-│   ├── start.ps1          # Start backend + frontend
-│   └── install-mongodb.ps1
-├── docker-compose.yml     # Optional (requires Docker Desktop)
-├── backend/
-└── frontend/
-```
-
-## Environment Variables
-
-| Variable              | Description                    | Default                    |
-|----------------------|--------------------------------|----------------------------|
-| MONGODB_URL          | MongoDB connection string      | mongodb://localhost:27017  |
-| MONGODB_DB_NAME      | Database name                  | logbook_db                 |
-| JWT_SECRET_KEY       | JWT signing secret             | (change in production)     |
-| CORS_ORIGINS         | Allowed frontend origins       | localhost:5173,3000        |
-| VITE_API_URL         | Backend API URL (frontend)     | http://localhost:8000/api/v1|
-| SEED_ADMIN_EMAIL     | Initial admin email            | admin@logbook.app        |
-| SEED_ADMIN_PASSWORD  | Initial admin password         | admin123                   |
-
-## Troubleshooting
-
-| Problem | Fix |
-|---------|-----|
-| `docker is not recognized` | Use `.\scripts\start.ps1` instead — Docker is not required |
-| `MongoDB is not running` | Run `.\scripts\install-mongodb.ps1` then `net start MongoDB` |
-| Backend won't start | Ensure MongoDB is on port 27017, then restart `.\scripts\start.ps1` |
-| Frontend can't reach API | Check `frontend/.env` has `VITE_API_URL=http://localhost:8000/api/v1` |
-
-## Future Extensions
-
-The architecture supports adding:
-
-- Analytics dashboards
-- Advanced reporting
-- CSV import
-- ML prediction engine (via `record_values.field_name`)
-- Audit logs
-- Notifications
-
-## License
-
-MIT
+- **Shift Dashboard** (`/shift`) — start heats on EAF #1–#3
+- **Heat Workspace** (`/heat/:id`) — tablet-first section tabs, workflow actions, event stream
+- **Supervisor Monitor** (`/supervisor`) — active heats, observations, corrective actions

@@ -12,10 +12,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "Logbook Management System"
+    APP_NAME: str = "Manufacturing Operations Intelligence Platform"
     API_V1_PREFIX: str = "/api/v1"
-    MONGODB_URL: str = "mongodb://localhost:27017"
-    MONGODB_DB_NAME: str = "logbook_db"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/moi_platform"
     JWT_SECRET_KEY: str = "change-me-in-production-use-long-random-string"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24

@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, dashboard, departments, organisations, records, templates, users
+from app.api.v1 import analytics, auth, operations, platform, process_runs, templates_moi, websocket
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-api_router.include_router(users.router, prefix="/users", tags=["Users"])
-api_router.include_router(organisations.router, prefix="/organisations", tags=["Organisations"])
-api_router.include_router(departments.router, prefix="/departments", tags=["Departments"])
-api_router.include_router(templates.router, prefix="/templates", tags=["Templates"])
-api_router.include_router(records.router, prefix="/records", tags=["Records"])
-api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(platform.router, tags=["Platform"])
+api_router.include_router(templates_moi.router, prefix="/templates", tags=["Templates"])
+api_router.include_router(process_runs.router, tags=["Process Runs"])
+api_router.include_router(operations.router, tags=["Operations"])
+api_router.include_router(analytics.router, tags=["Analytics"])
+api_router.include_router(websocket.router, tags=["WebSocket"])
