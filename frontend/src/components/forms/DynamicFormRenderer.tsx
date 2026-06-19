@@ -1,4 +1,4 @@
-import type { TemplateField } from '../../types';
+import type { LegacyTemplateField as TemplateField } from '../../types';
 import { Input } from '../ui/Input';
 
 interface DynamicFormRendererProps {

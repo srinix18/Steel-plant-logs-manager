@@ -4,7 +4,7 @@ import { fetchRecords, deleteRecord } from '../../api/records';
 import { fetchTemplates } from '../../api/templates';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Record as LogRecord, Template } from '../../types';
+import type { LogRecord, Template } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';

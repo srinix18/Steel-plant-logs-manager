@@ -31,8 +31,8 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Logbook System</h1>
-          <p className="mt-2 text-sm text-slate-500">Sign in to manage your logbooks</p>
+          <h1 className="text-2xl font-bold text-slate-900">MOI Platform</h1>
+          <p className="mt-2 text-sm text-slate-500">Manufacturing Operations Intelligence</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -43,7 +43,7 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="mt-6 text-center text-xs text-slate-400">
-          Default admin: admin@logbook.app / admin123
+          Demo: admin@logbook.app / admin123
         </p>
       </div>
     </div>

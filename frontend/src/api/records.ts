@@ -1,13 +1,13 @@
 import { apiClient } from './client';
-import type { Record } from '../types';
+import type { LogRecord } from '../types';
 
-export async function fetchRecords(): Promise<Record[]> {
-  const { data } = await apiClient.get<Record[]>('/records');
+export async function fetchRecords(): Promise<LogRecord[]> {
+  const { data } = await apiClient.get<LogRecord[]>('/records');
   return data;
 }
 
-export async function fetchRecord(id: string): Promise<Record> {
-  const { data } = await apiClient.get<Record>(`/records/${id}`);
+export async function fetchRecord(id: string): Promise<LogRecord> {
+  const { data } = await apiClient.get<LogRecord>(`/records/${id}`);
   return data;
 }
 
@@ -15,8 +15,8 @@ export async function createRecord(payload: {
   template_id: string;
   status?: 'draft' | 'submitted';
   values: { field_id: string; value: unknown }[];
-}): Promise<Record> {
-  const { data } = await apiClient.post<Record>('/records', payload);
+}): Promise<LogRecord> {
+  const { data } = await apiClient.post<LogRecord>('/records', payload);
   return data;
 }
 

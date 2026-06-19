@@ -50,7 +50,7 @@ export function DepartmentManagement() {
 
   const openEdit = (dept: Department) => {
     setEditing(dept);
-    setOrganisationId(dept.organisation_id);
+    setOrganisationId(dept.organisation_id || '');
     setName(dept.name);
     setDescription(dept.description || '');
     setOpen(true);
@@ -107,7 +107,7 @@ export function DepartmentManagement() {
         <Table
           data={departments}
           columns={[
-            { key: 'org', header: 'Organisation', render: (d) => orgNameById(d.organisation_id) },
+            { key: 'org', header: 'Organisation', render: (d) => orgNameById(d.organisation_id || '') },
             { key: 'name', header: 'Name', render: (d) => d.name },
             { key: 'desc', header: 'Description', render: (d) => d.description || '—' },
             {

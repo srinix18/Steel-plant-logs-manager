@@ -10,7 +10,7 @@ import {
 import { fetchDepartments } from '../../api/departments';
 import { fetchOrganisations } from '../../api/organisations';
 import { getErrorMessage } from '../../api/client';
-import type { Department, FieldType, Organisation, Template, TemplateField } from '../../types';
+import type { Department, FieldType, LegacyTemplateField, Organisation, Template } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -25,7 +25,7 @@ export function TemplateManagement() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [selected, setSelected] = useState<Template | null>(null);
-  const [fields, setFields] = useState<TemplateField[]>([]);
+  const [fields, setFields] = useState<LegacyTemplateField[]>([]);
   const [templateModal, setTemplateModal] = useState(false);
   const [fieldModal, setFieldModal] = useState(false);
   const [error, setError] = useState('');

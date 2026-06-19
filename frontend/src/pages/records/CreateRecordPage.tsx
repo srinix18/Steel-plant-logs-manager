@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createRecord } from '../../api/records';
 import { fetchTemplate, fetchTemplates } from '../../api/templates';
 import { getErrorMessage } from '../../api/client';
-import type { Template, TemplateField } from '../../types';
+import type { LegacyTemplateField, Template } from '../../types';
 import { DynamicFormRenderer } from '../../components/forms/DynamicFormRenderer';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -13,7 +13,7 @@ export function CreateRecordPage() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedId, setSelectedId] = useState(searchParams.get('template') || '');
-  const [fields, setFields] = useState<TemplateField[]>([]);
+  const [fields, setFields] = useState<LegacyTemplateField[]>([]);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

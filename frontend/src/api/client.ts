@@ -31,9 +31,18 @@ apiClient.interceptors.response.use(
 
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED') return 'Request timed out. Check that the backend is running.';
+      if (error.message === 'Network Error') {
+        return 'Cannot reach the server. Start the backend (uvicorn on port 8000) and try again.';
+      }
+      return error.message || 'Network error — is the backend running?';
+    }
     const detail = error.response?.data?.detail;
     if (typeof detail === 'string') return detail;
     if (Array.isArray(detail)) return detail.map((d) => d.msg).join(', ');
+    if (error.response.status === 503) return 'Server is starting or the database is unavailable.';
   }
+  if (error instanceof Error) return error.message;
   return 'An unexpected error occurred';
 }
