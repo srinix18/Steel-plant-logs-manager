@@ -11,12 +11,12 @@ Write-Host "======================" -ForegroundColor Cyan
 if (-not $SkipSetup) {
     if (-not (Test-Path $VenvPython) -or -not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
         Write-Step "First run detected - running setup..."
-        & "$PSScriptRoot\setup.ps1" -SkipMongoCheck
+        & "$PSScriptRoot\setup.ps1" -SkipPostgresCheck
     }
 }
 
 Ensure-EnvFiles
-Ensure-MongoRunning
+Ensure-PostgresRunning
 
 Write-Step "Preparing ports"
 Ensure-PortFree -Port $BackendPort -Label "backend"

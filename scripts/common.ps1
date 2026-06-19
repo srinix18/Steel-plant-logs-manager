@@ -44,6 +44,49 @@ function Test-MongoPortOpen {
     }
 }
 
+function Test-PostgresPortOpen([int]$Port = 5433) {
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $async = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
+        $ok = $async.AsyncWaitHandle.WaitOne(2000, $false)
+        if ($ok -and $client.Connected) {
+            $client.Close()
+            return $true
+        }
+        $client.Close()
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+function Ensure-PostgresRunning {
+    $dbUrl = $env:DATABASE_URL
+    if (-not $dbUrl) {
+        $rootEnv = Join-Path $ProjectRoot ".env"
+        if (Test-Path $rootEnv) {
+            $line = Get-Content $rootEnv | Where-Object { $_ -match '^\s*DATABASE_URL=' } | Select-Object -First 1
+            if ($line -match 'DATABASE_URL=(.+)') { $dbUrl = $Matches[1].Trim() }
+        }
+    }
+    $port = 5433
+    if ($dbUrl -match ':(\d+)/') { $port = [int]$Matches[1] }
+
+    if (Test-PostgresPortOpen -Port $port) {
+        Write-Ok "PostgreSQL is reachable on localhost:$port"
+        return
+    }
+
+    Write-Err "PostgreSQL is not reachable on localhost:$port"
+    Write-Host ""
+    Write-Host "Start Postgres (Docker, recommended on Windows):" -ForegroundColor Yellow
+    Write-Host "  docker compose up postgres -d" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Or use native/WSL Postgres on port 5432 — set DATABASE_URL in .env with your password." -ForegroundColor Yellow
+    Write-Host ""
+    throw "PostgreSQL is required. Start it using the command above, then run this script again."
+}
+
 function Get-PortProcessIds([int]$Port) {
     $pids = @()
     $lines = netstat -ano | Select-String ":$Port\s"

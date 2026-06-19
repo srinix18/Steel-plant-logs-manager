@@ -1,5 +1,5 @@
 param(
-    [switch]$SkipMongoCheck
+    [switch]$SkipPostgresCheck
 )
 
 . "$PSScriptRoot\common.ps1"
@@ -53,14 +53,15 @@ try {
     Pop-Location
 }
 
-if (-not $SkipMongoCheck) {
-    Write-Step "Checking MongoDB"
+if (-not $SkipPostgresCheck) {
+    Write-Step "Checking PostgreSQL"
     try {
-        Ensure-MongoRunning
+        Ensure-PostgresRunning
     } catch {
         Write-Warn $_.Exception.Message
         Write-Host ""
-        Write-Host "Setup completed except MongoDB. Install MongoDB, then run:" -ForegroundColor Yellow
+        Write-Host "Setup completed except PostgreSQL. Start Postgres, then run:" -ForegroundColor Yellow
+        Write-Host "  docker compose up postgres -d" -ForegroundColor White
         Write-Host "  .\scripts\start.ps1" -ForegroundColor White
         exit 1
     }
