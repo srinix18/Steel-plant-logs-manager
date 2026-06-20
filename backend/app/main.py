@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.session import async_session_factory, init_db
+from app.utils.seed_aod import seed_aod_template
+from app.utils.seed_concast import seed_concast_template
 from app.utils.seed_moi import seed_all
 
 
@@ -14,6 +16,8 @@ async def lifespan(_: FastAPI):
     await init_db()
     async with async_session_factory() as session:
         await seed_all(session)
+        await seed_aod_template(session)
+        await seed_concast_template(session)
         await session.commit()
     yield
 
