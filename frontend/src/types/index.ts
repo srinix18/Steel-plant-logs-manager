@@ -198,6 +198,121 @@ export interface MaterialSectionData {
   rows: MaterialRow[];
 }
 
+export interface StaticMaterialConfig {
+  code: string;
+  label: string;
+}
+
+export interface StaticMaterialSectionData {
+  rows: MaterialRow[];
+}
+
+export interface MatrixColumnDef {
+  key: string;
+  label: string;
+  group: string;
+  type: string;
+}
+
+export interface BlowProcessRow {
+  blow_no: string;
+  values: Record<string, string | number | null>;
+}
+
+export interface BlowProcessSectionData {
+  rows: BlowProcessRow[];
+}
+
+export interface TargetChemistrySectionData {
+  targets: Record<string, number | null>;
+}
+
+export interface SampleChemistryRow {
+  sample: string;
+  temperature: number | null;
+  elements: Record<string, number | null>;
+}
+
+export interface SampleChemistrySectionData {
+  rows: SampleChemistryRow[];
+}
+
+export interface ProductionLogObjectField {
+  key: string;
+  label: string;
+  type: string;
+}
+
+export interface ProductionLogColumnDef {
+  key: string;
+  label: string;
+  type: string;
+  group?: string;
+  subtype?: string;
+  fields?: ProductionLogObjectField[];
+  zones?: string[];
+  asset_group?: string;
+}
+
+export interface StrandPairValue {
+  strand_1: string | number | null;
+  strand_2: string | number | null;
+}
+
+export interface ZoneStrandValue {
+  zone_1: StrandPairValue;
+  zone_2: StrandPairValue;
+}
+
+export interface TimeRangeValue {
+  start: string | null;
+  end: string | null;
+  total_minutes: number | null;
+}
+
+export interface MouldTubeStrandValue {
+  no: string;
+  life: string | number | null;
+}
+
+export interface MouldTubeValue {
+  strand_1: MouldTubeStrandValue;
+  strand_2: MouldTubeStrandValue;
+}
+
+export interface LadleTempValue {
+  before_purging: number | null;
+  after_purging: number | null;
+}
+
+export type ProductionLogCellValue =
+  | string
+  | number
+  | null
+  | StrandPairValue
+  | ZoneStrandValue
+  | TimeRangeValue
+  | MouldTubeValue
+  | LadleTempValue;
+
+export interface ProductionLogRow {
+  values: Record<string, ProductionLogCellValue>;
+}
+
+export interface ProductionLogSectionData {
+  rows: ProductionLogRow[];
+}
+
+export interface SectionRenderContext {
+  gradeElements: GradeElement[];
+  alloyMaterials: MaterialCatalogItem[];
+  scrapMaterials: MaterialCatalogItem[];
+  steelGrades?: SteelGrade[];
+  fieldValues: Record<string, string>;
+  onFieldChange: (key: string, value: string) => void;
+  onFieldNow?: (key: string) => void;
+}
+
 // Legacy types (deprecated pages)
 export type FieldType = 'text' | 'number' | 'email' | 'date' | 'boolean' | 'dropdown' | 'textarea';
 

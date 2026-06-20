@@ -4,43 +4,13 @@ import { fetchTemplateVersion, fetchTemplates } from '../../api/templatesMoi';
 import { fetchGradeElements, fetchMaterials, fetchSteelGrades } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
 import {
-  ChemistryTable,
-  buildEmptyChemistry,
-} from '../../components/logsheet/ChemistryTable';
-import {
-  MaterialRowsTable,
-  emptyMaterialSection,
-} from '../../components/logsheet/MaterialRowsTable';
-import type {
-  ChemistrySectionData,
-  GradeElement,
-  MaterialCatalogItem,
-  MaterialSectionData,
-  TemplateSection,
-  TemplateSummary,
-  TemplateVersionDetail,
-} from '../../types';
+  SectionRenderer,
+  initPreviewSectionData,
+  type SectionDataMap,
+} from '../../components/logsheet/SectionRenderer';
+import type { GradeElement, MaterialCatalogItem, SteelGrade, TemplateSummary, TemplateVersionDetail } from '../../types';
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
-
-function FieldsPreview({ section }: { section: TemplateSection }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {section.fields.map((field) => (
-        <div key={field.id} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
-          <p className="text-xs font-medium text-slate-500">
-            {field.label}
-            {field.required && <span className="text-red-500"> *</span>}
-          </p>
-          <p className="mt-1 text-sm text-slate-400">
-            {field.field_type}
-            {field.formula ? ` · calculated` : ''}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function LogSheetPage() {
   const [searchParams] = useSearchParams();
@@ -51,11 +21,11 @@ export function LogSheetPage() {
   const [selectedVersionId, setSelectedVersionId] = useState('');
   const [versionDetail, setVersionDetail] = useState<TemplateVersionDetail | null>(null);
   const [gradeElements, setGradeElements] = useState<GradeElement[]>([]);
+  const [steelGrades, setSteelGrades] = useState<SteelGrade[]>([]);
   const [alloyMaterials, setAlloyMaterials] = useState<MaterialCatalogItem[]>([]);
   const [scrapMaterials, setScrapMaterials] = useState<MaterialCatalogItem[]>([]);
-  const [chemistryData, setChemistryData] = useState<ChemistrySectionData>({ rows: [] });
-  const [ferroData, setFerroData] = useState<MaterialSectionData>(emptyMaterialSection());
-  const [chargeData, setChargeData] = useState<MaterialSectionData>(emptyMaterialSection());
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [sectionDataMap, setSectionDataMap] = useState<SectionDataMap>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -65,14 +35,10 @@ export function LogSheetPage() {
   );
 
   useEffect(() => {
-    Promise.all([
-      fetchTemplates(),
-      fetchSteelGrades(),
-      fetchMaterials('alloy'),
-      fetchMaterials('scrap'),
-    ])
+    Promise.all([fetchTemplates(), fetchSteelGrades(), fetchMaterials('alloy'), fetchMaterials('scrap')])
       .then(async ([items, grades, alloys, scrap]) => {
         setTemplates(items);
+        setSteelGrades(grades);
         setAlloyMaterials(alloys);
         setScrapMaterials(scrap);
         const match = items.find((t) => t.doc_no === docParam) ?? items[0];
@@ -84,7 +50,6 @@ export function LogSheetPage() {
         if (grades[0]) {
           const elements = await fetchGradeElements(grades[0].id);
           setGradeElements(elements);
-          setChemistryData(buildEmptyChemistry(elements));
         }
       })
       .catch((e) => setError(getErrorMessage(e)))
@@ -94,49 +59,25 @@ export function LogSheetPage() {
   useEffect(() => {
     if (!selectedVersionId) return;
     fetchTemplateVersion(selectedVersionId)
-      .then(setVersionDetail)
+      .then((detail) => {
+        setVersionDetail(detail);
+        const sorted = detail.sections.sort((a, b) => a.sort_order - b.sort_order);
+        setSectionDataMap(initPreviewSectionData(sorted, gradeElements));
+      })
       .catch((e) => setError(getErrorMessage(e)));
-  }, [selectedVersionId]);
+  }, [selectedVersionId, gradeElements]);
 
   const statusColor = (status: string) =>
     status === 'published' ? 'blue' : status === 'draft' ? 'gray' : 'purple';
 
-  const renderSection = (section: TemplateSection) => {
-    if (section.section_type === 'table' && section.key === 'chemistry') {
-      const maxSamples = (section.config.max_samples as number | undefined) ?? 8;
-      return (
-        <ChemistryTable
-          elements={gradeElements}
-          data={chemistryData}
-          maxSamples={maxSamples}
-          onChange={setChemistryData}
-        />
-      );
-    }
-    if (section.section_type === 'repeatable_group' && section.key === 'ferro_alloys') {
-      return (
-        <MaterialRowsTable
-          materials={alloyMaterials}
-          data={ferroData}
-          onChange={setFerroData}
-          quantityLabel="Qty (kg)"
-        />
-      );
-    }
-    if (section.section_type === 'repeatable_group' && section.key === 'charge_mix') {
-      return (
-        <MaterialRowsTable
-          materials={scrapMaterials}
-          data={chargeData}
-          onChange={setChargeData}
-          quantityLabel="Qty (kg)"
-        />
-      );
-    }
-    if (section.section_type === 'fields') {
-      return <FieldsPreview section={section} />;
-    }
-    return <p className="text-sm text-slate-500">Section type not supported in preview.</p>;
+  const renderCtx = {
+    gradeElements,
+    alloyMaterials,
+    scrapMaterials,
+    steelGrades,
+    fieldValues,
+    onFieldChange: (key: string, value: string) => setFieldValues((p) => ({ ...p, [key]: value })),
+    onFieldNow: (key: string) => setFieldValues((p) => ({ ...p, [key]: new Date().toISOString() })),
   };
 
   return (
@@ -144,7 +85,7 @@ export function LogSheetPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Log Sheets</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Furnace Log Sheet F/PRD/02 — enter sample readings, ferro alloy additions, and charge mix rows below.
+          Template preview and data entry layout. Production runs are saved from Shift Dashboard → Heat Workspace.
         </p>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -214,7 +155,12 @@ export function LogSheetPage() {
               .sort((a, b) => a.sort_order - b.sort_order)
               .map((section) => (
                 <Card key={section.id} title={`${section.sort_order + 1}. ${section.title}`}>
-                  {renderSection(section)}
+                  <SectionRenderer
+                    section={section}
+                    sectionData={sectionDataMap}
+                    onSectionDataChange={(key, data) => setSectionDataMap((p) => ({ ...p, [key]: data }))}
+                    ctx={renderCtx}
+                  />
                 </Card>
               ))}
           </div>
