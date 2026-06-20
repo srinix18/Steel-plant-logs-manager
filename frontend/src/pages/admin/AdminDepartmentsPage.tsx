@@ -6,6 +6,12 @@ import type { Department, Organisation, Plant, Process } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 
+const PROCESS_LOG_SHEETS: Record<string, { doc: string; label: string }> = {
+  EAF: { doc: 'F/PRD/02', label: 'Furnace Log F/PRD/02' },
+  AOD: { doc: 'F/PRD/03', label: 'AOD Log F/PRD/03' },
+  CCM: { doc: 'F/PRD/04', label: 'Concast Log F/PRD/04' },
+};
+
 export function AdminDepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
@@ -77,14 +83,25 @@ export function AdminDepartmentsPage() {
             },
             {
               key: 'sheet',
-              header: 'Log sheet',
+              header: 'Log sheets',
               render: (d) => {
-                const eaf = processes.find((p) => p.department_id === d.id && p.code === 'EAF');
-                if (!eaf) return '—';
+                const procs = processes.filter((p) => p.department_id === d.id);
+                const linked = procs
+                  .map((p) => PROCESS_LOG_SHEETS[p.code])
+                  .filter(Boolean);
+                if (linked.length === 0) return '—';
                 return (
-                  <Link to="/admin/sheets?doc=F/PRD/02" className="text-brand-600 hover:underline">
-                    Furnace Log F/PRD/02
-                  </Link>
+                  <div className="flex flex-col gap-1">
+                    {linked.map((sheet) => (
+                      <Link
+                        key={sheet.doc}
+                        to={`/admin/sheets?doc=${sheet.doc}`}
+                        className="text-brand-600 hover:underline"
+                      >
+                        {sheet.label}
+                      </Link>
+                    ))}
+                  </div>
                 );
               },
             },
