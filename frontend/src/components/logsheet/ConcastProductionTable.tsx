@@ -10,7 +10,8 @@ import type {
 import { Button } from '../ui/Button';
 import { MouldTubeCell, emptyMouldTube } from './MouldTubeCell';
 import { StrandPairCell, emptyStrandPair } from './StrandPairCell';
-import { TimeRangeCell, emptyTimeRange } from './TimeRangeCell';
+import { TimeRangeCell, computeTotalMinutes, emptyTimeRange } from './TimeRangeCell';
+import { formatDurationMinutes } from '../../utils/formulaEngine';
 import { ZoneStrandCell, emptyZoneStrand } from './ZoneStrandCell';
 
 export function getProductionLogConfig(section: TemplateSection) {
@@ -104,16 +105,58 @@ function subHeaders(col: ProductionLogColumnDef): string[] {
     case 'object':
       return (col.fields ?? []).map((f) => f.label);
     case 'time_range':
-      return ['Start', 'End', 'Total'];
+      return col.key === 'sen_preheating' ? ['Start', 'Finish', 'Total'] : ['Start', 'End', 'Total'];
     case 'strand_pair':
-      return ['ST1', 'ST2'];
+      return ['ST 1', 'ST 2'];
     case 'zone_strand':
-      return ['Z1-ST1', 'Z1-ST2', 'Z2-ST1', 'Z2-ST2'];
+      return ['Z1 · ST1', 'Z1 · ST2', 'Z2 · ST1', 'Z2 · ST2'];
     case 'mould_tube':
       return ['S1 No', 'S1 Life', 'S2 No', 'S2 Life'];
     default:
       return [col.label];
   }
+}
+
+interface HeaderGroup {
+  mergeKey: string | null;
+  name: string;
+  columns: ProductionLogColumnDef[];
+  colSpan: number;
+}
+
+function buildHeaderGroups(columns: ProductionLogColumnDef[]): HeaderGroup[] {
+  const groups: HeaderGroup[] = [];
+  for (const col of columns) {
+    const span = columnColSpan(col);
+    const mergeKey = col.group ?? null;
+    const last = groups[groups.length - 1];
+    if (mergeKey && last?.mergeKey === mergeKey) {
+      last.columns.push(col);
+      last.colSpan += span;
+    } else {
+      groups.push({
+        mergeKey,
+        name: mergeKey ?? col.label,
+        columns: [col],
+        colSpan: span,
+      });
+    }
+  }
+  for (const group of groups) {
+    if (group.columns.length === 1) {
+      group.name = group.columns[0].label;
+    }
+  }
+  return groups;
+}
+
+function strandCastDuration(
+  start: string | number | null | undefined,
+  end: string | number | null | undefined,
+): string | null {
+  if (typeof start !== 'string' || typeof end !== 'string') return null;
+  const minutes = computeTotalMinutes(start, end);
+  return minutes != null ? formatDurationMinutes(minutes) : null;
 }
 
 interface ConcastProductionTableProps {
@@ -212,13 +255,29 @@ export function ConcastProductionTable({
     }
 
     if (col.type === 'strand_pair') {
+      const pairVal = (val as ReturnType<typeof emptyStrandPair>) ?? emptyStrandPair();
+      const showCastDuration = col.key === 'cast_end' && col.subtype === 'datetime';
+      const castStart = showCastDuration
+        ? ((rows[rowIndex]?.values.cast_start as ReturnType<typeof emptyStrandPair>) ?? emptyStrandPair())
+        : null;
+      const d1 = castStart ? strandCastDuration(castStart.strand_1, pairVal.strand_1) : null;
+      const d2 = castStart ? strandCastDuration(castStart.strand_2, pairVal.strand_2) : null;
+
       return (
-        <StrandPairCell
-          value={(val as ReturnType<typeof emptyStrandPair>) ?? emptyStrandPair()}
-          onChange={(v) => updateCell(rowIndex, col.key, v)}
-          subtype={(col.subtype as 'number' | 'datetime' | 'text') ?? 'number'}
-          readOnly={readOnly}
-        />
+        <div>
+          <StrandPairCell
+            value={pairVal}
+            onChange={(v) => updateCell(rowIndex, col.key, v)}
+            subtype={(col.subtype as 'number' | 'datetime' | 'text') ?? 'number'}
+            readOnly={readOnly}
+          />
+          {showCastDuration && (d1 || d2) && (
+            <div className="mt-0.5 flex gap-1 text-[9px] text-slate-500">
+              <span className="w-[4.5rem] text-center">{d1 ?? ''}</span>
+              <span className="w-[4.5rem] text-center">{d2 ?? ''}</span>
+            </div>
+          )}
+        </div>
       );
     }
 
@@ -289,6 +348,8 @@ export function ConcastProductionTable({
     );
   };
 
+  const headerGroups = buildHeaderGroups(columns);
+
   return (
     <div>
       <div className="overflow-x-auto">
@@ -301,13 +362,13 @@ export function ConcastProductionTable({
               >
                 S. No.
               </th>
-              {columns.map((col) => (
+              {headerGroups.map((group) => (
                 <th
-                  key={col.key}
-                  colSpan={columnColSpan(col)}
+                  key={group.columns.map((c) => c.key).join('-')}
+                  colSpan={group.colSpan}
                   className="border border-slate-300 px-2 py-1 text-center font-semibold text-slate-700 whitespace-nowrap"
                 >
-                  {col.group ?? col.label}
+                  {group.name}
                 </th>
               ))}
               {!readOnly && (
@@ -323,7 +384,7 @@ export function ConcastProductionTable({
                     key={`${col.key}-${idx}`}
                     className="border border-slate-300 px-1 py-1 text-center font-medium text-slate-600 whitespace-nowrap"
                   >
-                    {columnColSpan(col) === 1 ? '' : label}
+                    {label}
                   </th>
                 )),
               )}

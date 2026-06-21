@@ -1,4 +1,6 @@
 import type { BlowProcessSectionData, MatrixColumnDef, TemplateSection } from '../../types';
+import { formatDurationMinutes } from '../../utils/formulaEngine';
+import { computeTotalMinutes } from './TimeRangeCell';
 
 export function getBlowProcessConfig(section: TemplateSection) {
   const rows = (section.config.rows as string[] | undefined) ?? [];
@@ -33,8 +35,16 @@ interface BlowProcessMatrixProps {
 
 export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly }: BlowProcessMatrixProps) {
   const rows = data.rows.length > 0 ? data.rows : buildBlowProcessSection(rowLabels).rows;
+  const hasTimeRange = columns.some((c) => c.key === 'time_from') && columns.some((c) => c.key === 'time_to');
 
   const groups = [...new Set(columns.map((c) => c.group))];
+
+  const rowDurationMinutes = (row: BlowProcessSectionData['rows'][0]): number | null => {
+    const from = row.values.time_from;
+    const to = row.values.time_to;
+    if (typeof from !== 'string' || typeof to !== 'string') return null;
+    return computeTotalMinutes(from, to);
+  };
 
   const updateCell = (rowIndex: number, key: string, value: string) => {
     onChange({
@@ -45,7 +55,12 @@ export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly
         if (col?.type === 'number') {
           parsed = value === '' ? null : Number(value);
         }
-        return { ...row, values: { ...row.values, [key]: parsed } };
+        const nextValues = { ...row.values, [key]: parsed };
+        if (hasTimeRange && (key === 'time_from' || key === 'time_to')) {
+          const duration = rowDurationMinutes({ ...row, values: nextValues });
+          nextValues.duration_minutes = duration;
+        }
+        return { ...row, values: nextValues };
       }),
     });
   };
@@ -74,6 +89,11 @@ export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly
                 </th>
               );
             })}
+            {hasTimeRange && (
+              <th rowSpan={2} className="border border-slate-300 px-2 py-1 text-center font-semibold text-slate-700">
+                Duration
+              </th>
+            )}
           </tr>
           <tr>
             {groups.flatMap((group) =>
@@ -88,14 +108,29 @@ export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly
           </tr>
         </thead>
         <tbody>
-          {rowLabels.map((blowNo, rowIndex) => (
+          {rowLabels.map((blowNo, rowIndex) => {
+            const rawDuration =
+              rows[rowIndex]?.values.duration_minutes ??
+              rowDurationMinutes(rows[rowIndex] ?? { blow_no: blowNo, values: {} });
+            const duration =
+              typeof rawDuration === 'number'
+                ? rawDuration
+                : typeof rawDuration === 'string'
+                  ? Number(rawDuration)
+                  : null;
+            return (
             <tr key={blowNo} className="hover:bg-slate-50">
               <td className="border border-slate-300 px-2 py-1 font-medium text-slate-800 whitespace-nowrap">{blowNo}</td>
               {columns.map((col) => (
                 <td key={col.key} className="border border-slate-300 px-1 py-0.5">
                   {readOnly ? (
                     <span className="block px-1 py-1 text-center text-slate-700">
-                      {String(rows[rowIndex]?.values[col.key] ?? '—')}
+                      {col.type === 'datetime' && typeof rows[rowIndex]?.values[col.key] === 'string'
+                        ? new Date(String(rows[rowIndex]?.values[col.key])).toLocaleString(undefined, {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })
+                        : String(rows[rowIndex]?.values[col.key] ?? '—')}
                     </span>
                   ) : (
                     <input
@@ -114,8 +149,14 @@ export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly
                   )}
                 </td>
               ))}
+              {hasTimeRange && (
+                <td className="border border-slate-300 px-2 py-1 text-center text-slate-600 whitespace-nowrap">
+                  {duration != null && !Number.isNaN(duration) ? formatDurationMinutes(duration) : '—'}
+                </td>
+              )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
