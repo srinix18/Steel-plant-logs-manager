@@ -72,17 +72,27 @@ export function Sidebar() {
               </NavLink>
             )}
             {showShiftDashboard && (
-              <NavLink to="/shift" className={linkClass}>
-                Shift Dashboard
-              </NavLink>
+              <>
+                <NavLink to="/shift" className={linkClass}>
+                  Shift Dashboard
+                </NavLink>
+                <NavLink to="/my-runs" className={linkClass}>
+                  My Runs
+                </NavLink>
+              </>
             )}
           </>
         )}
 
         {!isAdmin && !isSupervisor && showShiftDashboard && (
-          <NavLink to="/shift" className={linkClass}>
-            Shift Dashboard
-          </NavLink>
+          <>
+            <NavLink to="/shift" className={linkClass}>
+              Shift Dashboard
+            </NavLink>
+            <NavLink to="/my-runs" className={linkClass}>
+              My Runs
+            </NavLink>
+          </>
         )}
       </nav>
 

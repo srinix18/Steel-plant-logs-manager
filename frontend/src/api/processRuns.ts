@@ -9,8 +9,14 @@ export async function fetchAllRuns(params?: {
   process_code?: string;
   active_only?: boolean;
   state?: string;
+  created_by?: string;
 }): Promise<ProcessRun[]> {
   const { data } = await apiClient.get<ProcessRun[]>('/process-runs', { params });
+  return data;
+}
+
+export async function fetchMyRuns(): Promise<ProcessRun[]> {
+  const { data } = await apiClient.get<ProcessRun[]>('/process-runs/mine');
   return data;
 }
 

@@ -13,6 +13,7 @@ import { ShiftDashboard } from './pages/operations/ShiftDashboard';
 import { HeatWorkspace } from './pages/operations/HeatWorkspace';
 import { SupervisorMonitor } from './pages/operations/SupervisorMonitor';
 import { RunReportPage } from './pages/reports/RunReportPage';
+import { MyRunsPage } from './pages/operations/MyRunsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { hasRole, ADMIN_ROLES, SUPERVISOR_ROLES, WORKER_ROLES } from './utils/roles';
@@ -54,6 +55,7 @@ function AppRoutes() {
           <Route path="heat/:runId" element={<HeatWorkspace />} />
           <Route path="reports/:runId" element={<RunReportPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="my-runs" element={<MyRunsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
