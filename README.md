@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ```
 
 On first start, tables are created and **Chandan Steel SMS** seed data is loaded:
-- EAF Process with **EAF #1, #2, #3**
+- IAF (Induction Furnace) process with **IAF #1, #2, #3**
 - Furnace Log Sheet **F/PRD/02 Rev 02** (published) + Rev 03 (draft)
 - SMS Heat workflow, materials, grades, telemetry bindings, KPI definitions
 - Additional processes: LF, CCM, Rolling Mill, QC, Maintenance
@@ -84,6 +84,6 @@ API docs: http://localhost:8000/docs
 
 ## Worker UX
 
-- **Shift Dashboard** (`/shift`) — start heats on EAF #1–#3
+- **Shift Dashboard** (`/shift`) — start heats on IAF #1–#3
 - **Heat Workspace** (`/heat/:id`) — tablet-first section tabs, workflow actions, event stream
 - **Supervisor Monitor** (`/supervisor`) — active heats, observations, corrective actions

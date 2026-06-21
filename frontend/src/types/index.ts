@@ -18,6 +18,31 @@ export interface User {
   organisation_id?: string | null;
   plant_id?: string | null;
   department_id?: string | null;
+  employee_uid?: string | null;
+  phone?: string | null;
+  designation?: string | null;
+  date_of_joining?: string | null;
+}
+
+export interface RunRemarkAttachment {
+  id: string;
+  remark_id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface RunRemark {
+  id: string;
+  run_id: string;
+  author_id: string;
+  body: string;
+  role: string;
+  parent_id?: string | null;
+  created_at: string;
+  author?: { id: string; full_name: string; employee_uid?: string | null };
+  attachments: RunRemarkAttachment[];
 }
 
 export interface Plant {
@@ -308,6 +333,10 @@ export interface SectionRenderContext {
   alloyMaterials: MaterialCatalogItem[];
   scrapMaterials: MaterialCatalogItem[];
   steelGrades?: SteelGrade[];
+  plantUsers?: User[];
+  currentUserId?: string;
+  runId?: string;
+  runState?: string;
   fieldValues: Record<string, string>;
   onFieldChange: (key: string, value: string) => void;
   onFieldNow?: (key: string) => void;

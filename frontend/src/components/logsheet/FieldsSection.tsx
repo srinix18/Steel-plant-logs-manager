@@ -87,6 +87,71 @@ function renderField(
     );
   }
 
+  if (f.field_type === 'grade_ref') {
+    const grades = ctx.steelGrades ?? [];
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">
+          {f.label}
+          {f.required && <span className="text-red-500"> *</span>}
+        </span>
+        <select
+          value={value}
+          onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
+          disabled={readOnly}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option value="">Select grade…</option>
+          {grades.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.code} — {g.description}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  if (f.field_type === 'user_ref') {
+    const users = ctx.plantUsers ?? [];
+    const displayUser = users.find((u) => u.id === value);
+    if (readOnly) {
+      return (
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-slate-700">{f.label}</span>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+            {displayUser
+              ? `${displayUser.full_name}${displayUser.employee_uid ? ` (${displayUser.employee_uid})` : ''}`
+              : value || '—'}
+          </div>
+        </label>
+      );
+    }
+    const defaultValue = value || ctx.currentUserId || '';
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">
+          {f.label}
+          {f.required && <span className="text-red-500"> *</span>}
+        </span>
+        <select
+          value={defaultValue}
+          onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
+          disabled={readOnly}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option value="">Select…</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.full_name}
+              {u.employee_uid ? ` (${u.employee_uid})` : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
   if (f.field_type === 'textarea') {
     return (
       <label className="block text-sm">

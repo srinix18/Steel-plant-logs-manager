@@ -1,4 +1,5 @@
 import type { SampleChemistrySectionData } from '../../types';
+import { COMPACT_TABLE_XS } from '../reports/compactTableClasses';
 
 export function buildSampleChemistry(sampleRows: string[], elements: string[]): SampleChemistrySectionData {
   return {
@@ -39,6 +40,7 @@ interface SampleChemistryMatrixProps {
   data: SampleChemistrySectionData;
   onChange: (data: SampleChemistrySectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
 }
 
 export function SampleChemistryMatrix({
@@ -48,7 +50,9 @@ export function SampleChemistryMatrix({
   data,
   onChange,
   readOnly,
+  compact,
 }: SampleChemistryMatrixProps) {
+  const tableClass = compact ? COMPACT_TABLE_XS : 'min-w-full border border-slate-300 text-xs';
   const rows = data.rows.length > 0 ? data.rows : buildSampleChemistry(sampleRows, elements).rows;
 
   const updateTemp = (index: number, value: string) => {
@@ -71,8 +75,8 @@ export function SampleChemistryMatrix({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full border border-slate-300 text-xs">
-        <thead className="bg-slate-100">
+      <table className={tableClass}>
+        <thead className={compact ? undefined : 'bg-slate-100'}>
           <tr>
             <th className="border border-slate-300 px-2 py-2 text-left font-semibold text-slate-700">Sample No.</th>
             {includeTemperature && (

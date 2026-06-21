@@ -71,3 +71,29 @@ export async function fetchRunEvents(runId: string) {
   const { data } = await apiClient.get(`/process-runs/${runId}/events`);
   return data;
 }
+
+export async function fetchRunRemarks(runId: string) {
+  const { data } = await apiClient.get(`/process-runs/${runId}/remarks`);
+  return data;
+}
+
+export async function createRunRemark(runId: string, body: string) {
+  const { data } = await apiClient.post(`/process-runs/${runId}/remarks`, { body });
+  return data;
+}
+
+export async function replyToRunRemark(runId: string, parentId: string, body: string) {
+  const { data } = await apiClient.post(`/process-runs/${runId}/remarks/${parentId}/reply`, { body });
+  return data;
+}
+
+export async function uploadRemarkAttachment(runId: string, remarkId: string, file: File) {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await apiClient.post(
+    `/process-runs/${runId}/remarks/${remarkId}/attachments`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return data;
+}

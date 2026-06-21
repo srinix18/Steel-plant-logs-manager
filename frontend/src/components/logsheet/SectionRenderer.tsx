@@ -25,6 +25,7 @@ import {
   parseProductionLog,
 } from './ConcastProductionTable';
 import { FieldsSection } from './FieldsSection';
+import { RemarkThread } from './RemarkThread';
 import {
   MaterialRowsTable,
   emptyMaterialSection,
@@ -168,15 +169,28 @@ export function SectionRenderer({
   onSaveFields,
 }: SectionRendererProps) {
   if (section.section_type === 'fields') {
+    const hasRemarksField = section.fields.some((f) => f.name === 'remarks');
+    const fields = ctx.runId && hasRemarksField
+      ? section.fields.filter((f) => f.name !== 'remarks')
+      : section.fields;
     return (
-      <FieldsSection
-        section={section}
-        {...ctx}
-        readOnly={readOnly}
-        showSave={showSave}
-        saving={saving}
-        onSave={onSaveFields ? () => onSaveFields(section.fields.map((f) => f.name)) : undefined}
-      />
+      <div>
+        {ctx.runId && hasRemarksField && (
+          <RemarkThread
+            runId={ctx.runId}
+            runState={ctx.runState ?? ''}
+            readOnly={readOnly}
+          />
+        )}
+        <FieldsSection
+          section={{ ...section, fields }}
+          {...ctx}
+          readOnly={readOnly}
+          showSave={showSave}
+          saving={saving}
+          onSave={onSaveFields ? () => onSaveFields(fields.map((f) => f.name)) : undefined}
+        />
+      </div>
     );
   }
 

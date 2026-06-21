@@ -1,4 +1,5 @@
 import type { MaterialRow, StaticMaterialConfig, StaticMaterialSectionData, TemplateSection } from '../../types';
+import { COMPACT_TABLE } from '../reports/compactTableClasses';
 
 export function buildStaticMaterialSection(config: StaticMaterialConfig[]): StaticMaterialSectionData {
   return {
@@ -30,10 +31,22 @@ interface StaticMaterialTableProps {
   data: StaticMaterialSectionData;
   onChange: (data: StaticMaterialSectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
+  title?: string;
+  hideHeader?: boolean;
 }
 
-export function StaticMaterialTable({ config, data, onChange, readOnly }: StaticMaterialTableProps) {
+export function StaticMaterialTable({
+  config,
+  data,
+  onChange,
+  readOnly,
+  compact,
+  title,
+  hideHeader,
+}: StaticMaterialTableProps) {
   const rows = data.rows.length > 0 ? data.rows : buildStaticMaterialSection(config).rows;
+  const tableClass = compact ? COMPACT_TABLE : 'min-w-full border border-slate-300 text-sm';
 
   const updateQty = (index: number, value: string) => {
     onChange({
@@ -44,21 +57,31 @@ export function StaticMaterialTable({ config, data, onChange, readOnly }: Static
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border border-slate-300 text-sm">
-        <thead className="bg-slate-100">
-          <tr>
-            <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Material</th>
-            <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Qty (kg)</th>
-          </tr>
-        </thead>
+    <div>
+      {title && <p className="report-section-title">{title}</p>}
+      <div className="overflow-x-auto">
+        <table className={tableClass}>
+          {!hideHeader && (
+            <thead className={compact ? undefined : 'bg-slate-100'}>
+              <tr>
+                <th className={compact ? '' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+                  Material
+                </th>
+                <th className={compact ? '' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+                  Qty (kg)
+                </th>
+              </tr>
+            </thead>
+          )}
         <tbody>
           {config.map((mat, index) => {
             const row = rows[index] ?? { material: mat.code, quantity_kg: null };
             return (
-              <tr key={mat.code} className="hover:bg-slate-50">
-                <td className="border border-slate-300 px-3 py-2 font-medium text-slate-800">{mat.label}</td>
-                <td className="border border-slate-300 px-2 py-1">
+              <tr key={mat.code} className={compact ? undefined : 'hover:bg-slate-50'}>
+                <td className={compact ? '' : 'border border-slate-300 px-3 py-2 font-medium text-slate-800'}>
+                  {mat.label}
+                </td>
+                <td className={compact ? '' : 'border border-slate-300 px-2 py-1'}>
                   {readOnly ? (
                     <span className="px-1 py-1 text-slate-700">{row.quantity_kg ?? '—'}</span>
                   ) : (
@@ -78,6 +101,7 @@ export function StaticMaterialTable({ config, data, onChange, readOnly }: Static
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

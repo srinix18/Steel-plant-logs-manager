@@ -11,6 +11,11 @@ export async function fetchDepartments(plantId?: string): Promise<Department[]> 
   return data;
 }
 
+export async function fetchPlantUsers(plantId: string): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>(`/plants/${plantId}/users`);
+  return data;
+}
+
 export async function fetchUsers(): Promise<User[]> {
   const { data } = await apiClient.get<User[]>('/users');
   return data;

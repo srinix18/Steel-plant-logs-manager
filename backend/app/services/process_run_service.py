@@ -31,6 +31,7 @@ from app.schemas.moi import (
     RunFieldValueResponse,
     RunSectionDataResponse,
 )
+from app.services.run_defaults_service import seed_default_field_values
 from app.services.workflow_service import WorkflowService
 from app.utils.formulas import apply_calculated_fields, collect_calculated_fields
 
@@ -208,6 +209,8 @@ class ProcessRunService:
         )
         session.add(run)
         await session.flush()
+        await seed_default_field_values(session, run, user)
+        await session.flush()
         return await self.get_run(session, run.id, user)
 
     async def get_run(self, session: AsyncSession, run_id: UUID, user: User) -> ProcessRunDetailResponse:
@@ -373,11 +376,19 @@ class ProcessRunService:
 
         energy = field_map.get("power_total")
         charge_kg = None
-        if "charge_mix" in section_map and isinstance(section_map["charge_mix"], list):
-            charge_kg = sum(row.get("quantity_kg", 0) or 0 for row in section_map["charge_mix"])
+        if "charge_mix" in section_map:
+            charge_data = section_map["charge_mix"]
+            if isinstance(charge_data, list):
+                charge_kg = sum(row.get("quantity_kg", 0) or 0 for row in charge_data)
+            elif isinstance(charge_data, dict) and isinstance(charge_data.get("rows"), list):
+                charge_kg = sum(row.get("quantity_kg", 0) or 0 for row in charge_data["rows"])
         alloy_kg = None
-        if "ferro_alloys" in section_map and isinstance(section_map["ferro_alloys"], list):
-            alloy_kg = sum(row.get("quantity_kg", 0) or 0 for row in section_map["ferro_alloys"])
+        if "ferro_alloys" in section_map:
+            alloy_data = section_map["ferro_alloys"]
+            if isinstance(alloy_data, list):
+                alloy_kg = sum(row.get("quantity_kg", 0) or 0 for row in alloy_data)
+            elif isinstance(alloy_data, dict) and isinstance(alloy_data.get("rows"), list):
+                alloy_kg = sum(row.get("quantity_kg", 0) or 0 for row in alloy_data["rows"])
 
         instance = await session.get(ProcessInstance, run.process_instance_id)
         from app.db.models import Department

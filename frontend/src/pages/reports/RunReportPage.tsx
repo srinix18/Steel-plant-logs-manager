@@ -1,15 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { fetchProcessRun } from '../../api/processRuns';
 import { fetchTemplateVersion, fetchTemplates } from '../../api/templatesMoi';
 import {
-  fetchDepartments,
   fetchGradeElements,
   fetchMaterials,
-  fetchOrganisations,
-  fetchPlants,
-  fetchProcessInstances,
-  fetchProcesses,
+  fetchPlantUsers,
   fetchSteelGrades,
 } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
@@ -19,6 +15,9 @@ import {
   initSectionDataMap,
   type SectionDataMap,
 } from '../../components/logsheet/SectionRenderer';
+import { AodLogSheetReport } from '../../components/reports/AodLogSheetReport';
+import { ConcastLogSheetReport } from '../../components/reports/ConcastLogSheetReport';
+import { IafLogSheetReport } from '../../components/reports/IafLogSheetReport';
 import type {
   GradeElement,
   MaterialCatalogItem,
@@ -26,11 +25,18 @@ import type {
   SteelGrade,
   TemplateSection,
   TemplateSummary,
+  TemplateVersionSummary,
 } from '../../types';
 import { mergeCalculatedIntoFields } from '../../utils/formulaEngine';
 import { hasRole, SUPERVISOR_ROLES, WORKER_ROLES } from '../../utils/roles';
-import { Badge } from '../../components/ui/Badge';
+import type { LogSheetReportProps } from '../../components/reports/reportFieldUtils';
 import { Button } from '../../components/ui/Button';
+
+const SHEET_REPORTS: Record<string, ComponentType<LogSheetReportProps>> = {
+  'F/PRD/02': IafLogSheetReport,
+  'F/PRD/03': AodLogSheetReport,
+  'F/PRD/04': ConcastLogSheetReport,
+};
 
 export function RunReportPage() {
   const { runId } = useParams<{ runId: string }>();
@@ -38,15 +44,11 @@ export function RunReportPage() {
   const [run, setRun] = useState<ProcessRunDetail | null>(null);
   const [sections, setSections] = useState<TemplateSection[]>([]);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
-  const [instances, setInstances] = useState<Awaited<ReturnType<typeof fetchProcessInstances>>>([]);
-  const [processes, setProcesses] = useState<Awaited<ReturnType<typeof fetchProcesses>>>([]);
-  const [plants, setPlants] = useState<Awaited<ReturnType<typeof fetchPlants>>>([]);
-  const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
-  const [organisations, setOrganisations] = useState<Awaited<ReturnType<typeof fetchOrganisations>>>([]);
   const [gradeElements, setGradeElements] = useState<GradeElement[]>([]);
   const [steelGrades, setSteelGrades] = useState<SteelGrade[]>([]);
   const [alloyMaterials, setAlloyMaterials] = useState<MaterialCatalogItem[]>([]);
   const [scrapMaterials, setScrapMaterials] = useState<MaterialCatalogItem[]>([]);
+  const [plantUsers, setPlantUsers] = useState<Awaited<ReturnType<typeof fetchPlantUsers>>>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [sectionDataMap, setSectionDataMap] = useState<SectionDataMap>({});
   const [error, setError] = useState('');
@@ -60,26 +62,19 @@ export function RunReportPage() {
     Promise.all([
       fetchProcessRun(runId),
       fetchTemplates(),
-      fetchProcessInstances(),
-      fetchProcesses(),
-      fetchPlants(),
-      fetchDepartments(),
-      fetchOrganisations(),
       fetchSteelGrades(),
       fetchMaterials('alloy'),
       fetchMaterials('scrap'),
     ])
-      .then(async ([data, tmpls, insts, procs, plts, depts, orgs, grades, alloys, scrap]) => {
+      .then(async ([data, tmpls, grades, alloys, scrap]) => {
         setRun(data);
         setTemplates(tmpls);
-        setInstances(insts);
-        setProcesses(procs);
-        setPlants(plts);
-        setDepartments(depts);
-        setOrganisations(orgs);
         setSteelGrades(grades);
         setAlloyMaterials(alloys);
         setScrapMaterials(scrap);
+        if (user?.plant_id) {
+          fetchPlantUsers(user.plant_id).then(setPlantUsers).catch(() => {});
+        }
 
         const tmpl = await fetchTemplateVersion(data.template_version_id);
         const sorted = tmpl.sections.sort((a, b) => a.sort_order - b.sort_order);
@@ -103,24 +98,17 @@ export function RunReportPage() {
         setSectionDataMap(initSectionDataMap(sorted, elements, rawSections));
       })
       .catch((e) => setError(getErrorMessage(e)));
-  }, [runId]);
-
-  const locationChain = useMemo(() => {
-    if (!run) return '';
-    const instance = instances.find((i) => i.id === run.process_instance_id);
-    const process = instance ? processes.find((p) => p.id === instance.process_id) : undefined;
-    const dept = process ? departments.find((d) => d.id === process.department_id) : undefined;
-    const plant = dept ? plants.find((p) => p.id === dept.plant_id) : undefined;
-    const org = plant ? organisations.find((o) => o.id === plant.organisation_id) : undefined;
-    return [org?.name, plant?.name, dept?.name, process?.name, instance?.name].filter(Boolean).join(' → ');
-  }, [run, instances, processes, departments, plants, organisations]);
+  }, [runId, user?.plant_id]);
 
   const templateMeta = useMemo(() => {
     if (!run) return null;
-    return templates.find((t) =>
-      t.versions.some((v) => v.id === run.template_version_id),
-    );
+    return templates.find((t) => t.versions.some((v) => v.id === run.template_version_id)) ?? null;
   }, [run, templates]);
+
+  const versionMeta = useMemo((): TemplateVersionSummary | null => {
+    if (!run || !templateMeta) return null;
+    return templateMeta.versions.find((v) => v.id === run.template_version_id) ?? null;
+  }, [run, templateMeta]);
 
   const gradeLabel = useMemo(() => {
     if (!run?.grade_id) return '—';
@@ -140,16 +128,31 @@ export function RunReportPage() {
     alloyMaterials,
     scrapMaterials,
     steelGrades,
+    plantUsers,
     fieldValues,
     onFieldChange: () => {},
   };
 
+  const docNo = templateMeta?.doc_no;
+  const SheetReport = docNo ? SHEET_REPORTS[docNo] : undefined;
+
+  const sheetProps = {
+    run,
+    sections,
+    fieldValues,
+    sectionDataMap,
+    renderCtx,
+    templateMeta,
+    versionMeta,
+    gradeLabel,
+  };
+
   return (
-    <div className="mx-auto max-w-5xl pb-12 print:max-w-none print:pb-0">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4 print:hidden">
+    <div className="print:bg-white">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div>
-          <p className="text-sm text-slate-500">Consolidated log sheet report</p>
-          <h1 className="text-2xl font-bold text-slate-900">{run.run_number}</h1>
+          <p className="text-sm text-slate-500">Log sheet report</p>
+          <h1 className="text-xl font-bold text-slate-900">{run.run_number}</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => window.print()}>
@@ -163,66 +166,24 @@ export function RunReportPage() {
         </div>
       </div>
 
-      <div className="mb-6 print:border-0 print:shadow-none rounded-xl border border-slate-200 bg-white shadow-sm p-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">Document</p>
-            <p className="text-sm font-semibold text-slate-900">
-              {templateMeta?.doc_no ?? '—'} {templateMeta?.name ?? ''}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">Run type</p>
-            <p className="text-sm text-slate-800">{run.run_type.replace(/_/g, ' ')}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">State</p>
-            <Badge color="blue">{run.current_state.replace(/_/g, ' ')}</Badge>
-          </div>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <p className="text-xs font-medium uppercase text-slate-400">Location</p>
-            <p className="text-sm text-slate-800">{locationChain || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">Grade</p>
-            <p className="text-sm text-slate-800">{gradeLabel}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">Started</p>
-            <p className="text-sm text-slate-800">
-              {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase text-slate-400">Completed</p>
-            <p className="text-sm text-slate-800">
-              {run.completed_at ? new Date(run.completed_at).toLocaleString() : '—'}
-            </p>
-          </div>
+      {SheetReport ? (
+        <SheetReport {...sheetProps} />
+      ) : (
+        <div className="mx-auto max-w-5xl space-y-6">
+          {sections.map((section) => (
+            <div key={section.id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-base font-semibold text-slate-900">{section.title}</h3>
+              <SectionRenderer
+                section={section}
+                sectionData={sectionDataMap}
+                onSectionDataChange={() => {}}
+                ctx={renderCtx}
+                readOnly
+              />
+            </div>
+          ))}
         </div>
-      </div>
-
-      <div className="space-y-6 print:space-y-4">
-        {sections.map((section) => (
-          <div
-            key={section.id}
-            className="rounded-xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid print:border print:border-slate-300 print:shadow-none"
-          >
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h3 className="text-base font-semibold text-slate-900">{section.title}</h3>
-            </div>
-            <div className="p-6">
-            <SectionRenderer
-              section={section}
-              sectionData={sectionDataMap}
-              onSectionDataChange={() => {}}
-              ctx={renderCtx}
-              readOnly
-            />
-            </div>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }

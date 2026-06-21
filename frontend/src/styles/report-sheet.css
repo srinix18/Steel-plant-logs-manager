@@ -1,0 +1,103 @@
+/* One-page log sheet report styles */
+
+.report-sheet-viewport {
+  @apply mx-auto flex justify-center py-4 print:py-0;
+}
+
+.report-sheet-shell {
+  @apply w-full border border-black bg-white text-black shadow-md print:shadow-none;
+  box-sizing: border-box;
+}
+
+.report-sheet-shell.report-sheet-portrait {
+  max-width: 210mm;
+  min-height: 297mm;
+}
+
+.report-sheet-shell.report-sheet-landscape {
+  max-width: 297mm;
+  min-height: 210mm;
+}
+
+.report-sheet-inner {
+  @apply p-2 print:p-0;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.report-sheet-aod .report-sheet-inner {
+  font-size: 7px;
+}
+
+.report-table-compact {
+  @apply w-full border-collapse border border-black;
+}
+
+.report-table-compact th,
+.report-table-compact td {
+  @apply border border-black px-0.5 py-0 text-left align-middle;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.report-table-compact th {
+  @apply bg-neutral-100 font-semibold text-center;
+}
+
+.report-section-title {
+  @apply mb-0.5 text-center text-[9px] font-bold uppercase tracking-wide;
+}
+
+.report-field-label {
+  @apply text-[8px] font-semibold uppercase;
+}
+
+.report-field-value {
+  @apply min-h-[14px] border-b border-black px-1 py-0.5 text-[9px];
+}
+
+.report-signature-box {
+  @apply mt-1 min-h-[28px] border border-black px-1 py-1 text-[8px];
+}
+
+@media print {
+  @page portrait-page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  @page landscape-page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+
+  .report-sheet-portrait {
+    page: portrait-page;
+    max-width: none !important;
+    min-height: auto !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  .report-sheet-landscape {
+    page: landscape-page;
+    max-width: none !important;
+    min-height: auto !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  .report-sheet-inner {
+    padding: 0 !important;
+  }
+
+  .report-sheet-shell {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-no-print-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

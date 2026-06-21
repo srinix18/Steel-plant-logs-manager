@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
-from sqlalchemy import func
+from app.utils.schema_patches import apply_schema_patches
 
 from app.db.base import Base
 from app.db import models  # noqa: F401
@@ -25,3 +25,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await apply_schema_patches(conn)

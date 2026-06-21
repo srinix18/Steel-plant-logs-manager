@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.security import create_access_token, verify_password
-from app.db.models import Template, TemplateSection, TemplateVersion, TemplateVersionAudit, User
+from app.db.models import Template, TemplateSection, TemplateVersion, TemplateVersionAudit, User, Department, Plant
 from app.models.enums import TemplateVersionStatus
 from app.schemas.moi import (
     LoginRequest,
@@ -18,6 +18,8 @@ from app.schemas.moi import (
     TemplateVersionDetailResponse,
     TemplateVersionResponse,
     UserBrief,
+    UserProfile,
+    UserProfileUpdate,
 )
 
 
@@ -31,6 +33,49 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
         token = create_access_token(str(user.id), {"role": user.role.value})
         return LoginResponse(access_token=token, user=UserBrief.model_validate(user))
+
+    async def _generate_employee_uid(self, session: AsyncSession, user: User) -> str:
+        plant_code = "PLT"
+        dept_code = "GEN"
+        if user.plant_id:
+            plant = await session.get(Plant, user.plant_id)
+            if plant:
+                plant_code = plant.code
+        if user.department_id:
+            dept = await session.get(Department, user.department_id)
+            if dept:
+                dept_code = dept.code
+
+        prefix = f"{plant_code}-{dept_code}-"
+        result = await session.execute(
+            select(User.employee_uid).where(User.employee_uid.isnot(None), User.employee_uid.like(f"{prefix}%"))
+        )
+        max_seq = 0
+        for (uid,) in result:
+            if uid and uid.startswith(prefix):
+                try:
+                    max_seq = max(max_seq, int(uid.split("-")[-1]))
+                except ValueError:
+                    pass
+        return f"{prefix}{max_seq + 1:04d}"
+
+    async def update_profile(
+        self, session: AsyncSession, user: User, data: UserProfileUpdate
+    ) -> UserProfile:
+        if data.full_name is not None:
+            user.full_name = data.full_name.strip()
+        if data.phone is not None:
+            user.phone = data.phone.strip() or None
+        if data.designation is not None:
+            user.designation = data.designation.strip() or None
+        if data.date_of_joining is not None:
+            user.date_of_joining = data.date_of_joining
+
+        if not user.employee_uid and (user.designation or data.designation):
+            user.employee_uid = await self._generate_employee_uid(session, user)
+
+        await session.flush()
+        return UserProfile.model_validate(user)
 
 
 class TemplateService:

@@ -1,5 +1,6 @@
 import type { ChemistryRow, ChemistrySectionData, GradeElement } from '../../types';
 import { Button } from '../ui/Button';
+import { COMPACT_TABLE } from '../reports/compactTableClasses';
 
 interface ChemistryTableProps {
   elements: GradeElement[];
@@ -7,6 +8,7 @@ interface ChemistryTableProps {
   maxSamples: number;
   onChange: (data: ChemistrySectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
 }
 
 export function buildEmptyChemistry(elements: GradeElement[]): ChemistrySectionData {
@@ -28,9 +30,17 @@ export function parseChemistryData(raw: unknown, elements: GradeElement[]): Chem
   return buildEmptyChemistry(elements);
 }
 
-export function ChemistryTable({ elements, data, maxSamples, onChange, readOnly }: ChemistryTableProps) {
+export function ChemistryTable({ elements, data, maxSamples, onChange, readOnly, compact }: ChemistryTableProps) {
   const rows = data.rows.length > 0 ? data.rows : buildEmptyChemistry(elements).rows;
-  const sampleCount = rows.reduce((max, row) => Math.max(max, row.samples.length), 0);
+  const effectiveMax = compact ? Math.min(maxSamples, 5) : maxSamples;
+  const sampleCount = Math.min(
+    rows.reduce((max, row) => Math.max(max, row.samples.length), 0),
+    effectiveMax,
+  );
+  const tableClass = compact ? COMPACT_TABLE : 'min-w-full border border-slate-300 text-sm';
+  const sampleLabels = compact
+    ? ['1st SAMPLE', '2nd SAMPLE', '3rd SAMPLE', '4th SAMPLE', '5th SAMPLE']
+    : null;
 
   const updateRow = (index: number, patch: Partial<ChemistryRow>) => {
     const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
@@ -68,16 +78,27 @@ export function ChemistryTable({ elements, data, maxSamples, onChange, readOnly 
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-slate-300 text-sm">
-          <thead className="bg-slate-100">
+        <table className={tableClass}>
+          <thead className={compact ? undefined : 'bg-slate-100'}>
             <tr>
-              <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Element</th>
-              <th className="border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700">Min</th>
-              <th className="border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700">Max</th>
+              <th className={compact ? '' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+                {compact ? '' : 'Element'}
+              </th>
+              {!compact && (
+                <>
+                  <th className="border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700">Min</th>
+                  <th className="border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700">Max</th>
+                </>
+              )}
               {Array.from({ length: sampleCount }, (_, i) => (
-                <th key={i} className="border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700">
+                <th
+                  key={i}
+                  className={
+                    compact ? 'text-center' : 'border border-slate-300 px-3 py-2 text-center font-semibold text-slate-700'
+                  }
+                >
                   <div className="flex items-center justify-center gap-1">
-                    Sample {i + 1}
+                    {sampleLabels ? sampleLabels[i] : `Sample ${i + 1}`}
                     {!readOnly && (
                       <button
                         type="button"
@@ -95,12 +116,21 @@ export function ChemistryTable({ elements, data, maxSamples, onChange, readOnly 
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
-              <tr key={row.element} className="hover:bg-slate-50">
-                <td className="border border-slate-300 px-3 py-2 font-medium text-slate-800">{row.element}</td>
-                <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">{row.min}</td>
-                <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">{row.max}</td>
+              <tr key={row.element} className={compact ? undefined : 'hover:bg-slate-50'}>
+                <td className={compact ? 'font-semibold' : 'border border-slate-300 px-3 py-2 font-medium text-slate-800'}>
+                  {row.element}
+                </td>
+                {!compact && (
+                  <>
+                    <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">{row.min}</td>
+                    <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">{row.max}</td>
+                  </>
+                )}
                 {Array.from({ length: sampleCount }, (_, sampleIndex) => (
-                  <td key={sampleIndex} className="border border-slate-300 px-2 py-1">
+                  <td
+                    key={sampleIndex}
+                    className={compact ? 'text-center' : 'border border-slate-300 px-2 py-1'}
+                  >
                     {readOnly ? (
                       <span className="block px-1 py-1 text-center text-slate-700">
                         {row.samples[sampleIndex] ?? '—'}
@@ -122,7 +152,7 @@ export function ChemistryTable({ elements, data, maxSamples, onChange, readOnly 
           </tbody>
         </table>
       </div>
-      {!readOnly && sampleCount < maxSamples && (
+      {!readOnly && sampleCount < effectiveMax && (
         <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={addSample}>
           + Add sample column
         </Button>

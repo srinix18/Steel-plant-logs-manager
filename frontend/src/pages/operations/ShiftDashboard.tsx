@@ -9,7 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 
 const PROCESS_OPTIONS = [
-  { code: 'EAF', label: 'EAF — Electric Arc Furnace', instanceLabel: 'Furnace', runType: 'heat' as const },
+  { code: 'IAF', label: 'IAF — Induction Furnace', instanceLabel: 'Furnace', runType: 'heat' as const },
   { code: 'AOD', label: 'AOD — Argon Oxygen Decarburization', instanceLabel: 'AOD Vessel', runType: 'ladle_metallurgy' as const },
   { code: 'CCM', label: 'CCM — Continuous Casting', instanceLabel: 'Caster Line', runType: 'cast' as const },
 ];
@@ -17,7 +17,7 @@ const PROCESS_OPTIONS = [
 export function ShiftDashboard() {
   const navigate = useNavigate();
   const [processes, setProcesses] = useState<Process[]>([]);
-  const [processCode, setProcessCode] = useState('EAF');
+  const [processCode, setProcessCode] = useState('IAF');
   const [instances, setInstances] = useState<ProcessInstance[]>([]);
   const [activeRuns, setActiveRuns] = useState<ProcessRun[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);

@@ -12,7 +12,26 @@ import { MouldTubeCell, emptyMouldTube } from './MouldTubeCell';
 import { StrandPairCell, emptyStrandPair } from './StrandPairCell';
 import { TimeRangeCell, computeTotalMinutes, emptyTimeRange } from './TimeRangeCell';
 import { formatDurationMinutes } from '../../utils/formulaEngine';
+import { COMPACT_TABLE_XS } from '../reports/compactTableClasses';
 import { ZoneStrandCell, emptyZoneStrand } from './ZoneStrandCell';
+
+function cellHasValue(val: ProductionLogCellValue): boolean {
+  if (val === null || val === undefined || val === '') return false;
+  if (typeof val === 'number') return true;
+  if (typeof val === 'string') return val.length > 0;
+  if (typeof val === 'object') {
+    return Object.values(val as object).some((v) => {
+      if (v === null || v === '') return false;
+      if (typeof v === 'object' && v !== null) return cellHasValue(v as ProductionLogCellValue);
+      return true;
+    });
+  }
+  return true;
+}
+
+function rowHasData(row: ProductionLogRow, columns: ProductionLogColumnDef[]): boolean {
+  return columns.some((col) => cellHasValue(row.values[col.key] ?? null));
+}
 
 export function getProductionLogConfig(section: TemplateSection) {
   const columns = (section.config.columns as ProductionLogColumnDef[] | undefined) ?? [];
@@ -165,6 +184,8 @@ interface ConcastProductionTableProps {
   grades: SteelGrade[];
   onChange: (data: ProductionLogSectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
+  filterEmptyRows?: boolean;
 }
 
 export function ConcastProductionTable({
@@ -173,8 +194,13 @@ export function ConcastProductionTable({
   grades,
   onChange,
   readOnly,
+  compact,
+  filterEmptyRows,
 }: ConcastProductionTableProps) {
-  const rows = data.rows.length > 0 ? data.rows : buildEmptyProductionLog(columns).rows;
+  const allRows = data.rows.length > 0 ? data.rows : buildEmptyProductionLog(columns).rows;
+  const rows = filterEmptyRows ? allRows.filter((row) => rowHasData(row, columns)) : allRows;
+  const cellText = compact ? 'text-[7px]' : 'text-[10px]';
+  const tableClass = compact ? COMPACT_TABLE_XS : 'min-w-full border border-slate-300 text-xs';
 
   const updateCell = (rowIndex: number, key: string, value: ProductionLogCellValue) => {
     onChange({
@@ -208,7 +234,7 @@ export function ConcastProductionTable({
       const objVal = (val as LadleTempValue) ?? emptyLadleTemp(col.fields);
       if (readOnly) {
         return (
-          <div className="flex gap-1 text-[10px]">
+          <div className={`flex gap-1 ${cellText}`}>
             {col.fields.map((f) => (
               <span key={f.key} className="min-w-[3.5rem] text-center">
                 {String(objVal[f.key as keyof LadleTempValue] ?? '—')}
@@ -305,7 +331,7 @@ export function ConcastProductionTable({
     if (col.type === 'grade_ref') {
       if (readOnly) {
         const grade = grades.find((g) => g.id === val);
-        return <span className="text-[10px]">{grade?.code ?? String(val ?? '—')}</span>;
+        return <span className={cellText}>{grade?.code ?? String(val ?? '—')}</span>;
       }
       return (
         <select
@@ -328,7 +354,7 @@ export function ConcastProductionTable({
         col.type === 'datetime' && typeof val === 'string'
           ? new Date(val).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
           : String(val ?? '—');
-      return <span className="text-[10px]">{display}</span>;
+      return <span className={cellText}>{display}</span>;
     }
 
     const inputType =
@@ -353,8 +379,8 @@ export function ConcastProductionTable({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-slate-300 text-xs">
-          <thead className="bg-slate-100">
+        <table className={tableClass}>
+          <thead className={compact ? undefined : 'bg-slate-100'}>
             <tr>
               <th
                 rowSpan={2}
@@ -391,6 +417,13 @@ export function ConcastProductionTable({
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && filterEmptyRows && (
+              <tr>
+                <td colSpan={columns.length + 1} className="py-2 text-center text-[8px] text-slate-500">
+                  No casting entries recorded
+                </td>
+              </tr>
+            )}
             {rows.map((_, rowIndex) => (
               <tr key={rowIndex} className="hover:bg-slate-50">
                 <td className="sticky left-0 z-10 border border-slate-300 bg-white px-2 py-1 font-medium text-slate-800">

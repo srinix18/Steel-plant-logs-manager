@@ -127,3 +127,9 @@ class ValueSource(str, enum.Enum):
     TELEMETRY = "telemetry"
     LIMS = "lims"
     SYSTEM = "system"
+
+
+class RemarkAuthorRole(str, enum.Enum):
+    MELTER = "melter"
+    SUPERVISOR = "supervisor"
+    SYSTEM = "system"

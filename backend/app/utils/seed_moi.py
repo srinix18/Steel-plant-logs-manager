@@ -69,30 +69,30 @@ async def seed_all(session: AsyncSession) -> None:
     await session.flush()
 
     # Asset groups
-    furnaces_grp = AssetGroup(plant_id=plant.id, code="furnaces", name="Electric Arc Furnaces")
+    furnaces_grp = AssetGroup(plant_id=plant.id, code="furnaces", name="Induction Furnaces")
     ladles_grp = AssetGroup(plant_id=plant.id, code="ladles", name="Transfer Ladles")
     crucibles_grp = AssetGroup(plant_id=plant.id, code="crucibles", name="Crucibles")
     transformers_grp = AssetGroup(plant_id=plant.id, code="transformers", name="Transformers")
     session.add_all([furnaces_grp, ladles_grp, crucibles_grp, transformers_grp])
     await session.flush()
 
-    eaf_assets = []
+    iaf_assets = []
     for i in range(1, 4):
         asset = Asset(
             group_id=furnaces_grp.id,
             plant_id=plant.id,
-            asset_no=f"EAF-{i:02d}",
-            name=f"EAF #{i}",
-            plc_tag_prefix=f"EAF{i}.",
+            asset_no=f"IAF-{i:02d}",
+            name=f"IAF #{i}",
+            plc_tag_prefix=f"IAF{i}.",
             life_counters={"heats": 0},
         )
         session.add(asset)
-        eaf_assets.append(asset)
+        iaf_assets.append(asset)
     await session.flush()
 
     # Additional process types for phase 6
     processes_data = [
-        ("EAF", "Electric Arc Furnace", dept.id),
+        ("IAF", "Induction Furnace", dept.id),
         ("LF", "Ladle Furnace", dept.id),
         ("CCM", "Continuous Casting Machine", dept.id),
         ("RM", "Rolling Mill", dept.id),
@@ -106,11 +106,11 @@ async def seed_all(session: AsyncSession) -> None:
         process_map[code] = p
     await session.flush()
 
-    eaf_process = process_map["EAF"]
+    iaf_process = process_map["IAF"]
     instances = []
-    for asset in eaf_assets:
+    for asset in iaf_assets:
         inst = ProcessInstance(
-            process_id=eaf_process.id,
+            process_id=iaf_process.id,
             asset_id=asset.id,
             name=asset.name,
             status=ProcessInstanceStatus.ACTIVE,
@@ -128,24 +128,14 @@ async def seed_all(session: AsyncSession) -> None:
         session.add(Shift(plant_id=plant.id, code=code, name=name, start_time=start, end_time=end))
     await session.flush()
 
-    # Steel grade 304
-    grade = SteelGrade(organisation_id=org.id, code="304", description="AISI 304")
-    session.add(grade)
-    await session.flush()
-    for element, min_v, max_v in [
-        ("C", 0.0, 0.08),
-        ("SI", 0.0, 1.0),
-        ("MN", 0.0, 2.0),
-        ("P", 0.0, 0.045),
-        ("S", 0.0, 0.03),
-        ("NI", 8.0, 10.5),
-        ("CR", 18.0, 20.0),
-        ("MO", 0.0, 0.75),
-        ("SN", 0.0, 0.1),
-        ("CO", 0.0, 0.5),
-        ("W", 0.0, 0.5),
-    ]:
-        session.add(GradeElementSpec(grade_id=grade.id, element=element, min_value=min_v, max_value=max_v))
+    from app.utils.seed_patches import GRADE_DESCRIPTIONS, GRADE_ELEMENT_SPECS
+
+    for code in ("304", "316", "410", "2205", "430"):
+        grade = SteelGrade(organisation_id=org.id, code=code, description=GRADE_DESCRIPTIONS[code])
+        session.add(grade)
+        await session.flush()
+        for element, min_v, max_v in GRADE_ELEMENT_SPECS[code]:
+            session.add(GradeElementSpec(grade_id=grade.id, element=element, min_value=min_v, max_value=max_v))
 
     # Materials
     for code, name, mtype in [
@@ -164,13 +154,13 @@ async def seed_all(session: AsyncSession) -> None:
     # Template F/PRD/02
     template = Template(
         scope_type=TemplateScopeType.PROCESS,
-        scope_id=eaf_process.id,
+        scope_id=iaf_process.id,
         doc_no="F/PRD/02",
         name="Furnace Log Sheet",
     )
     session.add(template)
     await session.flush()
-    eaf_process.default_template_id = template.id
+    iaf_process.default_template_id = template.id
 
     rev02 = TemplateVersion(
         template_id=template.id,
@@ -309,7 +299,7 @@ async def seed_all(session: AsyncSession) -> None:
         )
     await session.flush()
 
-    # Telemetry bindings for EAF #1
+    # Telemetry bindings for IAF #1
     for event_type, field_key in [
         ("power_on", "power_on_time"),
         ("tap_completed", "tapping_time"),
@@ -318,9 +308,9 @@ async def seed_all(session: AsyncSession) -> None:
     ]:
         session.add(
             TelemetryBinding(
-                asset_id=eaf_assets[0].id,
+                asset_id=iaf_assets[0].id,
                 field_key=field_key,
-                tag_name=f"EAF1.{field_key}",
+                tag_name=f"IAF1.{field_key}",
                 event_type=event_type,
             )
         )

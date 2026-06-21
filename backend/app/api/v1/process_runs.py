@@ -1,23 +1,28 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, File, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser, DbSession, SupervisorUser
 from app.schemas.moi import (
-    MessageResponse,
     ProcessRunCreate,
     ProcessRunDetailResponse,
     ProcessRunResponse,
     ProcessRunUpdate,
+    RunRemarkAttachmentResponse,
+    RunRemarkCreate,
+    RunRemarkResponse,
     TransitionRequest,
     WorkflowTransitionLogResponse,
 )
 from app.services.process_run_service import ProcessRunService
+from app.services.run_remark_service import RunRemarkService
 from app.services.workflow_service import WorkflowService
 
 router = APIRouter()
 run_service = ProcessRunService()
 workflow_service = WorkflowService()
+remark_service = RunRemarkService()
 
 
 @router.post("/process-instances/{instance_id}/runs", response_model=ProcessRunDetailResponse, status_code=201)
@@ -107,3 +112,41 @@ async def list_runs(
         state=state,
         active_only=active_only,
     )
+
+
+@router.get("/process-runs/{run_id}/remarks", response_model=list[RunRemarkResponse])
+async def list_run_remarks(run_id: UUID, session: DbSession, user: CurrentUser):
+    return await remark_service.list_remarks(session, run_id, user)
+
+
+@router.post("/process-runs/{run_id}/remarks", response_model=RunRemarkResponse, status_code=201)
+async def create_run_remark(run_id: UUID, data: RunRemarkCreate, session: DbSession, user: CurrentUser):
+    return await remark_service.create_remark(session, run_id, user, data)
+
+
+@router.post("/process-runs/{run_id}/remarks/{parent_id}/reply", response_model=RunRemarkResponse, status_code=201)
+async def reply_run_remark(
+    run_id: UUID, parent_id: UUID, data: RunRemarkCreate, session: DbSession, user: CurrentUser
+):
+    return await remark_service.reply_to_remark(session, run_id, parent_id, user, data)
+
+
+@router.post(
+    "/process-runs/{run_id}/remarks/{remark_id}/attachments",
+    response_model=RunRemarkAttachmentResponse,
+    status_code=201,
+)
+async def upload_remark_attachment(
+    run_id: UUID,
+    remark_id: UUID,
+    session: DbSession,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+):
+    return await remark_service.add_attachment(session, run_id, remark_id, user, file)
+
+
+@router.get("/attachments/{attachment_id}")
+async def get_attachment(attachment_id: UUID, session: DbSession, user: CurrentUser):
+    path, mime_type, filename = await remark_service.get_attachment(session, attachment_id, user)
+    return FileResponse(path, media_type=mime_type, filename=filename)

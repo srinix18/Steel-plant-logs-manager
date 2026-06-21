@@ -41,6 +41,20 @@ class UserBrief(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserProfile(UserBrief):
+    employee_uid: Optional[str] = None
+    phone: Optional[str] = None
+    designation: Optional[str] = None
+    date_of_joining: Optional[date] = None
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    designation: Optional[str] = None
+    date_of_joining: Optional[date] = None
+
+
 class LoginResponse(TokenResponse):
     user: UserBrief
 
@@ -377,6 +391,41 @@ class CorrectiveActionResponse(BaseModel):
     closure_notes: Optional[str] = None
     closed_at: Optional[datetime] = None
     model_config = {"from_attributes": True}
+
+
+# Run remarks
+class RunRemarkAttachmentResponse(BaseModel):
+    id: UUID
+    remark_id: UUID
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class RunRemarkAuthorBrief(BaseModel):
+    id: UUID
+    full_name: str
+    employee_uid: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class RunRemarkResponse(BaseModel):
+    id: UUID
+    run_id: UUID
+    author_id: UUID
+    body: str
+    role: str
+    parent_id: Optional[UUID] = None
+    created_at: datetime
+    author: Optional[RunRemarkAuthorBrief] = None
+    attachments: list[RunRemarkAttachmentResponse] = Field(default_factory=list)
+    model_config = {"from_attributes": True}
+
+
+class RunRemarkCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=5000)
 
 
 # Analytics

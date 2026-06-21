@@ -163,6 +163,10 @@ class User(Base, TimestampMixin):
     plant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("plants.id"), nullable=True)
     department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    employee_uid: Mapped[Optional[str]] = mapped_column(String(32), unique=True, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    designation: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    date_of_joining: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
 
 class Shift(Base, TimestampMixin):
@@ -369,6 +373,7 @@ class ProcessRun(Base, TimestampMixin):
     transition_logs: Mapped[list["WorkflowTransitionLog"]] = relationship(back_populates="run")
     events: Mapped[list["OperationalEvent"]] = relationship(back_populates="run")
     observations: Mapped[list["Observation"]] = relationship(back_populates="run")
+    remarks: Mapped[list["RunRemark"]] = relationship(back_populates="run")
 
 
 class RunFieldValue(Base, TimestampMixin):
@@ -471,6 +476,37 @@ class CorrectiveAction(Base, TimestampMixin):
     closed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     observation: Mapped["Observation"] = relationship(back_populates="corrective_actions")
+
+
+class RunRemark(Base):
+    __tablename__ = "run_remarks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("process_runs.id"), nullable=False)
+    author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("run_remarks.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    run: Mapped["ProcessRun"] = relationship(back_populates="remarks")
+    author: Mapped["User"] = relationship()
+    attachments: Mapped[list["RunRemarkAttachment"]] = relationship(back_populates="remark")
+
+
+class RunRemarkAttachment(Base):
+    __tablename__ = "run_remark_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    remark_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("run_remarks.id"), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    remark: Mapped["RunRemark"] = relationship(back_populates="attachments")
 
 
 class TelemetryBinding(Base, TimestampMixin):

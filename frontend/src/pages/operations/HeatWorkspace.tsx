@@ -7,8 +7,9 @@ import {
   transitionProcessRun,
   updateProcessRun,
 } from '../../api/processRuns';
-import { fetchGradeElements, fetchMaterials, fetchSteelGrades } from '../../api/platform';
+import { fetchGradeElements, fetchMaterials, fetchPlantUsers, fetchShifts, fetchSteelGrades } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   SectionRenderer,
   initSectionDataMap,
@@ -31,6 +32,7 @@ import { Badge } from '../../components/ui/Badge';
 
 export function HeatWorkspace() {
   const { runId } = useParams<{ runId: string }>();
+  const { user } = useAuth();
   const [run, setRun] = useState<ProcessRunDetail | null>(null);
   const [sections, setSections] = useState<TemplateSection[]>([]);
   const [activeTab, setActiveTab] = useState(0);
@@ -41,6 +43,7 @@ export function HeatWorkspace() {
   const [steelGrades, setSteelGrades] = useState<SteelGrade[]>([]);
   const [alloyMaterials, setAlloyMaterials] = useState<MaterialCatalogItem[]>([]);
   const [scrapMaterials, setScrapMaterials] = useState<MaterialCatalogItem[]>([]);
+  const [plantUsers, setPlantUsers] = useState<Awaited<ReturnType<typeof fetchPlantUsers>>>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -64,11 +67,23 @@ export function HeatWorkspace() {
       data.field_values.forEach((fv) => {
         vals[fv.field_key] = String(fv.value ?? '');
       });
+
+      const shift = data.shift_id ? await fetchShifts().then((s) => s.find((x) => x.id === data.shift_id)) : undefined;
+      if (!vals.date) vals.date = new Date().toISOString().slice(0, 10);
+      if (!vals.grade && data.grade_id) vals.grade = data.grade_id;
+      if (!vals.shift && shift) vals.shift = shift.code;
+      if (!vals.melter && user) vals.melter = user.id;
+      if (!vals.heat_no) vals.heat_no = data.run_number.split('-').pop() ?? data.run_number;
+
       setFieldValues(mergeCalculatedIntoFields(sorted, vals));
 
       let elements: GradeElement[] = [];
       const grades = await fetchSteelGrades();
       setSteelGrades(grades);
+      if (user?.plant_id) {
+        const users = await fetchPlantUsers(user.plant_id);
+        setPlantUsers(users);
+      }
       if (data.grade_id) {
         elements = await fetchGradeElements(data.grade_id);
       } else if (grades[0]) {
@@ -173,6 +188,10 @@ export function HeatWorkspace() {
     alloyMaterials,
     scrapMaterials,
     steelGrades,
+    plantUsers,
+    currentUserId: user?.id,
+    runId: run.id,
+    runState: run.current_state,
     fieldValues,
     onFieldChange: handleFieldChange,
     onFieldNow: (key: string) => handleFieldChange(key, new Date().toISOString()),

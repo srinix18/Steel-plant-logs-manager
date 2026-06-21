@@ -1,5 +1,6 @@
 import type { MaterialCatalogItem, MaterialRow, MaterialSectionData } from '../../types';
 import { Button } from '../ui/Button';
+import { COMPACT_TABLE } from '../reports/compactTableClasses';
 
 interface MaterialRowsTableProps {
   materials: MaterialCatalogItem[];
@@ -7,6 +8,8 @@ interface MaterialRowsTableProps {
   onChange: (data: MaterialSectionData) => void;
   readOnly?: boolean;
   quantityLabel?: string;
+  compact?: boolean;
+  title?: string;
 }
 
 export function emptyMaterialSection(): MaterialSectionData {
@@ -23,8 +26,10 @@ export function parseMaterialSection(raw: unknown): MaterialSectionData {
   return emptyMaterialSection();
 }
 
-export function materialSectionToPayload(data: MaterialSectionData): MaterialRow[] {
-  return data.rows.filter((r) => r.material || r.quantity_kg != null);
+export function materialSectionToPayload(data: MaterialSectionData): MaterialSectionData {
+  return {
+    rows: data.rows.filter((r) => r.material || r.quantity_kg != null),
+  };
 }
 
 export function MaterialRowsTable({
@@ -33,7 +38,10 @@ export function MaterialRowsTable({
   onChange,
   readOnly,
   quantityLabel = 'Qty (kg)',
+  compact,
+  title,
 }: MaterialRowsTableProps) {
+  const tableClass = compact ? COMPACT_TABLE : 'min-w-full border border-slate-300 text-sm';
   const addRow = () => {
     onChange({
       rows: [...data.rows, { material: materials[0]?.code ?? '', quantity_kg: null }],
@@ -52,21 +60,33 @@ export function MaterialRowsTable({
 
   return (
     <div>
+      {title && <p className="report-section-title">{title}</p>}
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-slate-300 text-sm">
-          <thead className="bg-slate-100">
+        <table className={tableClass}>
+          <thead className={compact ? undefined : 'bg-slate-100'}>
             <tr>
-              <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Material</th>
-              <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">{quantityLabel}</th>
+              <th className={compact ? '' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+                Material
+              </th>
+              <th className={compact ? '' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+                {quantityLabel}
+              </th>
               {!readOnly && <th className="border border-slate-300 px-3 py-2 w-16" />}
             </tr>
           </thead>
           <tbody>
             {data.rows.length === 0 && (
               <tr>
-                <td colSpan={readOnly ? 2 : 3} className="border border-slate-300 px-3 py-6 text-center text-slate-400">
-                  No entries yet
-                </td>
+                {compact && readOnly ? (
+                  <>
+                    <td className="text-center">—</td>
+                    <td className="text-center">—</td>
+                  </>
+                ) : (
+                  <td colSpan={readOnly ? 2 : 3} className="border border-slate-300 px-3 py-6 text-center text-slate-400">
+                    No entries yet
+                  </td>
+                )}
               </tr>
             )}
             {data.rows.map((row, index) => (

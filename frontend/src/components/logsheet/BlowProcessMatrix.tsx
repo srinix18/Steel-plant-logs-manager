@@ -1,4 +1,5 @@
 import type { BlowProcessSectionData, MatrixColumnDef, TemplateSection } from '../../types';
+import { COMPACT_TABLE_XS } from '../reports/compactTableClasses';
 import { formatDurationMinutes } from '../../utils/formulaEngine';
 import { computeTotalMinutes } from './TimeRangeCell';
 
@@ -31,9 +32,11 @@ interface BlowProcessMatrixProps {
   data: BlowProcessSectionData;
   onChange: (data: BlowProcessSectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
 }
 
-export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly }: BlowProcessMatrixProps) {
+export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly, compact }: BlowProcessMatrixProps) {
+  const tableClass = compact ? COMPACT_TABLE_XS : 'min-w-full border border-slate-300 text-xs';
   const rows = data.rows.length > 0 ? data.rows : buildBlowProcessSection(rowLabels).rows;
   const hasTimeRange = columns.some((c) => c.key === 'time_from') && columns.some((c) => c.key === 'time_to');
 
@@ -75,8 +78,8 @@ export function BlowProcessMatrix({ rowLabels, columns, data, onChange, readOnly
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full border border-slate-300 text-xs">
-        <thead className="bg-slate-100">
+      <table className={tableClass}>
+        <thead className={compact ? undefined : 'bg-slate-100'}>
           <tr>
             <th rowSpan={2} className="border border-slate-300 px-2 py-2 text-left font-semibold text-slate-700">
               Blow No.

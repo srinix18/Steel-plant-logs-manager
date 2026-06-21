@@ -1,4 +1,5 @@
 import type { GradeElement, TargetChemistrySectionData } from '../../types';
+import { COMPACT_TABLE_XS } from '../reports/compactTableClasses';
 
 export function buildTargetChemistry(elements: GradeElement[]): TargetChemistrySectionData {
   const targets: Record<string, number | null> = {};
@@ -21,6 +22,7 @@ interface TargetChemistryRowProps {
   data: TargetChemistrySectionData;
   onChange: (data: TargetChemistrySectionData) => void;
   readOnly?: boolean;
+  compact?: boolean;
 }
 
 export function TargetChemistryRow({
@@ -29,7 +31,9 @@ export function TargetChemistryRow({
   data,
   onChange,
   readOnly,
+  compact,
 }: TargetChemistryRowProps) {
+  const tableClass = compact ? COMPACT_TABLE_XS : 'min-w-full border border-slate-300 text-sm';
   const codes = elementCodes ?? elements.map((e) => e.element);
   const specByElement = Object.fromEntries(elements.map((e) => [e.element, e]));
 
@@ -44,31 +48,42 @@ export function TargetChemistryRow({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full border border-slate-300 text-sm">
-        <thead className="bg-slate-100">
+      <table className={tableClass}>
+        <thead className={compact ? undefined : 'bg-slate-100'}>
           <tr>
-            <th className="border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700">Req. Chem.</th>
+            <th className={compact ? 'whitespace-nowrap' : 'border border-slate-300 px-3 py-2 text-left font-semibold text-slate-700'}>
+              {compact ? 'Req. Chem.' : 'Req. Chem.'}
+            </th>
             {codes.map((el) => (
-              <th key={el} className="border border-slate-300 px-2 py-2 text-center font-semibold text-slate-700">
+              <th
+                key={el}
+                className={
+                  compact ? 'text-center' : 'border border-slate-300 px-2 py-2 text-center font-semibold text-slate-700'
+                }
+              >
                 {el}%
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          <tr className="bg-slate-50">
-            <td className="border border-slate-300 px-3 py-2 text-xs text-slate-500">Spec (min–max)</td>
-            {codes.map((el) => {
-              const spec = specByElement[el];
-              return (
-                <td key={el} className="border border-slate-300 px-2 py-1 text-center text-xs text-slate-500">
-                  {spec ? `${spec.min_value}–${spec.max_value}` : '—'}
-                </td>
-              );
-            })}
-          </tr>
+          {!compact && (
+            <tr className="bg-slate-50">
+              <td className="border border-slate-300 px-3 py-2 text-xs text-slate-500">Spec (min–max)</td>
+              {codes.map((el) => {
+                const spec = specByElement[el];
+                return (
+                  <td key={el} className="border border-slate-300 px-2 py-1 text-center text-xs text-slate-500">
+                    {spec ? `${spec.min_value}–${spec.max_value}` : '—'}
+                  </td>
+                );
+              })}
+            </tr>
+          )}
           <tr>
-            <td className="border border-slate-300 px-3 py-2 font-medium text-slate-800">Target</td>
+            <td className={compact ? 'font-semibold' : 'border border-slate-300 px-3 py-2 font-medium text-slate-800'}>
+              {compact ? 'Target' : 'Target'}
+            </td>
             {codes.map((el) => (
               <td key={el} className="border border-slate-300 px-1 py-1">
                 {readOnly ? (

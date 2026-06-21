@@ -17,6 +17,23 @@ export async function createObservation(payload: {
   return data;
 }
 
+export async function createCorrectiveAction(
+  observationId: string,
+  payload: {
+    title: string;
+    description?: string;
+    assigned_to: string;
+    due_date?: string;
+    priority?: string;
+  },
+): Promise<CorrectiveAction> {
+  const { data } = await apiClient.post<CorrectiveAction>(
+    `/observations/${observationId}/corrective-actions`,
+    payload,
+  );
+  return data;
+}
+
 export async function fetchObservations(plantId?: string): Promise<Observation[]> {
   const { data } = await apiClient.get<Observation[]>('/observations', { params: { plant_id: plantId } });
   return data;

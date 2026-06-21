@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     SEED_ADMIN_EMAIL: str = "admin@logbook.app"
     SEED_ADMIN_PASSWORD: str = "admin123"
     SEED_ADMIN_NAME: str = "System Admin"
+    UPLOAD_DIR: str = "uploads"
 
     @property
     def cors_origins_list(self) -> list[str]:

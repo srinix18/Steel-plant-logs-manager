@@ -65,19 +65,31 @@ def evaluate_formula(formula: str, field_values: dict[str, Any], field_types: di
     return evaluate_subtraction(left, right, left_type, right_type)
 
 
+def _section_fields(section) -> list:
+    if isinstance(section, dict):
+        return section.get("fields", [])
+    return getattr(section, "fields", None) or []
+
+
+def _field_attr(field, name: str, default=None):
+    if isinstance(field, dict):
+        return field.get(name, default)
+    return getattr(field, name, default)
+
+
 def collect_calculated_fields(sections: list) -> list[tuple[str, str]]:
     """Return list of (field_key, formula) from template sections."""
     result: list[tuple[str, str]] = []
     for section in sections:
-        fields = getattr(section, "fields", None) or section.get("fields", [])
-        for field in fields:
-            ftype = getattr(field, "field_type", None) or field.get("field_type")
+        for field in _section_fields(section):
+            ftype = _field_attr(field, "field_type")
             type_str = ftype.value if hasattr(ftype, "value") else str(ftype)
-            if type_str == "calculated":
-                name = getattr(field, "name", None) or field.get("name")
-                formula = getattr(field, "formula", None) or field.get("formula")
-                if name and formula:
-                    result.append((name, formula))
+            if type_str != "calculated":
+                continue
+            name = _field_attr(field, "name")
+            formula = _field_attr(field, "formula")
+            if name and formula:
+                result.append((name, formula))
     return result
 
 

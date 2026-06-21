@@ -28,6 +28,7 @@ from app.schemas.moi import (
     ProcessInstanceResponse,
     ProcessResponse,
     UserBrief,
+    UserProfile,
 )
 
 router = APIRouter()
@@ -49,6 +50,14 @@ async def list_users(session: DbSession, _: AdminUser):
 async def list_plants(session: DbSession, _: CurrentUser):
     result = await session.execute(select(Plant))
     return [PlantResponse.model_validate(p) for p in result.scalars()]
+
+
+@router.get("/plants/{plant_id}/users", response_model=list[UserProfile])
+async def plant_users(plant_id: UUID, session: DbSession, user: CurrentUser):
+    result = await session.execute(
+        select(User).where(User.plant_id == plant_id, User.is_active.is_(True)).order_by(User.full_name)
+    )
+    return [UserProfile.model_validate(u) for u in result.scalars()]
 
 
 @router.get("/departments", response_model=list[DepartmentResponse])
