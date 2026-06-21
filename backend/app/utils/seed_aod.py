@@ -274,7 +274,7 @@ async def seed_aod_template(session: AsyncSession) -> None:
         ("time_summary", "Time Summary", "fields", 9, [
             ("ladle_prepare_time", "Ladle Prepare Time", FieldType.DATETIME, False),
             ("heat_tapping_time", "Heat Tapping Time", FieldType.DATETIME, False),
-            ("total_process_time", "Total Process Time", FieldType.TEXT, False),
+            ("total_process_time", "Total Process Time", FieldType.CALCULATED, False, {}, "heat_tapping_time - ladle_prepare_time"),
             ("ladle_purging_time", "Ladle Purging Time", FieldType.DATETIME, False),
             ("ladle_lifting_time", "Ladle Lifting Time", FieldType.DATETIME, False),
             ("ladle_purging_temp", "Ladle Purging Temp.", FieldType.NUMBER, False),
@@ -370,4 +370,43 @@ async def seed_aod_template(session: AsyncSession) -> None:
                 allowed_roles=list(roles),
             )
         )
+    await session.flush()
+
+
+async def patch_aod_calculated_fields(session: AsyncSession) -> None:
+    """Update existing AOD template total_process_time to calculated field."""
+    tpl_result = await session.execute(select(Template).where(Template.doc_no == "F/PRD/03"))
+    template = tpl_result.scalar_one_or_none()
+    if not template:
+        return
+    ver_result = await session.execute(
+        select(TemplateVersion)
+        .where(TemplateVersion.template_id == template.id, TemplateVersion.status == TemplateVersionStatus.PUBLISHED)
+        .order_by(TemplateVersion.effective_from.desc())
+    )
+    version = ver_result.scalars().first()
+    if not version:
+        return
+    section_result = await session.execute(
+        select(TemplateSection).where(
+            TemplateSection.version_id == version.id,
+            TemplateSection.key == "time_summary",
+        )
+    )
+    section = section_result.scalar_one_or_none()
+    if not section:
+        return
+    field_result = await session.execute(
+        select(TemplateField).where(
+            TemplateField.section_id == section.id,
+            TemplateField.name == "total_process_time",
+        )
+    )
+    field = field_result.scalar_one_or_none()
+    if not field:
+        return
+    if field.field_type == FieldType.CALCULATED and field.formula:
+        return
+    field.field_type = FieldType.CALCULATED
+    field.formula = "heat_tapping_time - ladle_prepare_time"
     await session.flush()
