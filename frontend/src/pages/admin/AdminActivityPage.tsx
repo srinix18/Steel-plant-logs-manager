@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchObservations, fetchOpenActions } from '../../api/operations';
 import { fetchAllRuns } from '../../api/processRuns';
@@ -18,6 +18,9 @@ export function AdminActivityPage() {
   const [plants, setPlants] = useState<Awaited<ReturnType<typeof fetchPlants>>>([]);
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
   const [organisations, setOrganisations] = useState<Awaited<ReturnType<typeof fetchOrganisations>>>([]);
+  const [orgFilter, setOrgFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [processFilter, setProcessFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
   const [error, setError] = useState('');
 
@@ -38,26 +41,43 @@ export function AdminActivityPage() {
         setDepartments(depts);
         setOrganisations(orgs);
         if (plts[0]) {
-          const pid = plts[0].id;
-          fetchObservations(pid).then(setObservations).catch(() => {});
-          fetchOpenActions(pid).then(setActions).catch(() => {});
+          fetchObservations(plts[0].id).then(setObservations).catch(() => {});
+          fetchOpenActions(plts[0].id).then(setActions).catch(() => {});
         }
       })
       .catch((e) => setError(getErrorMessage(e)));
   }, []);
 
-  const instanceName = (instanceId: string) => instances.find((i) => i.id === instanceId)?.name ?? '—';
-
-  const runContext = (run: ProcessRun) => {
+  const runMeta = (run: ProcessRun) => {
     const instance = instances.find((i) => i.id === run.process_instance_id);
     const process = instance ? processes.find((p) => p.id === instance.process_id) : undefined;
     const dept = process ? departments.find((d) => d.id === process.department_id) : undefined;
     const plant = dept ? plants.find((p) => p.id === dept.plant_id) : undefined;
     const org = plant ? organisations.find((o) => o.id === plant.organisation_id) : undefined;
+    return { instance, process, dept, plant, org };
+  };
+
+  const runContext = (run: ProcessRun) => {
+    const { org, plant, dept, instance } = runMeta(run);
     return [org?.name, plant?.name, dept?.name, instance?.name].filter(Boolean).join(' → ');
   };
 
-  const filteredRuns = stateFilter ? runs.filter((r) => r.current_state === stateFilter) : runs;
+  const departmentsForOrg = useMemo(
+    () => (orgFilter ? departments.filter((d) => d.organisation_id === orgFilter) : departments),
+    [departments, orgFilter],
+  );
+
+  const filteredRuns = useMemo(() => {
+    return runs.filter((run) => {
+      const { org, dept, process } = runMeta(run);
+      if (orgFilter && org?.id !== orgFilter) return false;
+      if (deptFilter && dept?.id !== deptFilter) return false;
+      if (processFilter && process?.code !== processFilter) return false;
+      if (stateFilter && run.current_state !== stateFilter) return false;
+      return true;
+    });
+  }, [runs, orgFilter, deptFilter, processFilter, stateFilter, instances, processes, departments, organisations, plants]);
+
   const states = [...new Set(runs.map((r) => r.current_state))];
 
   return (
@@ -65,41 +85,107 @@ export function AdminActivityPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Activity</h1>
-          <p className="mt-1 text-sm text-slate-500">All heats, observations, and corrective actions across the platform.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            All production runs across the platform. Click a run to open its consolidated report.
+          </p>
         </div>
-        <label className="text-sm text-slate-600">
-          Filter by state{' '}
-          <select
-            value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
-            className="ml-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          >
-            <option value="">All states</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="text-sm text-slate-600">
+            Organisation{' '}
+            <select
+              value={orgFilter}
+              onChange={(e) => {
+                setOrgFilter(e.target.value);
+                setDeptFilter('');
+              }}
+              className="ml-1 rounded-lg border border-slate-200 px-2 py-2 text-sm"
+            >
+              <option value="">All</option>
+              {organisations.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            Department{' '}
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className="ml-1 rounded-lg border border-slate-200 px-2 py-2 text-sm"
+            >
+              <option value="">All</option>
+              {departmentsForOrg.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            Process{' '}
+            <select
+              value={processFilter}
+              onChange={(e) => setProcessFilter(e.target.value)}
+              className="ml-1 rounded-lg border border-slate-200 px-2 py-2 text-sm"
+            >
+              <option value="">All</option>
+              {processes.map((p) => (
+                <option key={p.id} value={p.code}>
+                  {p.code} — {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            State{' '}
+            <select
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
+              className="ml-1 rounded-lg border border-slate-200 px-2 py-2 text-sm"
+            >
+              <option value="">All</option>
+              {states.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <Card title="Process runs (heats)">
+      <Card title="Process runs">
         <Table
           data={filteredRuns}
-          emptyMessage="No heats yet. Workers can start heats from Shift Dashboard."
+          emptyMessage="No runs match the selected filters."
           columns={[
             {
               key: 'run',
-              header: 'Heat',
+              header: 'Run',
               render: (r) => (
-                <Link to={`/heat/${r.id}`} className="font-medium text-brand-600 hover:underline">
+                <Link to={`/reports/${r.id}`} className="font-medium text-brand-600 hover:underline">
                   {r.run_number}
                 </Link>
               ),
             },
-            { key: 'instance', header: 'Furnace', render: (r) => instanceName(r.process_instance_id) },
+            {
+              key: 'process',
+              header: 'Process',
+              render: (r) => runMeta(r).process?.name ?? '—',
+            },
+            {
+              key: 'type',
+              header: 'Type',
+              render: (r) => r.run_type.replace(/_/g, ' '),
+            },
+            {
+              key: 'instance',
+              header: 'Line / Unit',
+              render: (r) => runMeta(r).instance?.name ?? '—',
+            },
             { key: 'state', header: 'State', render: (r) => <Badge color="blue">{r.current_state}</Badge> },
             { key: 'context', header: 'Location', render: (r) => runContext(r) || '—' },
             {

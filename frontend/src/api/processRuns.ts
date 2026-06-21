@@ -3,6 +3,10 @@ import type { ProcessRun, ProcessRunDetail, TemplateVersionDetail } from '../typ
 
 export async function fetchAllRuns(params?: {
   plant_id?: string;
+  organisation_id?: string;
+  department_id?: string;
+  process_id?: string;
+  process_code?: string;
   active_only?: boolean;
   state?: string;
 }): Promise<ProcessRun[]> {
