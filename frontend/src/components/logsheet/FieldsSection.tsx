@@ -117,9 +117,12 @@ function renderField(
 
   if (f.field_type === 'calculated') {
     return (
-      <p className="text-sm text-slate-600">
-        <span className="font-medium">{f.label}:</span> {value || '—'}
-      </p>
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">{f.label}</span>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+          {value || '—'}
+        </div>
+      </label>
     );
   }
 

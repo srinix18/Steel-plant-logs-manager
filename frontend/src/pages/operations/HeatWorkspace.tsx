@@ -15,7 +15,16 @@ import {
   sectionDataToPayload,
   type SectionDataMap,
 } from '../../components/logsheet/SectionRenderer';
-import type { GradeElement, MaterialCatalogItem, OperationalEvent, ProcessRunDetail, SteelGrade, TemplateSection } from '../../types';
+import type {
+  BlowProcessSectionData,
+  GradeElement,
+  MaterialCatalogItem,
+  OperationalEvent,
+  ProcessRunDetail,
+  SteelGrade,
+  TemplateSection,
+} from '../../types';
+import { mergeCalculatedIntoFields, getCalculatedFieldSpecs } from '../../utils/formulaEngine';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -55,7 +64,7 @@ export function HeatWorkspace() {
       data.field_values.forEach((fv) => {
         vals[fv.field_key] = String(fv.value ?? '');
       });
-      setFieldValues(vals);
+      setFieldValues(mergeCalculatedIntoFields(sorted, vals));
 
       let elements: GradeElement[] = [];
       const grades = await fetchSteelGrades();
@@ -81,12 +90,44 @@ export function HeatWorkspace() {
     load();
   }, [runId]);
 
+  const handleFieldChange = (key: string, value: string) => {
+    setFieldValues((prev) => {
+      const next = { ...prev, [key]: value };
+      return mergeCalculatedIntoFields(sections, next);
+    });
+  };
+
+  const handleSectionDataChange = (key: string, data: unknown) => {
+    setSectionDataMap((p) => ({ ...p, [key]: data }));
+    if (key === 'blow_process' && data && typeof data === 'object' && 'rows' in data) {
+      const blow = data as BlowProcessSectionData;
+      let o2 = 0;
+      let n2 = 0;
+      let ar = 0;
+      for (const row of blow.rows) {
+        o2 += Number(row.values.consumption_o2) || 0;
+        n2 += Number(row.values.consumption_n2) || 0;
+        ar += Number(row.values.consumption_ar) || 0;
+      }
+      setFieldValues((prev) =>
+        mergeCalculatedIntoFields(sections, {
+          ...prev,
+          o2_nm3: String(o2),
+          n2_nm3: String(n2),
+          ar_nm3: String(ar),
+        }),
+      );
+    }
+  };
+
   const saveFields = async (keys: string[]) => {
     if (!runId) return;
     setSaving(true);
     try {
+      const calculatedKeys = getCalculatedFieldSpecs(sections).map((s) => s.name);
+      const allKeys = [...new Set([...keys, ...calculatedKeys])];
       await updateProcessRun(runId, {
-        field_values: keys.map((k) => ({ field_key: k, value: fieldValues[k] })),
+        field_values: allKeys.map((k) => ({ field_key: k, value: fieldValues[k] ?? '' })),
       });
       await load();
     } catch (e) {
@@ -133,8 +174,8 @@ export function HeatWorkspace() {
     scrapMaterials,
     steelGrades,
     fieldValues,
-    onFieldChange: (key: string, value: string) => setFieldValues((p) => ({ ...p, [key]: value })),
-    onFieldNow: (key: string) => setFieldValues((p) => ({ ...p, [key]: new Date().toISOString() })),
+    onFieldChange: handleFieldChange,
+    onFieldNow: (key: string) => handleFieldChange(key, new Date().toISOString()),
   };
 
   return (
@@ -169,7 +210,7 @@ export function HeatWorkspace() {
           <SectionRenderer
             section={section}
             sectionData={sectionDataMap}
-            onSectionDataChange={(key, data) => setSectionDataMap((p) => ({ ...p, [key]: data }))}
+            onSectionDataChange={handleSectionDataChange}
             ctx={renderCtx}
             showSave
             saving={saving}
