@@ -36,7 +36,9 @@ def evaluate_subtraction(left: Any, right: Any, left_type: str, right_type: str)
         end = _parse_iso(right)
         if not start or not end:
             return None
-        minutes = (end - start).total_seconds() / 60
+        minutes = (start - end).total_seconds() / 60
+        if minutes < 0:
+            return None
         return _format_duration(minutes)
     try:
         lv = float(left) if left not in (None, "") else None
@@ -44,6 +46,8 @@ def evaluate_subtraction(left: Any, right: Any, left_type: str, right_type: str)
         if lv is None or rv is None:
             return None
         result = lv - rv
+        if result < 0:
+            return None
         if result == int(result):
             return str(int(result))
         return str(round(result, 2))

@@ -46,6 +46,25 @@ async def list_users(session: DbSession, _: AdminUser):
     return [UserBrief.model_validate(u) for u in result.scalars()]
 
 
+@router.get("/users/lookup", response_model=list[UserProfile])
+async def lookup_users(session: DbSession, user: CurrentUser, ids: str = ""):
+    if not ids.strip():
+        return []
+    id_list: list[UUID] = []
+    for part in ids.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            id_list.append(UUID(part))
+        except ValueError:
+            continue
+    if not id_list:
+        return []
+    result = await session.execute(select(User).where(User.id.in_(id_list), User.is_active.is_(True)))
+    return [UserProfile.model_validate(u) for u in result.scalars()]
+
+
 @router.get("/plants", response_model=list[PlantResponse])
 async def list_plants(session: DbSession, _: CurrentUser):
     result = await session.execute(select(Plant))

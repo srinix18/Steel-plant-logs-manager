@@ -43,6 +43,40 @@ async def list_instance_runs(
     )
 
 
+@router.get("/process-runs/mine", response_model=list[ProcessRunResponse])
+async def list_my_runs(session: DbSession, user: CurrentUser, active_only: bool = Query(default=False)):
+    return await run_service.list_runs(session, user, created_by=user.id, active_only=active_only)
+
+
+@router.get("/process-runs", response_model=list[ProcessRunResponse])
+async def list_runs(
+    session: DbSession,
+    user: CurrentUser,
+    plant_id: UUID | None = None,
+    organisation_id: UUID | None = None,
+    department_id: UUID | None = None,
+    process_id: UUID | None = None,
+    process_code: str | None = None,
+    instance_id: UUID | None = None,
+    state: str | None = None,
+    active_only: bool = Query(default=False),
+    created_by: UUID | None = None,
+):
+    return await run_service.list_runs(
+        session,
+        user,
+        plant_id=plant_id,
+        organisation_id=organisation_id,
+        department_id=department_id,
+        process_id=process_id,
+        process_code=process_code,
+        instance_id=instance_id,
+        state=state,
+        active_only=active_only,
+        created_by=created_by,
+    )
+
+
 @router.get("/process-runs/{run_id}", response_model=ProcessRunDetailResponse)
 async def get_run(run_id: UUID, session: DbSession, user: CurrentUser):
     return await run_service.get_run(session, run_id, user)
@@ -85,33 +119,6 @@ async def transition_history(run_id: UUID, session: DbSession, _: CurrentUser):
 @router.get("/plants/{plant_id}/runs/active", response_model=list[ProcessRunResponse])
 async def active_plant_runs(plant_id: UUID, session: DbSession, user: SupervisorUser):
     return await run_service.list_runs(session, user, plant_id=plant_id, active_only=True)
-
-
-@router.get("/process-runs", response_model=list[ProcessRunResponse])
-async def list_runs(
-    session: DbSession,
-    user: CurrentUser,
-    plant_id: UUID | None = None,
-    organisation_id: UUID | None = None,
-    department_id: UUID | None = None,
-    process_id: UUID | None = None,
-    process_code: str | None = None,
-    instance_id: UUID | None = None,
-    state: str | None = None,
-    active_only: bool = Query(default=False),
-):
-    return await run_service.list_runs(
-        session,
-        user,
-        plant_id=plant_id,
-        organisation_id=organisation_id,
-        department_id=department_id,
-        process_id=process_id,
-        process_code=process_code,
-        instance_id=instance_id,
-        state=state,
-        active_only=active_only,
-    )
 
 
 @router.get("/process-runs/{run_id}/remarks", response_model=list[RunRemarkResponse])

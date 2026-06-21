@@ -254,9 +254,10 @@ class ProcessRunService:
         department_id: UUID | None = None,
         process_id: UUID | None = None,
         process_code: str | None = None,
-        state: str | None = None,
-        active_only: bool = False,
-    ) -> list[ProcessRunResponse]:
+    state: str | None = None,
+    active_only: bool = False,
+    created_by: UUID | None = None,
+) -> list[ProcessRunResponse]:
         needs_join = (
             plant_id
             or organisation_id
@@ -292,6 +293,8 @@ class ProcessRunService:
             query = query.where(ProcessRun.current_state == state)
         if active_only:
             query = query.where(ProcessRun.current_state.notin_(["closed", "approved", "aborted"]))
+        if created_by:
+            query = query.where(ProcessRun.created_by == created_by)
 
         result = await session.execute(query.order_by(ProcessRun.created_at.desc()))
         runs = result.scalars().unique().all()
