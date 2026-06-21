@@ -29,11 +29,13 @@ async def create_run(instance_id: UUID, data: ProcessRunCreate, session: DbSessi
 async def list_instance_runs(
     instance_id: UUID,
     session: DbSession,
-    _: CurrentUser,
+    user: CurrentUser,
     state: str | None = None,
     active_only: bool = False,
 ):
-    return await run_service.list_runs(session, instance_id=instance_id, state=state, active_only=active_only)
+    return await run_service.list_runs(
+        session, user, instance_id=instance_id, state=state, active_only=active_only
+    )
 
 
 @router.get("/process-runs/{run_id}", response_model=ProcessRunDetailResponse)
@@ -76,19 +78,32 @@ async def transition_history(run_id: UUID, session: DbSession, _: CurrentUser):
 
 
 @router.get("/plants/{plant_id}/runs/active", response_model=list[ProcessRunResponse])
-async def active_plant_runs(plant_id: UUID, session: DbSession, _: SupervisorUser):
-    return await run_service.list_runs(session, plant_id=plant_id, active_only=True)
+async def active_plant_runs(plant_id: UUID, session: DbSession, user: SupervisorUser):
+    return await run_service.list_runs(session, user, plant_id=plant_id, active_only=True)
 
 
 @router.get("/process-runs", response_model=list[ProcessRunResponse])
 async def list_runs(
     session: DbSession,
-    _: CurrentUser,
+    user: CurrentUser,
     plant_id: UUID | None = None,
+    organisation_id: UUID | None = None,
+    department_id: UUID | None = None,
+    process_id: UUID | None = None,
+    process_code: str | None = None,
     instance_id: UUID | None = None,
     state: str | None = None,
     active_only: bool = Query(default=False),
 ):
     return await run_service.list_runs(
-        session, plant_id=plant_id, instance_id=instance_id, state=state, active_only=active_only
+        session,
+        user,
+        plant_id=plant_id,
+        organisation_id=organisation_id,
+        department_id=department_id,
+        process_id=process_id,
+        process_code=process_code,
+        instance_id=instance_id,
+        state=state,
+        active_only=active_only,
     )

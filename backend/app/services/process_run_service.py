@@ -7,18 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models import (
+    Department,
     FactProcessRun,
     MLFeatureSnapshot,
+    Plant,
     Process,
     ProcessInstance,
     ProcessRun,
     RunFieldValue,
     RunSectionData,
+    TemplateField,
+    TemplateSection,
     TemplateVersion,
     WorkflowDefinition,
 )
 from app.db.models import User
-from app.models.enums import TemplateVersionStatus, ValueSource
+from app.models.enums import TemplateVersionStatus, UserRole, ValueSource
 from app.schemas.moi import (
     ProcessRunCreate,
     ProcessRunDetailResponse,
@@ -28,6 +32,23 @@ from app.schemas.moi import (
     RunSectionDataResponse,
 )
 from app.services.workflow_service import WorkflowService
+from app.utils.formulas import apply_calculated_fields, collect_calculated_fields
+
+ADMIN_ROLES = {
+    UserRole.SUPER_ADMIN,
+    UserRole.ORG_ADMIN,
+    UserRole.PLANT_ADMIN,
+    UserRole.ADMIN,
+}
+SUPERVISOR_ONLY_ROLES = {UserRole.SUPERVISOR, UserRole.DEPARTMENT}
+
+
+def _user_is_admin(user: User) -> bool:
+    return user.role in ADMIN_ROLES
+
+
+def _user_is_scoped_supervisor(user: User) -> bool:
+    return user.role in SUPERVISOR_ONLY_ROLES and not _user_is_admin(user)
 
 
 def _to_run_response(run: ProcessRun) -> ProcessRunResponse:
@@ -57,6 +78,72 @@ def _to_run_response(run: ProcessRun) -> ProcessRunResponse:
 class ProcessRunService:
     def __init__(self):
         self.workflow = WorkflowService()
+
+    def _runs_query_with_joins(self):
+        return (
+            select(ProcessRun)
+            .join(ProcessInstance, ProcessRun.process_instance_id == ProcessInstance.id)
+            .join(Process, ProcessInstance.process_id == Process.id)
+            .join(Department, Process.department_id == Department.id)
+            .join(Plant, Department.plant_id == Plant.id)
+        )
+
+    async def _assert_run_access(self, session: AsyncSession, run: ProcessRun, user: User) -> None:
+        if not _user_is_scoped_supervisor(user):
+            return
+        process = await session.get(Process, run.process_id)
+        if not process:
+            raise HTTPException(status_code=404, detail="Process run not found")
+        dept = await session.get(Department, process.department_id)
+        if not dept:
+            raise HTTPException(status_code=403, detail="Access denied")
+        if user.department_id and dept.id != user.department_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        if user.plant_id and not user.department_id and dept.plant_id != user.plant_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    async def _load_template_field_meta(
+        self, session: AsyncSession, version_id: UUID
+    ) -> tuple[list[tuple[str, str]], dict[str, str]]:
+        result = await session.execute(
+            select(TemplateSection)
+            .where(TemplateSection.version_id == version_id)
+            .options(selectinload(TemplateSection.fields))
+        )
+        sections = result.scalars().all()
+        calculated = collect_calculated_fields(sections)
+        field_types: dict[str, str] = {}
+        for section in sections:
+            for field in section.fields:
+                field_types[field.name] = field.field_type.value if hasattr(field.field_type, "value") else str(field.field_type)
+        return calculated, field_types
+
+    async def _sync_calculated_fields(self, session: AsyncSession, run: ProcessRun) -> None:
+        calculated, field_types = await self._load_template_field_meta(session, run.template_version_id)
+        if not calculated:
+            return
+        result = await session.execute(select(RunFieldValue).where(RunFieldValue.run_id == run.id))
+        field_map: dict = {}
+        for fv in result.scalars():
+            field_map[fv.field_key] = fv.value
+        updates = apply_calculated_fields(field_map, field_types, calculated)
+        for key, value in updates.items():
+            existing = await session.execute(
+                select(RunFieldValue).where(RunFieldValue.run_id == run.id, RunFieldValue.field_key == key)
+            )
+            fv = existing.scalar_one_or_none()
+            if fv:
+                fv.value = value
+                fv.source = ValueSource.SYSTEM
+            else:
+                session.add(
+                    RunFieldValue(
+                        run_id=run.id,
+                        field_key=key,
+                        value=value,
+                        source=ValueSource.SYSTEM,
+                    )
+                )
 
     async def _resolve_template_version(
         self, session: AsyncSession, instance: ProcessInstance
@@ -136,6 +223,8 @@ class ProcessRunService:
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
 
+        await self._assert_run_access(session, run, user)
+
         workflow_status = await self.workflow.get_status(session, run, user)
         return ProcessRunDetailResponse(
             **_to_run_response(run).model_dump(),
@@ -154,22 +243,46 @@ class ProcessRunService:
     async def list_runs(
         self,
         session: AsyncSession,
+        user: User | None = None,
         *,
         instance_id: UUID | None = None,
         plant_id: UUID | None = None,
+        organisation_id: UUID | None = None,
+        department_id: UUID | None = None,
+        process_id: UUID | None = None,
+        process_code: str | None = None,
         state: str | None = None,
         active_only: bool = False,
     ) -> list[ProcessRunResponse]:
-        from app.db.models import Department
+        needs_join = (
+            plant_id
+            or organisation_id
+            or department_id
+            or process_id
+            or process_code
+            or (user and _user_is_scoped_supervisor(user))
+        )
+        if needs_join:
+            query = self._runs_query_with_joins()
+        else:
+            query = select(ProcessRun)
 
-        query = select(ProcessRun)
+        if user and _user_is_scoped_supervisor(user):
+            if user.department_id:
+                query = query.where(Department.id == user.department_id)
+            elif user.plant_id:
+                query = query.where(Department.plant_id == user.plant_id)
+
         if plant_id:
-            query = (
-                query.join(ProcessInstance, ProcessRun.process_instance_id == ProcessInstance.id)
-                .join(Process, ProcessInstance.process_id == Process.id)
-                .join(Department, Process.department_id == Department.id)
-                .where(Department.plant_id == plant_id)
-            )
+            query = query.where(Department.plant_id == plant_id)
+        if organisation_id:
+            query = query.where(Plant.organisation_id == organisation_id)
+        if department_id:
+            query = query.where(Department.id == department_id)
+        if process_id:
+            query = query.where(Process.id == process_id)
+        if process_code:
+            query = query.where(Process.code == process_code)
         if instance_id:
             query = query.where(ProcessRun.process_instance_id == instance_id)
         if state:
@@ -178,7 +291,7 @@ class ProcessRunService:
             query = query.where(ProcessRun.current_state.notin_(["closed", "approved", "aborted"]))
 
         result = await session.execute(query.order_by(ProcessRun.created_at.desc()))
-        runs = result.scalars().all()
+        runs = result.scalars().unique().all()
         return [_to_run_response(r) for r in runs]
 
     async def update_run(
@@ -187,6 +300,8 @@ class ProcessRunService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
+
+        await self._assert_run_access(session, run, user)
 
         if data.metadata is not None:
             run.metadata_ = data.metadata
@@ -230,6 +345,9 @@ class ProcessRunService:
                     session.add(
                         RunSectionData(run_id=run_id, section_key=item.section_key, data=item.data)
                     )
+
+        if data.field_values or data.section_data:
+            await self._sync_calculated_fields(session, run)
 
         await session.flush()
         return await self.get_run(session, run_id, user)
