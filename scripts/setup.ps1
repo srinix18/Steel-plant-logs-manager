@@ -60,15 +60,17 @@ if (-not $SkipPostgresCheck) {
     } catch {
         Write-Warn $_.Exception.Message
         Write-Host ""
-        Write-Host "Setup completed except PostgreSQL. Start Postgres, then run:" -ForegroundColor Yellow
-        Write-Host "  docker compose up postgres -d" -ForegroundColor White
-        Write-Host "  .\scripts\start.ps1" -ForegroundColor White
+        Write-Host "Setup completed except PostgreSQL. Start Postgres in WSL, then run:" -ForegroundColor Yellow
+        Write-Host "  postgres.bat" -ForegroundColor White
+        Write-Host "  start.bat" -ForegroundColor White
         exit 1
     }
 }
 
 Write-Host ""
 Write-Host "Setup complete! Start the app with:" -ForegroundColor Green
-Write-Host "  .\scripts\start.ps1" -ForegroundColor White
-Write-Host "  or double-click start.bat" -ForegroundColor White
+Write-Host "  start.bat" -ForegroundColor White
+Write-Host "  or: .\scripts\start.ps1" -ForegroundColor White
+Write-Host ""
+Write-Host "PostgreSQL (WSL Docker): postgres.bat" -ForegroundColor Gray
 Write-Host ""

@@ -10,5 +10,8 @@ Stop-PortProcess -Port $FrontendPort -Label "frontend"
 
 Write-Ok "Stopped backend and frontend (if they were running)"
 Write-Host ""
-Write-Host "MongoDB was left running (shared system service)." -ForegroundColor Gray
+$wslPath = Get-WslProjectPath
+Write-Host "PostgreSQL was left running (WSL Docker container or local service)." -ForegroundColor Gray
+Write-Host "To stop WSL Docker Postgres:" -ForegroundColor Gray
+Write-Host ('  wsl -e bash -lc ''cd ' + $wslPath + ' && docker compose stop postgres''') -ForegroundColor Gray
 Write-Host ""

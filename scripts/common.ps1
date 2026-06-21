@@ -28,22 +28,6 @@ function Test-CommandExists([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-function Test-MongoPortOpen {
-    try {
-        $client = New-Object System.Net.Sockets.TcpClient
-        $async = $client.BeginConnect("127.0.0.1", 27017, $null, $null)
-        $ok = $async.AsyncWaitHandle.WaitOne(2000, $false)
-        if ($ok -and $client.Connected) {
-            $client.Close()
-            return $true
-        }
-        $client.Close()
-        return $false
-    } catch {
-        return $false
-    }
-}
-
 function Test-PostgresPortOpen([int]$Port = 5433) {
     try {
         $client = New-Object System.Net.Sockets.TcpClient
@@ -60,7 +44,7 @@ function Test-PostgresPortOpen([int]$Port = 5433) {
     }
 }
 
-function Ensure-PostgresRunning {
+function Get-PostgresPort {
     $dbUrl = $env:DATABASE_URL
     if (-not $dbUrl) {
         $rootEnv = Join-Path $ProjectRoot ".env"
@@ -71,20 +55,169 @@ function Ensure-PostgresRunning {
     }
     $port = 5433
     if ($dbUrl -match ':(\d+)/') { $port = [int]$Matches[1] }
+    return $port
+}
+
+function Test-WslAvailable {
+    if (-not (Test-CommandExists "wsl")) {
+        return $false
+    }
+    wsl -e true 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+}
+
+function Get-WslProjectPath {
+    if ($ProjectRoot -match '^([A-Za-z]):\\(.*)$') {
+        $drive = $Matches[1].ToLower()
+        $rest = ($Matches[2] -replace '\\', '/')
+        return "/mnt/$drive/$rest"
+    }
+    return ($ProjectRoot -replace '\\', '/')
+}
+
+function Invoke-WslBash {
+    param([string]$Command)
+    if ($env:LOGBOOK_WSL_DISTRO) {
+        wsl -d $env:LOGBOOK_WSL_DISTRO -e bash -lc $Command
+    } else {
+        wsl -e bash -lc $Command
+    }
+}
+
+function Test-DockerEngineInWsl {
+    if (-not (Test-WslAvailable)) {
+        return $false
+    }
+    Invoke-WslBash 'docker info >/dev/null 2>&1'
+    return $LASTEXITCODE -eq 0
+}
+
+function Start-DockerEngineInWsl {
+    if (-not (Test-WslAvailable)) {
+        return $false
+    }
+
+    if (Test-DockerEngineInWsl) {
+        return $true
+    }
+
+    Write-Step "Docker engine not reachable in WSL - attempting to start..."
+
+    # Native Docker daemon inside WSL (apt install docker.io)
+    Invoke-WslBash 'command -v service >/dev/null && sudo service docker start >/dev/null 2>&1'
+    Start-Sleep -Seconds 2
+    if (Test-DockerEngineInWsl) {
+        Write-Ok "Docker engine started in WSL"
+        return $true
+    }
+
+    # Docker Desktop WSL integration - engine comes from Desktop
+    Invoke-WslBash 'command -v docker >/dev/null && docker context ls >/dev/null 2>&1'
+    Start-Sleep -Seconds 2
+    if (Test-DockerEngineInWsl) {
+        Write-Ok "Docker engine reachable in WSL"
+        return $true
+    }
+
+    Write-Warn "Could not start Docker in WSL. Open Docker Desktop or run: wsl sudo service docker start"
+    return $false
+}
+
+function Start-DockerPostgres {
+    param([int]$Port = 5433)
+
+    if (-not (Test-WslAvailable)) {
+        Write-Warn "WSL is not available - falling back to Windows docker compose"
+        return Start-DockerPostgresWindows -Port $Port
+    }
+
+    if (-not (Start-DockerEngineInWsl)) {
+        return $false
+    }
+
+    $wslPath = Get-WslProjectPath
+    $composeFile = Join-Path $ProjectRoot "docker-compose.yml"
+    if (-not (Test-Path $composeFile)) {
+        return $false
+    }
+
+    Write-Step "Starting PostgreSQL via WSL Docker (localhost:$Port)..."
+    $cmd = 'cd ''' + $wslPath + ''' && docker compose up postgres -d'
+    Invoke-WslBash $cmd
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "docker compose failed in WSL (exit $LASTEXITCODE)"
+        return $false
+    }
+
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep -Seconds 1
+        if (Test-PostgresPortOpen -Port $Port) {
+            Write-Ok "PostgreSQL is reachable on localhost:$Port"
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Start-DockerPostgresWindows {
+    param([int]$Port = 5433)
+
+    if (-not (Test-CommandExists "docker")) {
+        return $false
+    }
+
+    $composeFile = Join-Path $ProjectRoot "docker-compose.yml"
+    if (-not (Test-Path $composeFile)) {
+        return $false
+    }
+
+    Write-Step "Starting PostgreSQL via Windows Docker (localhost:$Port)..."
+    Push-Location $ProjectRoot
+    try {
+        & docker compose up postgres -d 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            return $false
+        }
+    } finally {
+        Pop-Location
+    }
+
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep -Seconds 1
+        if (Test-PostgresPortOpen -Port $Port) {
+            Write-Ok "PostgreSQL is reachable on localhost:$Port"
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Ensure-PostgresRunning {
+    $port = Get-PostgresPort
 
     if (Test-PostgresPortOpen -Port $port) {
         Write-Ok "PostgreSQL is reachable on localhost:$port"
         return
     }
 
+    if (Start-DockerPostgres -Port $port) {
+        return
+    }
+
+    $wslPath = Get-WslProjectPath
     Write-Err "PostgreSQL is not reachable on localhost:$port"
     Write-Host ""
-    Write-Host "Start Postgres (Docker, recommended on Windows):" -ForegroundColor Yellow
-    Write-Host "  docker compose up postgres -d" -ForegroundColor White
+    Write-Host "This project expects Postgres via WSL Docker (port $port in .env)." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "Or use native/WSL Postgres on port 5432 — set DATABASE_URL in .env with your password." -ForegroundColor Yellow
+    Write-Host "  postgres.bat" -ForegroundColor White
+    Write-Host "  or in WSL:" -ForegroundColor White
+    Write-Host ('    wsl -e bash -lc ''cd ' + $wslPath + ' && docker compose up postgres -d''') -ForegroundColor Gray
     Write-Host ""
-    throw "PostgreSQL is required. Start it using the command above, then run this script again."
+    Write-Host "Ensure Docker is running in WSL (Docker Desktop or: wsl sudo service docker start)." -ForegroundColor Yellow
+    Write-Host ""
+    throw "PostgreSQL is required. Start it using the steps above, then run this script again."
 }
 
 function Get-PortProcessIds([int]$Port) {
@@ -153,45 +286,4 @@ function Ensure-EnvFiles {
         "VITE_API_URL=$apiUrl" | Set-Content -Path $frontendEnv -Encoding UTF8
         Write-Ok "Created frontend/.env"
     }
-}
-
-function Start-MongoServiceIfInstalled {
-    $service = Get-Service -Name "MongoDB" -ErrorAction SilentlyContinue
-    if (-not $service) {
-        return $false
-    }
-
-    if ($service.Status -ne "Running") {
-        Write-Step "Starting MongoDB Windows service..."
-        Start-Service MongoDB
-        Start-Sleep -Seconds 3
-    }
-
-    return $true
-}
-
-function Ensure-MongoRunning {
-    if (Test-MongoPortOpen) {
-        Write-Ok "MongoDB is reachable on localhost:27017"
-        return
-    }
-
-    if (Start-MongoServiceIfInstalled) {
-        Start-Sleep -Seconds 2
-        if (Test-MongoPortOpen) {
-            Write-Ok "MongoDB service started"
-            return
-        }
-    }
-
-    Write-Err "MongoDB is not running on localhost:27017"
-    Write-Host ""
-    Write-Host "Install MongoDB (one-time, no Docker required):" -ForegroundColor Yellow
-    Write-Host "  .\scripts\install-mongodb.ps1" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Or manually:" -ForegroundColor Yellow
-    Write-Host "  winget install MongoDB.Server" -ForegroundColor White
-    Write-Host "  net start MongoDB" -ForegroundColor White
-    Write-Host ""
-    throw "MongoDB is required. Install it using the command above, then run this script again."
 }

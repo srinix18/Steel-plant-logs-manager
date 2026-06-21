@@ -41,7 +41,8 @@ Write-Host "  Frontend:  http://localhost:$FrontendPort" -ForegroundColor White
 Write-Host "  Backend:   http://localhost:$BackendPort" -ForegroundColor White
 Write-Host "  API Docs:  http://localhost:$BackendPort/docs" -ForegroundColor White
 Write-Host ""
-Write-Host "  Login:     admin@logbook.app / admin123" -ForegroundColor White
+Write-Host "  Admin:     admin@logbook.app / admin123" -ForegroundColor White
+Write-Host "  Worker:    melter@chandansteel.com / worker123" -ForegroundColor White
 Write-Host ""
 Write-Host "Two terminal windows were opened for backend and frontend." -ForegroundColor Gray
 Write-Host "Close those windows to stop the app." -ForegroundColor Gray
