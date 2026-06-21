@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { RunRemark } from '../../types';
 import { hasRole, SUPERVISOR_ROLES } from '../../utils/roles';
 import { Button } from '../ui/Button';
+import { ImageLightbox } from '../ui/ImageLightbox';
 
 interface RemarkThreadProps {
   runId: string;
@@ -19,7 +20,17 @@ interface RemarkThreadProps {
   compact?: boolean;
 }
 
-function RemarkImage({ id, alt, className }: { id: string; alt: string; className: string }) {
+function RemarkImage({
+  id,
+  alt,
+  className,
+  onEnlarge,
+}: {
+  id: string;
+  alt: string;
+  className: string;
+  onEnlarge: (src: string) => void;
+}) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -35,7 +46,16 @@ function RemarkImage({ id, alt, className }: { id: string; alt: string; classNam
     };
   }, [id]);
   if (!src) return <span className="text-xs text-slate-400">Loading…</span>;
-  return <img src={src} alt={alt} className={className} />;
+  return (
+    <button
+      type="button"
+      onClick={() => onEnlarge(src)}
+      className="cursor-zoom-in rounded border-0 bg-transparent p-0 print:pointer-events-none"
+      title="Click to enlarge"
+    >
+      <img src={src} alt={alt} className={`${className} hover:opacity-90`} />
+    </button>
+  );
 }
 
 export function RemarkThread({ runId, runState, readOnly, compact }: RemarkThreadProps) {
@@ -45,6 +65,8 @@ export function RemarkThread({ runId, runState, readOnly, compact }: RemarkThrea
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [lightboxAlt, setLightboxAlt] = useState('');
 
   const isSupervisor = user && hasRole(user.role, SUPERVISOR_ROLES);
   const completedStates = ['completed', 'approved', 'closed'];
@@ -147,6 +169,10 @@ export function RemarkThread({ runId, runState, readOnly, compact }: RemarkThrea
               id={a.id}
               alt={a.file_name}
               className={compact ? 'h-12 w-12 rounded border object-cover' : 'h-16 w-16 rounded border object-cover'}
+              onEnlarge={(src) => {
+                setLightboxSrc(src);
+                setLightboxAlt(a.file_name);
+              }}
             />
           ))}
         </div>
@@ -200,6 +226,10 @@ export function RemarkThread({ runId, runState, readOnly, compact }: RemarkThrea
             </Button>
           )}
         </div>
+      )}
+
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} alt={lightboxAlt} onClose={() => setLightboxSrc(null)} />
       )}
     </div>
   );

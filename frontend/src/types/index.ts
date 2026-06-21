@@ -125,6 +125,7 @@ export interface ProcessRun {
   current_state: string;
   shift_id?: string | null;
   grade_id?: string | null;
+  created_by?: string;
   started_at?: string | null;
   completed_at?: string | null;
   metadata: JsonObject;
@@ -335,6 +336,7 @@ export interface SectionRenderContext {
   steelGrades?: SteelGrade[];
   plantUsers?: User[];
   currentUserId?: string;
+  currentUser?: User;
   runId?: string;
   runState?: string;
   fieldValues: Record<string, string>;

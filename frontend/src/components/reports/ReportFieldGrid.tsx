@@ -27,7 +27,7 @@ export function ReportFieldGrid({
           {fields.map((f) => (
             <tr key={f.name}>
               <td className="w-[40%] bg-neutral-100 font-semibold">{f.label}</td>
-              <td>{formatFieldValue(f, fieldValues[f.name] ?? '', { steelGrades: ctx.steelGrades, gradeLabel, plantUsers: ctx.plantUsers })}</td>
+              <td>{formatFieldValue(f, fieldValues[f.name] ?? '', { steelGrades: ctx.steelGrades, gradeLabel, plantUsers: ctx.plantUsers, currentUser: ctx.currentUser })}</td>
             </tr>
           ))}
         </tbody>
@@ -50,7 +50,7 @@ export function ReportFieldGrid({
         <tr>
           {fields.map((f) => (
             <td key={f.name} className="text-center">
-              {formatFieldValue(f, fieldValues[f.name] ?? '', { steelGrades: ctx.steelGrades, gradeLabel, plantUsers: ctx.plantUsers })}
+              {formatFieldValue(f, fieldValues[f.name] ?? '', { steelGrades: ctx.steelGrades, gradeLabel, plantUsers: ctx.plantUsers, currentUser: ctx.currentUser })}
             </td>
           ))}
         </tr>

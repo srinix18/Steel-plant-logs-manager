@@ -11,6 +11,14 @@ export async function fetchDepartments(plantId?: string): Promise<Department[]> 
   return data;
 }
 
+export async function fetchUsersLookup(ids: string[]): Promise<User[]> {
+  if (ids.length === 0) return [];
+  const { data } = await apiClient.get<User[]>('/users/lookup', {
+    params: { ids: ids.join(',') },
+  });
+  return data;
+}
+
 export async function fetchPlantUsers(plantId: string): Promise<User[]> {
   const { data } = await apiClient.get<User[]>(`/plants/${plantId}/users`);
   return data;

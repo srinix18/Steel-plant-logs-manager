@@ -33,16 +33,18 @@ function evaluateSubtraction(
   rightType: string,
 ): string | null {
   if (leftType === 'datetime' || rightType === 'datetime' || leftType === 'calculated') {
-    const start = parseIso(left);
-    const end = parseIso(right);
-    if (!start || !end) return null;
-    const minutes = (end.getTime() - start.getTime()) / 60000;
+    const leftDate = parseIso(left);
+    const rightDate = parseIso(right);
+    if (!leftDate || !rightDate) return null;
+    const minutes = (leftDate.getTime() - rightDate.getTime()) / 60000;
+    if (minutes < 0) return null;
     return formatDurationMinutes(minutes);
   }
   const lv = left === '' ? NaN : Number(left);
   const rv = right === '' ? NaN : Number(right);
   if (Number.isNaN(lv) || Number.isNaN(rv)) return null;
   const result = lv - rv;
+  if (result < 0) return null;
   return Number.isInteger(result) ? String(result) : String(Math.round(result * 100) / 100);
 }
 

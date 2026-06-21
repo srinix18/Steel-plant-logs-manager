@@ -1,4 +1,5 @@
 import type { SectionRenderContext, TemplateField, TemplateSection } from '../../types';
+import { resolveUserDisplay } from '../../utils/userLookup';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
@@ -114,15 +115,12 @@ function renderField(
 
   if (f.field_type === 'user_ref') {
     const users = ctx.plantUsers ?? [];
-    const displayUser = users.find((u) => u.id === value);
     if (readOnly) {
       return (
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700">{f.label}</span>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-            {displayUser
-              ? `${displayUser.full_name}${displayUser.employee_uid ? ` (${displayUser.employee_uid})` : ''}`
-              : value || '—'}
+            {resolveUserDisplay(value, users, ctx.currentUser)}
           </div>
         </label>
       );
@@ -181,11 +179,13 @@ function renderField(
   }
 
   if (f.field_type === 'calculated') {
+    const num = Number(value);
+    const display = Number.isFinite(num) && num < 0 ? '—' : value || '—';
     return (
       <label className="block text-sm">
         <span className="mb-1 block font-medium text-slate-700">{f.label}</span>
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-          {value || '—'}
+          {display}
         </div>
       </label>
     );

@@ -7,7 +7,8 @@ import {
   transitionProcessRun,
   updateProcessRun,
 } from '../../api/processRuns';
-import { fetchGradeElements, fetchMaterials, fetchPlantUsers, fetchShifts, fetchSteelGrades } from '../../api/platform';
+import { fetchGradeElements, fetchMaterials, fetchPlantUsers, fetchShifts, fetchSteelGrades, fetchUsersLookup } from '../../api/platform';
+import { collectUserRefIds, mergeUsers } from '../../utils/userLookup';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -77,13 +78,20 @@ export function HeatWorkspace() {
 
       setFieldValues(mergeCalculatedIntoFields(sorted, vals));
 
+      const userIds = collectUserRefIds(sorted, vals);
+      if (data.created_by) userIds.push(data.created_by);
+      if (user?.id) userIds.push(user.id);
+      const lookupUsers = await fetchUsersLookup([...new Set(userIds)]);
+      if (user?.plant_id) {
+        const fromPlant = await fetchPlantUsers(user.plant_id);
+        setPlantUsers(mergeUsers(fromPlant, lookupUsers, user ? [user] : []));
+      } else {
+        setPlantUsers(mergeUsers(lookupUsers, user ? [user] : []));
+      }
+
       let elements: GradeElement[] = [];
       const grades = await fetchSteelGrades();
       setSteelGrades(grades);
-      if (user?.plant_id) {
-        const users = await fetchPlantUsers(user.plant_id);
-        setPlantUsers(users);
-      }
       if (data.grade_id) {
         elements = await fetchGradeElements(data.grade_id);
       } else if (grades[0]) {
@@ -190,6 +198,7 @@ export function HeatWorkspace() {
     steelGrades,
     plantUsers,
     currentUserId: user?.id,
+    currentUser: user ?? undefined,
     runId: run.id,
     runState: run.current_state,
     fieldValues,

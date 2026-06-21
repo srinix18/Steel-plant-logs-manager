@@ -7,9 +7,11 @@ import {
   fetchMaterials,
   fetchPlantUsers,
   fetchSteelGrades,
+  fetchUsersLookup,
 } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
+import { collectUserRefIds, mergeUsers } from '../../utils/userLookup';
 import {
   SectionRenderer,
   initSectionDataMap,
@@ -72,9 +74,6 @@ export function RunReportPage() {
         setSteelGrades(grades);
         setAlloyMaterials(alloys);
         setScrapMaterials(scrap);
-        if (user?.plant_id) {
-          fetchPlantUsers(user.plant_id).then(setPlantUsers).catch(() => {});
-        }
 
         const tmpl = await fetchTemplateVersion(data.template_version_id);
         const sorted = tmpl.sections.sort((a, b) => a.sort_order - b.sort_order);
@@ -84,7 +83,14 @@ export function RunReportPage() {
         data.field_values.forEach((fv) => {
           vals[fv.field_key] = String(fv.value ?? '');
         });
-        setFieldValues(mergeCalculatedIntoFields(sorted, vals));
+        const mergedVals = mergeCalculatedIntoFields(sorted, vals);
+        setFieldValues(mergedVals);
+
+        const userIds = collectUserRefIds(sorted, mergedVals);
+        if (data.created_by) userIds.push(data.created_by);
+        const lookupUsers = await fetchUsersLookup([...new Set(userIds)]);
+        const fromPlant = user?.plant_id ? await fetchPlantUsers(user.plant_id).catch(() => []) : [];
+        setPlantUsers(mergeUsers(lookupUsers, fromPlant, user ? [user] : []));
 
         let elements: GradeElement[] = [];
         if (data.grade_id) {
@@ -129,6 +135,8 @@ export function RunReportPage() {
     scrapMaterials,
     steelGrades,
     plantUsers,
+    currentUserId: user?.id,
+    currentUser: user ?? undefined,
     fieldValues,
     onFieldChange: () => {},
   };

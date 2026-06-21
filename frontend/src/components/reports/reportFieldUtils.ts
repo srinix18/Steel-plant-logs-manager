@@ -1,4 +1,5 @@
 import type { SectionRenderContext, SteelGrade, TemplateField, TemplateSection, TemplateSummary, TemplateVersionSummary, ProcessRunDetail, User } from '../../types';
+import { resolveUserDisplay } from '../../utils/userLookup';
 
 export type SectionDataMap = Record<string, unknown>;
 
@@ -43,7 +44,12 @@ export function formatReportDate(value: string): string {
 export function formatFieldValue(
   field: TemplateField,
   value: string,
-  ctx: { steelGrades?: SteelGrade[]; gradeLabel?: string; plantUsers?: User[] },
+  ctx: {
+    steelGrades?: SteelGrade[];
+    gradeLabel?: string;
+    plantUsers?: User[];
+    currentUser?: User | null;
+  },
 ): string {
   if (!value) return '—';
   switch (field.field_type) {
@@ -53,9 +59,11 @@ export function formatFieldValue(
       return formatReportDate(value);
     case 'grade_ref':
       return ctx.steelGrades?.find((g) => g.id === value)?.code ?? ctx.gradeLabel ?? value;
-    case 'user_ref': {
-      const u = ctx.plantUsers?.find((x) => x.id === value);
-      if (u) return `${u.full_name}${u.employee_uid ? ` (${u.employee_uid})` : ''}`;
+    case 'user_ref':
+      return resolveUserDisplay(value, ctx.plantUsers, ctx.currentUser);
+    case 'calculated': {
+      const num = Number(value);
+      if (Number.isFinite(num) && num < 0) return '—';
       return value;
     }
     default:
