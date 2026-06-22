@@ -162,6 +162,7 @@ class User(Base, TimestampMixin):
     organisation_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("organisations.id"), nullable=True)
     plant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("plants.id"), nullable=True)
     department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    process_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("processes.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     employee_uid: Mapped[Optional[str]] = mapped_column(String(32), unique=True, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
@@ -507,6 +508,65 @@ class RunRemarkAttachment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     remark: Mapped["RunRemark"] = relationship(back_populates="attachments")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_broadcast: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    sender: Mapped["User"] = relationship(foreign_keys=[sender_id])
+    recipients: Mapped[list["MessageRecipient"]] = relationship(back_populates="message")
+    attachments: Mapped[list["MessageAttachment"]] = relationship(back_populates="message")
+
+
+class MessageRecipient(Base):
+    __tablename__ = "message_recipients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id"), nullable=False)
+    recipient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    message: Mapped["Message"] = relationship(back_populates="recipients")
+    recipient: Mapped["User"] = relationship(foreign_keys=[recipient_id])
+
+    __table_args__ = (UniqueConstraint("message_id", "recipient_id", name="uq_message_recipient"),)
+
+
+class MessageAttachment(Base):
+    __tablename__ = "message_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id"), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    message: Mapped["Message"] = relationship(back_populates="attachments")
+
+
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id"), nullable=False)
+    notification_type: Mapped[str] = mapped_column(String(50), default="message")
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    message: Mapped["Message"] = relationship()
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
 
 
 class TelemetryBinding(Base, TimestampMixin):

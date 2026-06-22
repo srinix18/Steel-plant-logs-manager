@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Asset, AssetGroup, GradeElementSpec, Organisation, Process, ProcessInstance, SteelGrade, TelemetryBinding
+from app.db.models import Asset, AssetGroup, GradeElementSpec, Organisation, Process, ProcessInstance, SteelGrade, TelemetryBinding, WorkflowTransitionDef
 
 GRADE_ELEMENT_SPECS: dict[str, list[tuple[str, float, float]]] = {
     "304": [
@@ -151,3 +151,22 @@ async def patch_extra_steel_grades(session: AsyncSession) -> None:
 
     for code in ("316", "410", "2205", "430"):
         await _add_grade_if_missing(session, org.id, code)
+
+
+async def patch_workflow_roles(session: AsyncSession) -> None:
+    result = await session.execute(select(WorkflowTransitionDef))
+    for transition in result.scalars():
+        roles = list(transition.allowed_roles or [])
+        changed = False
+        for alias, additions in (
+            ("plant_admin", ["ceo", "hod"]),
+            ("supervisor", ["ceo", "hod"]),
+            ("org_admin", ["ceo"]),
+        ):
+            if alias in roles:
+                for role in additions:
+                    if role not in roles:
+                        roles.append(role)
+                        changed = True
+        if changed:
+            transition.allowed_roles = roles

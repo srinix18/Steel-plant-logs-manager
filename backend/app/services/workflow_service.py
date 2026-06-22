@@ -16,24 +16,18 @@ from app.db.models import (
 from app.db.models import User
 from app.models.enums import UserRole
 from app.schemas.moi import TransitionRequest, WorkflowStatusResponse, WorkflowTransitionDefResponse
+from app.services.access_scope import role_key
 
 
-ADMIN_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.ORG_ADMIN,
-    UserRole.PLANT_ADMIN,
-    UserRole.ADMIN,
-}
+def _role_key(role) -> str:
+    return role_key(role)
 
 
-def _role_key(role: UserRole) -> str:
-    if role == UserRole.ADMIN:
-        return UserRole.SUPER_ADMIN.value
-    if role == UserRole.DEPARTMENT:
-        return UserRole.SUPERVISOR.value
-    if role == UserRole.MEMBER:
-        return UserRole.WORKER.value
-    return role.value
+def _role_allowed(user_role: UserRole, allowed_roles: list[str]) -> bool:
+    if not allowed_roles:
+        return True
+    candidates = {user_role.value, role_key(user_role)}
+    return bool(candidates & set(allowed_roles))
 
 
 class WorkflowService:
@@ -55,11 +49,10 @@ class WorkflowService:
         self, session: AsyncSession, run: ProcessRun, user: User
     ) -> WorkflowStatusResponse:
         definition = await self.get_definition(session, run.workflow_definition_id)
-        role = _role_key(user.role)
         available = [
             WorkflowTransitionDefResponse.model_validate(t)
             for t in definition.transitions
-            if t.from_state == run.current_state and (not t.allowed_roles or role in t.allowed_roles)
+            if t.from_state == run.current_state and _role_allowed(user.role, t.allowed_roles or [])
         ]
         return WorkflowStatusResponse(
             current_state=run.current_state,
@@ -87,8 +80,7 @@ class WorkflowService:
         if not transition:
             raise HTTPException(status_code=400, detail="Invalid workflow transition")
 
-        role = _role_key(user.role)
-        if transition.allowed_roles and role not in transition.allowed_roles:
+        if not _role_allowed(user.role, transition.allowed_roles or []):
             raise HTTPException(status_code=403, detail="Role not permitted for this transition")
 
         target_state = next((s for s in definition.states if s.key == data.to_state), None)

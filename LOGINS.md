@@ -10,8 +10,12 @@ Development seed credentials for the Chandan Steel SMS demo environment. **Do no
 | Shift dashboard | http://localhost:5173/shift |
 | Heat workspace | http://localhost:5173/heat/:runId |
 | Run report (read-only) | http://localhost:5173/reports/:runId |
-| Admin portal | http://localhost:5173/admin |
+| Admin portal (super admin) | http://localhost:5173/admin |
+| Executive overview (CEO) | http://localhost:5173/executive |
+| Employees (CEO) | http://localhost:5173/executive/employees |
+| Department overview (HoD) | http://localhost:5173/hod |
 | Operations activity (supervisor) | http://localhost:5173/supervisor |
+| Messages & alerts | http://localhost:5173/messages |
 | Backend API | http://localhost:8000 |
 | API docs (Swagger) | http://localhost:8000/docs |
 
@@ -19,11 +23,16 @@ Start the app with `start.bat` (or `scripts/start.ps1`).
 
 ## Seed users
 
-| Role | Full name | Email | Password | Organisation / scope |
-|------|-----------|-------|----------|----------------------|
-| Super Admin | System Admin | `admin@logbook.app` | `admin123` | Chandan Steel Ltd. — all orgs, plants, departments |
-| Supervisor | SMS Supervisor | `supervisor@chandansteel.com` | `supervisor123` | Chandan Steel SMS department (plant-scoped activity) |
-| Worker | Plant Melter | `melter@chandansteel.com` | `worker123` | Chandan Steel SMS department |
+| Role | Full name | Email | Password | Scope |
+|------|-----------|-------|----------|-------|
+| Super Admin | System Admin | `admin@logbook.app` | `admin123` | Platform-wide |
+| CEO | Chandan CEO | `ceo@chandansteel.com` | `ceo123` | Chandan Steel — all departments |
+| HoD | SMS Head of Department | `hod@chandansteel.com` | `hod123` | SMS department (all processes) |
+| Supervisor (IAF) | IAF Shift Incharge | `iaf.supervisor@chandansteel.com` | `iaf123` | SMS — IAF log sheet only |
+| Supervisor (AOD) | AOD Shift Incharge | `aod.supervisor@chandansteel.com` | `aod123` | SMS — AOD log sheet only |
+| Supervisor (CCM) | CCM Shift Incharge | `ccm.supervisor@chandansteel.com` | `ccm123` | SMS — CCM log sheet only |
+| Supervisor (legacy) | SMS Supervisor | `supervisor@chandansteel.com` | `supervisor123` | SMS — IAF (migrated) |
+| Worker | Plant Melter | `melter@chandansteel.com` | `worker123` | SMS department — own runs |
 
 ### Login API
 
@@ -32,18 +41,22 @@ POST http://localhost:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@logbook.app",
-  "password": "admin123"
+  "email": "ceo@chandansteel.com",
+  "password": "ceo123"
 }
 ```
 
 ## What each role sees
 
-| Role | Default landing | Sidebar highlights |
-|------|-----------------|-------------------|
-| **Super Admin** | `/admin` | Administration (orgs, departments, activity, users). No Shift Dashboard. Operations Activity for scoped monitoring. Activity runs open **read-only reports** at `/reports/:runId`. |
-| **Supervisor** | `/supervisor` | Operations Activity (runs in their plant/dept only), Shift Dashboard, run reports with **Open workspace** for approvals/edits. |
-| **Worker** | `/shift` | Shift Dashboard → start/open heats on IAF #1–#3, fill log sheets in Heat Workspace. |
+| Role | Default landing | Highlights |
+|------|-----------------|------------|
+| **Super Admin** | `/admin` | Full platform administration. Unchanged from before. |
+| **CEO** | `/executive` | Org-wide overview, employee management (assign HoD / supervisor / worker), broadcast messages. |
+| **HoD** | `/hod` | All processes in their department — runs, observations, reports. |
+| **Supervisor** | `/supervisor` | Single process/log sheet scope (IAF, AOD, or CCM). |
+| **Worker** | `/shift` | Shift dashboard, My Runs, own heats only. |
+
+All roles have **Messages & Alerts** in the sidebar.
 
 ## Admin account overrides
 
@@ -55,7 +68,7 @@ The super admin email and password can be changed before first seed via environm
 | `SEED_ADMIN_PASSWORD` | `admin123` |
 | `SEED_ADMIN_NAME` | `System Admin` |
 
-Supervisor and worker credentials are fixed in `backend/app/utils/seed_moi.py` unless you change the seed or create users in **Admin → Users**.
+CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent). The CEO can also manage employees at **Executive → Employees**.
 
 ## Database (local dev)
 

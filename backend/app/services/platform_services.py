@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.models import Template, TemplateSection, TemplateVersion, TemplateVersionAudit, User, Department, Plant
 from app.models.enums import TemplateVersionStatus
 from app.schemas.moi import (
@@ -20,6 +20,15 @@ from app.schemas.moi import (
     UserBrief,
     UserProfile,
     UserProfileUpdate,
+    OrgUserCreate,
+    OrgUserUpdate,
+)
+from app.models.enums import UserRole
+from app.services.access_scope import (
+    CEO_ASSIGNABLE_ROLES,
+    is_ceo_tier,
+    is_platform_admin,
+    validate_user_scope,
 )
 
 
@@ -73,6 +82,112 @@ class AuthService:
 
         if not user.employee_uid and (user.designation or data.designation):
             user.employee_uid = await self._generate_employee_uid(session, user)
+
+        await session.flush()
+        return UserProfile.model_validate(user)
+
+
+class OrgUserService:
+    def _assert_org_access(self, actor: User, org_id: UUID) -> None:
+        if is_platform_admin(actor):
+            return
+        if not is_ceo_tier(actor) or actor.organisation_id != org_id:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    async def list_org_users(self, session: AsyncSession, actor: User, org_id: UUID) -> list[UserProfile]:
+        self._assert_org_access(actor, org_id)
+        result = await session.execute(
+            select(User).where(User.organisation_id == org_id).order_by(User.full_name)
+        )
+        return [UserProfile.model_validate(u) for u in result.scalars()]
+
+    async def create_org_user(
+        self, session: AsyncSession, actor: User, org_id: UUID, data: OrgUserCreate
+    ) -> UserProfile:
+        from fastapi import HTTPException
+
+        self._assert_org_access(actor, org_id)
+        if not is_platform_admin(actor) and data.role not in CEO_ASSIGNABLE_ROLES:
+            raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, or worker roles")
+
+        existing = await session.execute(select(User).where(User.email == data.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        validate_user_scope(data.role, org_id, data.department_id, data.process_id)
+
+        if data.role == UserRole.HOD:
+            hod_check = await session.execute(
+                select(User).where(
+                    User.organisation_id == org_id,
+                    User.department_id == data.department_id,
+                    User.role.in_([UserRole.HOD, UserRole.PLANT_ADMIN]),
+                    User.is_active.is_(True),
+                )
+            )
+            if hod_check.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Department already has an active HoD")
+
+        user = User(
+            email=data.email,
+            hashed_password=get_password_hash(data.password),
+            full_name=data.full_name.strip(),
+            role=data.role,
+            organisation_id=org_id,
+            plant_id=data.plant_id,
+            department_id=data.department_id,
+            process_id=data.process_id if data.role == UserRole.SUPERVISOR else None,
+            designation=data.designation,
+            phone=data.phone,
+            is_active=True,
+        )
+        session.add(user)
+        await session.flush()
+        return UserProfile.model_validate(user)
+
+    async def update_org_user(
+        self, session: AsyncSession, actor: User, org_id: UUID, user_id: UUID, data: OrgUserUpdate
+    ) -> UserProfile:
+        from fastapi import HTTPException
+
+        self._assert_org_access(actor, org_id)
+        user = await session.get(User, user_id)
+        if not user or user.organisation_id != org_id:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not is_platform_admin(actor):
+            if user.role in {UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CEO, UserRole.ORG_ADMIN}:
+                raise HTTPException(status_code=403, detail="Cannot modify this user")
+            if data.role and data.role not in CEO_ASSIGNABLE_ROLES:
+                raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, or worker roles")
+
+        new_role = data.role or user.role
+        new_dept = data.department_id if data.department_id is not None else user.department_id
+        new_process = data.process_id if data.process_id is not None else user.process_id
+        validate_user_scope(new_role, org_id, new_dept, new_process if new_role == UserRole.SUPERVISOR else None)
+
+        if data.full_name is not None:
+            user.full_name = data.full_name.strip()
+        if data.role is not None:
+            user.role = data.role
+            if data.role != UserRole.SUPERVISOR:
+                user.process_id = None
+        if data.department_id is not None:
+            user.department_id = data.department_id
+        if data.process_id is not None and (data.role or user.role) == UserRole.SUPERVISOR:
+            user.process_id = data.process_id
+        if data.plant_id is not None:
+            user.plant_id = data.plant_id
+        if data.designation is not None:
+            user.designation = data.designation.strip() or None
+        if data.phone is not None:
+            user.phone = data.phone.strip() or None
+        if data.is_active is not None:
+            user.is_active = data.is_active
+        if data.password:
+            user.hashed_password = get_password_hash(data.password)
 
         await session.flush()
         return UserProfile.model_validate(user)

@@ -9,7 +9,8 @@ from app.db.session import async_session_factory, init_db
 from app.utils.seed_aod import patch_aod_calculated_fields, seed_aod_template
 from app.utils.seed_concast import seed_concast_template
 from app.utils.seed_moi import seed_all
-from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades
+from app.utils.seed_org_roles import seed_org_role_users
+from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
 
 
 @asynccontextmanager
@@ -22,6 +23,8 @@ async def lifespan(_: FastAPI):
         await seed_concast_template(session)
         await patch_eaf_to_iaf(session)
         await patch_extra_steel_grades(session)
+        await patch_workflow_roles(session)
+        await seed_org_role_users(session)
         await session.commit()
     yield
 

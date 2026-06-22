@@ -11,8 +11,8 @@ analytics = AnalyticsService()
 
 
 @router.get("/dashboard", response_model=DashboardMetrics)
-async def dashboard(session: DbSession, _: CurrentUser):
-    data = await analytics.dashboard_metrics(session)
+async def dashboard(session: DbSession, user: CurrentUser):
+    data = await analytics.dashboard_metrics(session, user)
     return DashboardMetrics(**data)
 
 

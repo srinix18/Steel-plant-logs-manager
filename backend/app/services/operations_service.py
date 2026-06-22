@@ -253,24 +253,39 @@ class AnalyticsService:
         result = await session.execute(select(KPIDefinition))
         return [KPIDefinitionResponse.model_validate(k) for k in result.scalars()]
 
-    async def dashboard_metrics(self, session: AsyncSession) -> dict:
-        from app.db.models import Organisation, Plant
+    async def dashboard_metrics(self, session: AsyncSession, user: User | None = None) -> dict:
+        from app.db.models import Department, Organisation, Plant, Process
+        from app.services.access_scope import apply_run_query_scope, is_platform_admin
 
         orgs = await session.execute(select(func.count()).select_from(Organisation))
         plants = await session.execute(select(func.count()).select_from(Plant))
-        active = await session.execute(
+
+        active_query = (
             select(func.count())
             .select_from(ProcessRun)
+            .join(ProcessInstance, ProcessRun.process_instance_id == ProcessInstance.id)
+            .join(Process, ProcessInstance.process_id == Process.id)
+            .join(Department, Process.department_id == Department.id)
+            .join(Plant, Department.plant_id == Plant.id)
             .where(ProcessRun.current_state.notin_(["closed", "approved", "aborted"]))
         )
-        open_obs = await session.execute(
-            select(func.count()).select_from(Observation).where(Observation.status == "open")
-        )
-        open_ca = await session.execute(
+        if user and not is_platform_admin(user):
+            active_query = apply_run_query_scope(active_query, user)
+        active = await session.execute(active_query)
+
+        open_obs_query = select(func.count()).select_from(Observation).where(Observation.status == "open")
+        if user and user.plant_id and not is_platform_admin(user):
+            open_obs_query = open_obs_query.where(Observation.plant_id == user.plant_id)
+        open_obs = await session.execute(open_obs_query)
+
+        open_ca_query = (
             select(func.count())
             .select_from(CorrectiveAction)
             .where(CorrectiveAction.status.in_([CorrectiveActionStatus.OPEN, CorrectiveActionStatus.IN_PROGRESS]))
         )
+        if user and user.plant_id and not is_platform_admin(user):
+            open_ca_query = open_ca_query.join(Observation).where(Observation.plant_id == user.plant_id)
+        open_ca = await session.execute(open_ca_query)
         return {
             "total_organisations": orgs.scalar() or 0,
             "total_plants": plants.scalar() or 0,

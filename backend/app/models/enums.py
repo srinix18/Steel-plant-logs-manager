@@ -3,6 +3,8 @@ import enum
 
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "super_admin"
+    CEO = "ceo"
+    HOD = "hod"
     ORG_ADMIN = "org_admin"
     PLANT_ADMIN = "plant_admin"
     SUPERVISOR = "supervisor"

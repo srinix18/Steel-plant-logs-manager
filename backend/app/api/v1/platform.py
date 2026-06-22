@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import AdminUser, CurrentUser, DbSession
+from app.api.deps import CeoUser, CurrentUser, DbSession, PlatformAdminUser
 from app.db.models import (
     Asset,
     AssetGroup,
@@ -24,24 +24,28 @@ from app.schemas.moi import (
     AssetResponse,
     DepartmentResponse,
     OrganisationResponse,
+    OrgUserCreate,
+    OrgUserUpdate,
     PlantResponse,
     ProcessInstanceResponse,
     ProcessResponse,
     UserBrief,
     UserProfile,
 )
+from app.services.platform_services import OrgUserService
 
 router = APIRouter()
+org_user_service = OrgUserService()
 
 
 @router.get("/organisations", response_model=list[OrganisationResponse])
-async def list_organisations(session: DbSession, _: AdminUser):
+async def list_organisations(session: DbSession, _: PlatformAdminUser):
     result = await session.execute(select(Organisation).order_by(Organisation.name))
     return [OrganisationResponse.model_validate(o) for o in result.scalars()]
 
 
 @router.get("/users", response_model=list[UserBrief])
-async def list_users(session: DbSession, _: AdminUser):
+async def list_users(session: DbSession, _: PlatformAdminUser):
     result = await session.execute(select(User).order_by(User.full_name))
     return [UserBrief.model_validate(u) for u in result.scalars()]
 
@@ -129,6 +133,23 @@ async def list_assets(session: DbSession, user: CurrentUser, plant_id: UUID | No
     ]
 
 
+@router.get("/organisations/{org_id}/users", response_model=list[UserProfile])
+async def list_org_users(org_id: UUID, session: DbSession, user: CeoUser):
+    return await org_user_service.list_org_users(session, user, org_id)
+
+
+@router.post("/organisations/{org_id}/users", response_model=UserProfile, status_code=201)
+async def create_org_user(org_id: UUID, data: OrgUserCreate, session: DbSession, user: CeoUser):
+    return await org_user_service.create_org_user(session, user, org_id, data)
+
+
+@router.patch("/organisations/{org_id}/users/{user_id}", response_model=UserProfile)
+async def update_org_user(
+    org_id: UUID, user_id: UUID, data: OrgUserUpdate, session: DbSession, user: CeoUser
+):
+    return await org_user_service.update_org_user(session, user, org_id, user_id, data)
+
+
 @router.get("/shifts")
 async def list_shifts(session: DbSession, user: CurrentUser, plant_id: UUID | None = None):
     query = select(Shift)
@@ -184,3 +205,20 @@ async def list_materials(session: DbSession, _: CurrentUser, material_type: str 
         }
         for m in result.scalars()
     ]
+
+
+@router.get("/organisations/{org_id}/users", response_model=list[UserProfile])
+async def list_org_users(org_id: UUID, session: DbSession, user: CeoUser):
+    return await org_user_service.list_org_users(session, user, org_id)
+
+
+@router.post("/organisations/{org_id}/users", response_model=UserProfile, status_code=201)
+async def create_org_user(org_id: UUID, data: OrgUserCreate, session: DbSession, user: CeoUser):
+    return await org_user_service.create_org_user(session, user, org_id, data)
+
+
+@router.patch("/organisations/{org_id}/users/{user_id}", response_model=UserProfile)
+async def update_org_user(
+    org_id: UUID, user_id: UUID, data: OrgUserUpdate, session: DbSession, user: CeoUser
+):
+    return await org_user_service.update_org_user(session, user, org_id, user_id, data)

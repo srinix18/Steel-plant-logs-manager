@@ -10,17 +10,22 @@ from app.core.security import decode_access_token
 from app.db.models import User
 from app.db.session import get_db
 from app.models.enums import UserRole
+from app.services.access_scope import (
+    CEO_ROLES,
+    CEO_TIER_ROLES,
+    HOD_ROLES,
+    HOD_TIER_ROLES,
+    PLATFORM_ADMIN_ROLES,
+    SUPERVISOR_ONLY_ROLES,
+    SUPERVISOR_TIER_ROLES,
+    WORKER_ROLES,
+    user_has_role,
+)
 
 security = HTTPBearer()
 
-ADMIN_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.ORG_ADMIN,
-    UserRole.PLANT_ADMIN,
-    UserRole.ADMIN,
-}
-
-SUPERVISOR_ROLES = ADMIN_ROLES | {UserRole.SUPERVISOR, UserRole.DEPARTMENT}
+ADMIN_ROLES = PLATFORM_ADMIN_ROLES | CEO_ROLES | {UserRole.PLANT_ADMIN, UserRole.ORG_ADMIN}
+SUPERVISOR_ROLES = SUPERVISOR_TIER_ROLES
 
 
 async def get_current_user(
@@ -38,15 +43,10 @@ async def get_current_user(
 
 
 def require_roles(*roles: UserRole):
+    allowed = set(roles)
+
     async def checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
-        effective = current_user.role
-        if effective == UserRole.ADMIN and UserRole.SUPER_ADMIN in roles:
-            return current_user
-        if effective == UserRole.DEPARTMENT and UserRole.SUPERVISOR in roles:
-            return current_user
-        if effective == UserRole.MEMBER and UserRole.WORKER in roles:
-            return current_user
-        if effective not in roles:
+        if not user_has_role(current_user, allowed):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
 
@@ -54,6 +54,35 @@ def require_roles(*roles: UserRole):
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
-AdminUser = Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.PLANT_ADMIN, UserRole.ADMIN))]
-SupervisorUser = Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN, UserRole.PLANT_ADMIN, UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.DEPARTMENT))]
+PlatformAdminUser = Annotated[
+    User,
+    Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)),
+]
+CeoUser = Annotated[
+    User,
+    Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.ADMIN,
+            UserRole.CEO,
+            UserRole.ORG_ADMIN,
+        )
+    ),
+]
+AdminUser = PlatformAdminUser
+SupervisorUser = Annotated[
+    User,
+    Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.ADMIN,
+            UserRole.CEO,
+            UserRole.ORG_ADMIN,
+            UserRole.HOD,
+            UserRole.PLANT_ADMIN,
+            UserRole.SUPERVISOR,
+            UserRole.DEPARTMENT,
+        )
+    ),
+]
 DbSession = Annotated[AsyncSession, Depends(get_db)]

@@ -37,6 +37,84 @@ class UserBrief(BaseModel):
     organisation_id: Optional[UUID] = None
     plant_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
+    process_id: Optional[UUID] = None
+    is_active: bool = True
+
+    model_config = {"from_attributes": True}
+
+
+class OrgUserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+    full_name: str
+    role: UserRole
+    department_id: Optional[UUID] = None
+    process_id: Optional[UUID] = None
+    plant_id: Optional[UUID] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class OrgUserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    department_id: Optional[UUID] = None
+    process_id: Optional[UUID] = None
+    plant_id: Optional[UUID] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = Field(default=None, min_length=6)
+
+
+class MessageCreate(BaseModel):
+    subject: str = Field(min_length=1, max_length=500)
+    body: str = Field(min_length=1)
+    recipient_ids: list[UUID] = Field(default_factory=list)
+    is_broadcast: bool = False
+
+
+class MessageAttachmentResponse(BaseModel):
+    id: UUID
+    message_id: UUID
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MessageSenderBrief(BaseModel):
+    id: UUID
+    full_name: str
+    role: UserRole
+
+    model_config = {"from_attributes": True}
+
+
+class MessageResponse(BaseModel):
+    id: UUID
+    organisation_id: UUID
+    sender_id: UUID
+    subject: str
+    body: str
+    is_broadcast: bool
+    created_at: datetime
+    sender: Optional[MessageSenderBrief] = None
+    attachments: list[MessageAttachmentResponse] = Field(default_factory=list)
+    read_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class NotificationResponse(BaseModel):
+    id: UUID
+    message_id: UUID
+    notification_type: str
+    read_at: Optional[datetime] = None
+    created_at: datetime
+    message: Optional[MessageResponse] = None
 
     model_config = {"from_attributes": True}
 

@@ -10,40 +10,16 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.db.models import Department, Plant, ProcessRun, RunFieldValue, RunRemark, RunRemarkAttachment, User
-from app.models.enums import RemarkAuthorRole, UserRole, ValueSource
+from app.models.enums import RemarkAuthorRole, ValueSource
 from app.schemas.moi import RunRemarkAttachmentResponse, RunRemarkCreate, RunRemarkResponse
-
-ADMIN_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.ORG_ADMIN,
-    UserRole.PLANT_ADMIN,
-    UserRole.ADMIN,
-}
-SUPERVISOR_ROLES = {UserRole.SUPERVISOR, UserRole.DEPARTMENT, UserRole.PLANT_ADMIN, UserRole.SUPER_ADMIN, UserRole.ORG_ADMIN}
+from app.services.access_scope import assert_run_access, is_supervisor_tier
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
 MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
 
 def _is_supervisor(user: User) -> bool:
-    return user.role in SUPERVISOR_ROLES
-
-
-async def _assert_run_access(session: AsyncSession, run: ProcessRun, user: User) -> None:
-    if user.role not in {UserRole.SUPERVISOR, UserRole.DEPARTMENT}:
-        return
-    from app.db.models import Process
-
-    process = await session.get(Process, run.process_id)
-    if not process:
-        raise HTTPException(status_code=404, detail="Process run not found")
-    dept = await session.get(Department, process.department_id)
-    if not dept:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if user.department_id and dept.id != user.department_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if user.plant_id and not user.department_id and dept.plant_id != user.plant_id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    return is_supervisor_tier(user)
 
 
 async def _mirror_legacy_remarks(session: AsyncSession, run_id: UUID) -> None:
@@ -79,7 +55,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await _assert_run_access(session, run, user)
+        await assert_run_access(session, run, user)
 
         result = await session.execute(
             select(RunRemark)
@@ -98,7 +74,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await _assert_run_access(session, run, user)
+        await assert_run_access(session, run, user)
 
         if run.current_state in ("closed", "aborted"):
             raise HTTPException(status_code=400, detail="Cannot add remarks to a closed run")
@@ -140,7 +116,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await _assert_run_access(session, run, user)
+        await assert_run_access(session, run, user)
 
         if run.current_state not in ("completed", "approved", "closed"):
             raise HTTPException(status_code=400, detail="Supervisor replies are allowed after heat completion")
@@ -169,7 +145,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await _assert_run_access(session, run, user)
+        await assert_run_access(session, run, user)
 
         remark = await session.get(RunRemark, remark_id)
         if not remark or remark.run_id != run_id:
@@ -219,7 +195,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, attachment.remark.run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await _assert_run_access(session, run, user)
+        await assert_run_access(session, run, user)
 
         path = Path(attachment.storage_path)
         if not path.is_file():

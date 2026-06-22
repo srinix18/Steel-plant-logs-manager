@@ -33,23 +33,15 @@ from app.schemas.moi import (
 )
 from app.services.run_defaults_service import seed_default_field_values
 from app.services.workflow_service import WorkflowService
+from app.services.access_scope import (
+    apply_run_query_scope,
+    assert_run_access,
+    is_platform_admin,
+    is_supervisor_only,
+    is_worker,
+    needs_run_join_for_scope,
+)
 from app.utils.formulas import apply_calculated_fields, collect_calculated_fields
-
-ADMIN_ROLES = {
-    UserRole.SUPER_ADMIN,
-    UserRole.ORG_ADMIN,
-    UserRole.PLANT_ADMIN,
-    UserRole.ADMIN,
-}
-SUPERVISOR_ONLY_ROLES = {UserRole.SUPERVISOR, UserRole.DEPARTMENT}
-
-
-def _user_is_admin(user: User) -> bool:
-    return user.role in ADMIN_ROLES
-
-
-def _user_is_scoped_supervisor(user: User) -> bool:
-    return user.role in SUPERVISOR_ONLY_ROLES and not _user_is_admin(user)
 
 
 def _to_run_response(run: ProcessRun) -> ProcessRunResponse:
@@ -90,18 +82,7 @@ class ProcessRunService:
         )
 
     async def _assert_run_access(self, session: AsyncSession, run: ProcessRun, user: User) -> None:
-        if not _user_is_scoped_supervisor(user):
-            return
-        process = await session.get(Process, run.process_id)
-        if not process:
-            raise HTTPException(status_code=404, detail="Process run not found")
-        dept = await session.get(Department, process.department_id)
-        if not dept:
-            raise HTTPException(status_code=403, detail="Access denied")
-        if user.department_id and dept.id != user.department_id:
-            raise HTTPException(status_code=403, detail="Access denied")
-        if user.plant_id and not user.department_id and dept.plant_id != user.plant_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        await assert_run_access(session, run, user)
 
     async def _load_template_field_meta(
         self, session: AsyncSession, version_id: UUID
@@ -264,18 +245,17 @@ class ProcessRunService:
             or department_id
             or process_id
             or process_code
-            or (user and _user_is_scoped_supervisor(user))
+            or (user and needs_run_join_for_scope(user))
         )
         if needs_join:
             query = self._runs_query_with_joins()
         else:
             query = select(ProcessRun)
 
-        if user and _user_is_scoped_supervisor(user):
-            if user.department_id:
-                query = query.where(Department.id == user.department_id)
-            elif user.plant_id:
-                query = query.where(Department.plant_id == user.plant_id)
+        if user:
+            query = apply_run_query_scope(query, user)
+            if is_worker(user) and not created_by:
+                query = query.where(ProcessRun.created_by == user.id)
 
         if plant_id:
             query = query.where(Department.plant_id == plant_id)

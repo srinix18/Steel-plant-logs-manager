@@ -275,15 +275,15 @@ async def seed_all(session: AsyncSession) -> None:
         session.add(WorkflowState(definition_id=wf.id, key=key, label=label, is_terminal=terminal, color=color))
 
     transitions = [
-        ("created", "in_progress", "Start Heat", ["worker", "supervisor", "plant_admin", "super_admin"]),
+        ("created", "in_progress", "Start Heat", ["worker", "supervisor", "hod", "ceo", "plant_admin", "super_admin"]),
         ("in_progress", "waiting_for_sample", "Power On", ["worker", "supervisor"], "power_on"),
         ("waiting_for_sample", "refining", "Record Sample", ["worker", "supervisor"]),
         ("refining", "refining", "Additional Sample", ["worker", "supervisor"]),
         ("refining", "ready_to_tap", "Ready To Tap", ["worker", "supervisor"]),
         ("ready_to_tap", "completed", "Tap Completed", ["worker", "supervisor"], "tap_completed"),
-        ("completed", "approved", "Approve", ["supervisor", "plant_admin"], None, True),
-        ("approved", "closed", "Close", ["supervisor", "plant_admin"]),
-        ("in_progress", "aborted", "Abort", ["supervisor", "plant_admin"]),
+        ("completed", "approved", "Approve", ["supervisor", "hod", "ceo", "plant_admin"], None, True),
+        ("approved", "closed", "Close", ["supervisor", "hod", "ceo", "plant_admin"]),
+        ("in_progress", "aborted", "Abort", ["supervisor", "hod", "ceo", "plant_admin"]),
     ]
     for t in transitions:
         session.add(
