@@ -85,4 +85,5 @@ SupervisorUser = Annotated[
         )
     ),
 ]
+MaintenanceUser = Annotated[User, Depends(require_roles(UserRole.MAINTENANCE))]
 DbSession = Annotated[AsyncSession, Depends(get_db)]

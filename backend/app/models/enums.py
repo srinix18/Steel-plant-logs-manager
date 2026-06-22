@@ -9,6 +9,7 @@ class UserRole(str, enum.Enum):
     PLANT_ADMIN = "plant_admin"
     SUPERVISOR = "supervisor"
     WORKER = "worker"
+    MAINTENANCE = "maintenance"
     # Legacy aliases for migration
     ADMIN = "admin"
     DEPARTMENT = "department"
@@ -103,6 +104,12 @@ class ObservationSeverity(str, enum.Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
+
+class MaintenanceIssueStatus(str, enum.Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    CLOSED = "closed"
 
 
 class CorrectiveActionStatus(str, enum.Enum):

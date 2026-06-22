@@ -9,10 +9,12 @@ _USER_COLUMN_PATCHES = (
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(128)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_joining DATE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS process_id UUID REFERENCES processes(id)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS maintenance_division VARCHAR(32)",
+    "UPDATE users SET maintenance_division = lower(maintenance_division) WHERE maintenance_division IS NOT NULL",
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_employee_uid ON users (employee_uid) WHERE employee_uid IS NOT NULL",
 )
 
-_USERROLE_VALUES = ("ceo", "hod")
+_USERROLE_VALUES = ("ceo", "hod", "maintenance")
 
 _MESSAGE_TABLE_PATCHES = (
     """
@@ -51,12 +53,41 @@ _MESSAGE_TABLE_PATCHES = (
     CREATE TABLE IF NOT EXISTS user_notifications (
         id UUID PRIMARY KEY,
         user_id UUID NOT NULL REFERENCES users(id),
-        message_id UUID NOT NULL REFERENCES messages(id),
+        message_id UUID REFERENCES messages(id),
         notification_type VARCHAR(50) DEFAULT 'message',
         read_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
     )
     """,
+)
+
+_MAINTENANCE_PATCHES = (
+    """
+    CREATE TABLE IF NOT EXISTS maintenance_issues (
+        id UUID PRIMARY KEY,
+        organisation_id UUID NOT NULL REFERENCES organisations(id),
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        run_id UUID REFERENCES process_runs(id),
+        asset_id UUID REFERENCES assets(id),
+        category VARCHAR(32) NOT NULL,
+        title VARCHAR(300) NOT NULL,
+        description TEXT NOT NULL,
+        severity VARCHAR(32) NOT NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'open',
+        raised_by UUID NOT NULL REFERENCES users(id),
+        raised_at TIMESTAMPTZ DEFAULT NOW(),
+        assigned_to UUID REFERENCES users(id),
+        assigned_at TIMESTAMPTZ,
+        closed_by UUID REFERENCES users(id),
+        closed_at TIMESTAMPTZ,
+        resolution_notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50)",
+    "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS entity_id UUID",
+    "ALTER TABLE user_notifications ALTER COLUMN message_id DROP NOT NULL",
 )
 
 
@@ -69,3 +100,9 @@ async def apply_schema_patches(conn: AsyncConnection) -> None:
 
     for stmt in _MESSAGE_TABLE_PATCHES:
         await conn.execute(text(stmt))
+
+    for stmt in _MAINTENANCE_PATCHES:
+        try:
+            await conn.execute(text(stmt))
+        except Exception:
+            pass

@@ -6,11 +6,10 @@ import { Button } from '../ui/Button';
 import {
   hasRole,
   CEO_ROLES,
-  HOD_TIER_ROLES,
   HOD_ROLES,
-  SUPERVISOR_ROLES,
   SUPERVISOR_ONLY_ROLES,
   WORKER_ROLES,
+  MAINTENANCE_ROLES,
 } from '../../utils/roles';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -42,13 +41,13 @@ export function Sidebar() {
   const isCeo = hasRole(user.role, CEO_ROLES);
   const isHod = hasRole(user.role, HOD_ROLES) && !isCeo;
   const isSupervisorOnly = hasRole(user.role, SUPERVISOR_ONLY_ROLES);
-  const isSupervisorTier = hasRole(user.role, SUPERVISOR_ROLES);
   const isWorker = hasRole(user.role, WORKER_ROLES);
+  const isMaintenance = hasRole(user.role, MAINTENANCE_ROLES);
 
   const showShift =
     isWorker ||
     isSupervisorOnly ||
-    (hasRole(user.role, HOD_TIER_ROLES) && !isPlatformAdmin);
+    (isHod && !isPlatformAdmin);
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -117,14 +116,21 @@ export function Sidebar() {
           </>
         )}
 
-        {isSupervisorTier && (
+        {isSupervisorOnly && (
           <>
             <p className={sectionClass}>Operations</p>
-            {isSupervisorOnly && (
-              <NavLink to="/supervisor" className={linkClass}>
-                Operations Activity
-              </NavLink>
-            )}
+            <NavLink to="/supervisor" className={linkClass}>
+              Operations Activity
+            </NavLink>
+          </>
+        )}
+
+        {isMaintenance && (
+          <>
+            <p className={sectionClass}>Maintenance</p>
+            <NavLink to="/maintenance" className={linkClass}>
+              Issue queue
+            </NavLink>
           </>
         )}
 

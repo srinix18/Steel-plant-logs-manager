@@ -8,6 +8,7 @@ export type UserRole =
   | 'plant_admin'
   | 'supervisor'
   | 'worker'
+  | 'maintenance'
   | 'admin'
   | 'department'
   | 'member';
@@ -21,6 +22,7 @@ export interface User {
   plant_id?: string | null;
   department_id?: string | null;
   process_id?: string | null;
+  maintenance_division?: string | null;
   is_active?: boolean;
   employee_uid?: string | null;
   phone?: string | null;
@@ -201,11 +203,24 @@ export interface AppMessage {
 
 export interface AppNotification {
   id: string;
-  message_id: string;
+  message_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
   notification_type: string;
   read_at?: string | null;
   created_at: string;
   message?: AppMessage | null;
+  maintenance_issue?: {
+    id: string;
+    title: string;
+    category: string;
+    status: string;
+    run_id?: string | null;
+    closed_at?: string | null;
+    resolution_notes?: string | null;
+    closed_by_user?: { id: string; full_name: string };
+    raised_by_user?: { id: string; full_name: string };
+  } | null;
 }
 
 export interface OrgUserPayload {
@@ -218,6 +233,7 @@ export interface OrgUserPayload {
   plant_id?: string | null;
   designation?: string | null;
   phone?: string | null;
+  maintenance_division?: string | null;
 }
 
 export interface OrgUserUpdatePayload {
@@ -230,6 +246,7 @@ export interface OrgUserUpdatePayload {
   phone?: string | null;
   is_active?: boolean;
   password?: string;
+  maintenance_division?: string | null;
 }
 
 export interface LoginResponse {

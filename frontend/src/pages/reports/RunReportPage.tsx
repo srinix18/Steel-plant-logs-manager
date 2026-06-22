@@ -20,6 +20,7 @@ import {
 import { AodLogSheetReport } from '../../components/reports/AodLogSheetReport';
 import { ConcastLogSheetReport } from '../../components/reports/ConcastLogSheetReport';
 import { IafLogSheetReport } from '../../components/reports/IafLogSheetReport';
+import { MaintenanceIssuesSection } from '../../components/reports/MaintenanceIssuesSection';
 import type {
   GradeElement,
   MaterialCatalogItem,
@@ -192,6 +193,8 @@ export function RunReportPage() {
           ))}
         </div>
       )}
+
+      {runId && <MaintenanceIssuesSection runId={runId} />}
     </div>
   );
 }

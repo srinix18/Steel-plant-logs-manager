@@ -1,31 +1,43 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchInbox,
   fetchMessage,
+  fetchNotifications,
   fetchSentMessages,
   fetchSuggestedRecipients,
+  markNotificationRead,
   sendMessage,
   uploadMessageAttachment,
   downloadMessageAttachment,
 } from '../../api/messages';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AppMessage, User } from '../../types';
+import type { AppMessage, AppNotification, User } from '../../types';
 import { isCeoTier } from '../../utils/roles';
+import {
+  isMaintenanceAlert,
+  maintenanceAlertSubtitle,
+  maintenanceAlertTarget,
+  maintenanceAlertTitle,
+} from '../../utils/maintenanceAlerts';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { ImageLightbox } from '../../components/ui/ImageLightbox';
 
-type Tab = 'inbox' | 'sent' | 'compose';
+type Tab = 'inbox' | 'sent' | 'alerts' | 'compose';
 
 export function MessagesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('inbox');
   const [inbox, setInbox] = useState<AppMessage[]>([]);
   const [sent, setSent] = useState<AppMessage[]>([]);
+  const [alerts, setAlerts] = useState<AppNotification[]>([]);
   const [recipients, setRecipients] = useState<User[]>([]);
   const [selected, setSelected] = useState<AppMessage | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<AppNotification | null>(null);
   const [error, setError] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
@@ -37,14 +49,16 @@ export function MessagesPage() {
   const [sending, setSending] = useState(false);
 
   const reload = async () => {
-    const [inboxMsgs, sentMsgs, suggested] = await Promise.all([
+    const [inboxMsgs, sentMsgs, suggested, notifs] = await Promise.all([
       fetchInbox(),
       fetchSentMessages(),
       fetchSuggestedRecipients(),
+      fetchNotifications(),
     ]);
     setInbox(inboxMsgs);
     setSent(sentMsgs);
     setRecipients(suggested);
+    setAlerts(notifs);
   };
 
   useEffect(() => {
@@ -62,6 +76,21 @@ export function MessagesPage() {
 
   const toggleRecipient = (id: string) => {
     setRecipientIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const openAlert = async (alert: AppNotification) => {
+    try {
+      setSelectedAlert(alert);
+      if (!alert.read_at) {
+        await markNotificationRead(alert.id);
+        await reload();
+      }
+      if (!user) return;
+      const target = maintenanceAlertTarget(alert, user.role);
+      if (target) navigate(target);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    }
   };
 
   const handleSend = async () => {
@@ -104,14 +133,98 @@ export function MessagesPage() {
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="mb-4 flex gap-2">
-        {(['inbox', 'sent', 'compose'] as Tab[]).map((t) => (
+        {(['inbox', 'sent', 'alerts', 'compose'] as Tab[]).map((t) => (
           <Button key={t} variant={tab === t ? 'primary' : 'secondary'} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'alerts' ? 'Alerts' : t.charAt(0).toUpperCase() + t.slice(1)}
           </Button>
         ))}
       </div>
 
-      {tab === 'compose' ? (
+      {tab === 'alerts' ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card title="System alerts">
+            <div className="space-y-2">
+              {alerts.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => openAlert(a)}
+                  className={`w-full rounded-lg border px-3 py-2 text-left hover:bg-slate-50 ${
+                    selectedAlert?.id === a.id
+                      ? 'border-brand-400 bg-brand-50/60'
+                      : a.read_at
+                        ? 'border-slate-100'
+                        : 'border-brand-200 bg-brand-50/40'
+                  }`}
+                >
+                  <p className="font-medium text-slate-900">{maintenanceAlertTitle(a)}</p>
+                  <p className="text-xs text-slate-500">
+                    {maintenanceAlertSubtitle(a)}
+                    {maintenanceAlertSubtitle(a) ? ' · ' : ''}
+                    {new Date(a.created_at).toLocaleString()}
+                  </p>
+                </button>
+              ))}
+              {alerts.length === 0 && <p className="text-sm text-slate-500">No alerts.</p>}
+            </div>
+          </Card>
+
+          <Card title="Alert detail">
+            {selectedAlert && isMaintenanceAlert(selectedAlert) ? (
+              <div>
+                <h3 className="font-semibold text-slate-900">{maintenanceAlertTitle(selectedAlert)}</h3>
+                <p className="mt-1 text-xs text-slate-500">{new Date(selectedAlert.created_at).toLocaleString()}</p>
+                {selectedAlert.maintenance_issue && (
+                  <div className="mt-4 space-y-2 text-sm text-slate-700">
+                    {selectedAlert.maintenance_issue.category && (
+                      <p>
+                        <span className="text-slate-500">Category:</span>{' '}
+                        <span className="capitalize">{selectedAlert.maintenance_issue.category}</span>
+                      </p>
+                    )}
+                    {selectedAlert.maintenance_issue.status && (
+                      <p>
+                        <span className="text-slate-500">Status:</span>{' '}
+                        {selectedAlert.maintenance_issue.status.replace(/_/g, ' ')}
+                      </p>
+                    )}
+                    {selectedAlert.notification_type === 'maintenance_issue_closed' &&
+                      selectedAlert.maintenance_issue.closed_by_user && (
+                        <p>
+                          <span className="text-slate-500">Closed by:</span>{' '}
+                          {selectedAlert.maintenance_issue.closed_by_user.full_name}
+                        </p>
+                      )}
+                    {selectedAlert.maintenance_issue.resolution_notes && (
+                      <div>
+                        <p className="text-slate-500">Resolution</p>
+                        <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-3">
+                          {selectedAlert.maintenance_issue.resolution_notes}
+                        </p>
+                      </div>
+                    )}
+                    {selectedAlert.maintenance_issue.run_id && user && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate(`/reports/${selectedAlert.maintenance_issue!.run_id}`)}
+                      >
+                        View related run report
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : selectedAlert ? (
+              <div>
+                <h3 className="font-semibold text-slate-900">{maintenanceAlertTitle(selectedAlert)}</h3>
+                <p className="mt-4 text-sm text-slate-600">{maintenanceAlertSubtitle(selectedAlert)}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Select an alert to view details.</p>
+            )}
+          </Card>
+        </div>
+      ) : tab === 'compose' ? (
         <Card>
           <div className="space-y-3">
             <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />

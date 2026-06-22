@@ -6,14 +6,16 @@ from fastapi import HTTPException
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Department, Plant, Process, ProcessRun, User
-from app.models.enums import UserRole
+from app.db.models import Department, MaintenanceIssue, Plant, Process, ProcessRun, User
+from app.db.types import categories_equal, pg_category_matches_division
+from app.models.enums import ObservationCategory, UserRole
 
 PLATFORM_ADMIN_ROLES = {UserRole.SUPER_ADMIN, UserRole.ADMIN}
 CEO_ROLES = {UserRole.CEO, UserRole.ORG_ADMIN}
 HOD_ROLES = {UserRole.HOD, UserRole.PLANT_ADMIN}
 SUPERVISOR_ONLY_ROLES = {UserRole.SUPERVISOR, UserRole.DEPARTMENT}
 WORKER_ROLES = {UserRole.WORKER, UserRole.MEMBER}
+MAINTENANCE_ROLES = {UserRole.MAINTENANCE}
 
 CEO_TIER_ROLES = PLATFORM_ADMIN_ROLES | CEO_ROLES
 HOD_TIER_ROLES = CEO_TIER_ROLES | HOD_ROLES
@@ -56,6 +58,46 @@ def is_supervisor_only(user: User) -> bool:
 
 def is_worker(user: User) -> bool:
     return user.role in WORKER_ROLES
+
+
+def is_maintenance(user: User) -> bool:
+    return user.role in MAINTENANCE_ROLES
+
+
+def can_raise_maintenance_issue(user: User) -> bool:
+    return is_platform_admin(user) or is_supervisor_tier(user) or is_worker(user)
+
+
+def apply_maintenance_issue_scope(query: Select, user: User) -> Select:
+    if is_platform_admin(user):
+        return query
+    if is_maintenance(user) and user.maintenance_division:
+        query = query.where(pg_category_matches_division(MaintenanceIssue.category, user.maintenance_division))
+        if user.organisation_id:
+            query = query.where(MaintenanceIssue.organisation_id == user.organisation_id)
+        return query
+    if is_ceo_tier(user) and user.organisation_id:
+        return query.where(MaintenanceIssue.organisation_id == user.organisation_id)
+    if user.plant_id:
+        return query.where(MaintenanceIssue.plant_id == user.plant_id)
+    return query
+
+
+async def assert_maintenance_issue_access(session: AsyncSession, issue: MaintenanceIssue, user: User) -> None:
+    if is_platform_admin(user):
+        return
+    if is_maintenance(user):
+        if not categories_equal(issue.category, user.maintenance_division):
+            raise HTTPException(status_code=403, detail="Access denied")
+        if user.organisation_id and issue.organisation_id != user.organisation_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return
+    if is_ceo_tier(user):
+        if user.organisation_id and issue.organisation_id != user.organisation_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return
+    if user.plant_id and issue.plant_id != user.plant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
 
 def user_has_role(user: User, allowed: set[UserRole]) -> bool:
@@ -209,10 +251,17 @@ def can_message(sender: User, recipient: User) -> bool:
     return False
 
 
-CEO_ASSIGNABLE_ROLES = {UserRole.HOD, UserRole.SUPERVISOR, UserRole.WORKER}
+CEO_ASSIGNABLE_ROLES = {UserRole.HOD, UserRole.SUPERVISOR, UserRole.WORKER, UserRole.MAINTENANCE}
 
 
-def validate_user_scope(role: UserRole, organisation_id: UUID | None, department_id: UUID | None, process_id: UUID | None) -> None:
+def validate_user_scope(
+    role: UserRole,
+    organisation_id: UUID | None,
+    department_id: UUID | None,
+    process_id: UUID | None,
+    plant_id: UUID | None = None,
+    maintenance_division: ObservationCategory | None = None,
+) -> None:
     if role == UserRole.CEO and not organisation_id:
         raise HTTPException(status_code=400, detail="CEO requires organisation_id")
     if role == UserRole.HOD:
@@ -224,3 +273,9 @@ def validate_user_scope(role: UserRole, organisation_id: UUID | None, department
     if role == UserRole.WORKER:
         if not organisation_id or not department_id:
             raise HTTPException(status_code=400, detail="Worker requires organisation_id and department_id")
+    if role == UserRole.MAINTENANCE:
+        if not organisation_id or not plant_id or not department_id or not maintenance_division:
+            raise HTTPException(
+                status_code=400,
+                detail="Maintenance requires organisation_id, plant_id, department_id, and maintenance_division",
+            )

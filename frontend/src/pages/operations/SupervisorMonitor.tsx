@@ -2,21 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllRuns } from '../../api/processRuns';
 import {
-  createCorrectiveAction,
-  createObservation,
-  fetchObservations,
-  fetchOpenActions,
-} from '../../api/operations';
+  createMaintenanceIssue,
+  fetchMaintenanceCategories,
+  fetchMaintenanceIssues,
+  type IssueCategory,
+  type IssueSeverity,
+  type MaintenanceIssue,
+} from '../../api/maintenance';
 import {
   fetchDepartments,
-  fetchPlantUsers,
   fetchPlants,
   fetchProcessInstances,
   fetchProcesses,
 } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import type { CorrectiveAction, Observation, ProcessRun, User } from '../../types';
+import type { ProcessRun } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -26,57 +27,38 @@ import { Table } from '../../components/ui/Table';
 export function SupervisorMonitor() {
   const { user } = useAuth();
   const [runs, setRuns] = useState<ProcessRun[]>([]);
-  const [observations, setObservations] = useState<Observation[]>([]);
-  const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [instances, setInstances] = useState<Awaited<ReturnType<typeof fetchProcessInstances>>>([]);
   const [processes, setProcesses] = useState<Awaited<ReturnType<typeof fetchProcesses>>>([]);
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
   const [plantId, setPlantId] = useState('');
-  const [plantUsers, setPlantUsers] = useState<User[]>([]);
   const [stateFilter, setStateFilter] = useState('');
   const [processFilter, setProcessFilter] = useState('');
   const [error, setError] = useState('');
-  const [obsError, setObsError] = useState('');
+  const [formError, setFormError] = useState('');
 
-  const [showObsModal, setShowObsModal] = useState(false);
-  const [obsDescription, setObsDescription] = useState('');
-  const [obsCategory, setObsCategory] = useState('process');
-  const [obsSeverity, setObsSeverity] = useState('medium');
-  const [obsRunId, setObsRunId] = useState('');
-  const [savingObs, setSavingObs] = useState(false);
-
-  const [actionObservationId, setActionObservationId] = useState<string | null>(null);
-  const [actionTitle, setActionTitle] = useState('');
-  const [actionDescription, setActionDescription] = useState('');
-  const [actionAssignee, setActionAssignee] = useState('');
-  const [savingAction, setSavingAction] = useState(false);
-
-  const reloadObservations = async (pid: string) => {
-    try {
-      setObsError('');
-      const [obs, acts] = await Promise.all([fetchObservations(pid), fetchOpenActions(pid)]);
-      setObservations(obs);
-      setActions(acts);
-    } catch (e) {
-      setObsError(getErrorMessage(e));
-    }
-  };
+  const [showMaintModal, setShowMaintModal] = useState(false);
+  const [maintCategories, setMaintCategories] = useState<{ value: IssueCategory; label: string }[]>([]);
+  const [maintTitle, setMaintTitle] = useState('');
+  const [maintDescription, setMaintDescription] = useState('');
+  const [maintCategory, setMaintCategory] = useState<IssueCategory>('equipment');
+  const [maintSeverity, setMaintSeverity] = useState<IssueSeverity>('medium');
+  const [maintRunId, setMaintRunId] = useState('');
+  const [savingMaint, setSavingMaint] = useState(false);
+  const [openMaintIssues, setOpenMaintIssues] = useState<MaintenanceIssue[]>([]);
 
   useEffect(() => {
     Promise.all([fetchAllRuns(), fetchProcessInstances(), fetchProcesses(), fetchDepartments(), fetchPlants()])
-      .then(async ([r, insts, procs, depts, plants]) => {
+      .then(([r, insts, procs, depts, plants]) => {
         setRuns(r);
         setInstances(insts);
         setProcesses(procs);
         setDepartments(depts);
         const pid = user?.plant_id ?? plants[0]?.id ?? '';
         setPlantId(pid);
-        if (pid) {
-          await reloadObservations(pid);
-          fetchPlantUsers(pid).then(setPlantUsers).catch(() => {});
-        }
       })
       .catch((e) => setError(getErrorMessage(e)));
+    fetchMaintenanceCategories().then(setMaintCategories).catch(() => {});
+    fetchMaintenanceIssues({ status: 'open' }).then(setOpenMaintIssues).catch(() => {});
   }, [user?.plant_id]);
 
   const runMeta = (run: ProcessRun) => {
@@ -97,46 +79,28 @@ export function SupervisorMonitor() {
 
   const states = [...new Set(runs.map((r) => r.current_state))];
 
-  const submitObservation = async () => {
-    if (!plantId || !obsDescription.trim()) return;
-    setSavingObs(true);
+  const submitMaintenanceIssue = async () => {
+    if (!plantId || !maintTitle.trim() || !maintDescription.trim()) return;
+    setSavingMaint(true);
     try {
-      await createObservation({
+      setFormError('');
+      await createMaintenanceIssue({
         plant_id: plantId,
-        run_id: obsRunId || undefined,
-        category: obsCategory,
-        description: obsDescription.trim(),
-        severity: obsSeverity,
+        run_id: maintRunId || undefined,
+        title: maintTitle.trim(),
+        description: maintDescription.trim(),
+        category: maintCategory,
+        severity: maintSeverity,
       });
-      setShowObsModal(false);
-      setObsDescription('');
-      setObsRunId('');
-      await reloadObservations(plantId);
+      setShowMaintModal(false);
+      setMaintTitle('');
+      setMaintDescription('');
+      setMaintRunId('');
+      fetchMaintenanceIssues({ status: 'open' }).then(setOpenMaintIssues).catch(() => {});
     } catch (e) {
-      setObsError(getErrorMessage(e));
+      setFormError(getErrorMessage(e));
     } finally {
-      setSavingObs(false);
-    }
-  };
-
-  const submitAction = async () => {
-    if (!actionObservationId || !actionTitle.trim() || !actionAssignee) return;
-    setSavingAction(true);
-    try {
-      await createCorrectiveAction(actionObservationId, {
-        title: actionTitle.trim(),
-        description: actionDescription.trim() || undefined,
-        assigned_to: actionAssignee,
-      });
-      setActionObservationId(null);
-      setActionTitle('');
-      setActionDescription('');
-      setActionAssignee('');
-      if (plantId) await reloadObservations(plantId);
-    } catch (e) {
-      setObsError(getErrorMessage(e));
-    } finally {
-      setSavingAction(false);
+      setSavingMaint(false);
     }
   };
 
@@ -150,7 +114,7 @@ export function SupervisorMonitor() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => setShowObsModal(true)}>Raise observation</Button>
+          <Button onClick={() => setShowMaintModal(true)}>Raise maintenance issue</Button>
           <label className="text-sm text-slate-600">
             Process{' '}
             <select
@@ -184,7 +148,7 @@ export function SupervisorMonitor() {
         </div>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-      {obsError && <p className="mb-4 text-sm text-red-600">{obsError}</p>}
+      {formError && <p className="mb-4 text-sm text-red-600">{formError}</p>}
 
       <Card title="Production runs">
         <Table
@@ -228,69 +192,67 @@ export function SupervisorMonitor() {
         />
       </Card>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title="Observations">
-          <div className="space-y-2">
-            {observations.slice(0, 8).map((o) => (
-              <div key={o.id} className="rounded-lg border border-slate-100 p-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <Badge color={o.severity === 'critical' ? 'purple' : 'gray'}>{o.severity}</Badge>
-                  <Button
-                    variant="secondary"
-                    className="text-xs"
-                    onClick={() => {
-                      setActionObservationId(o.id);
-                      setActionTitle('');
-                      setActionDescription('');
-                      setActionAssignee('');
-                    }}
-                  >
-                    Add action
-                  </Button>
+      {openMaintIssues.length > 0 && (
+        <div className="mt-6">
+          <Card title={`Open maintenance issues (${openMaintIssues.length})`}>
+            <div className="space-y-2">
+              {openMaintIssues.slice(0, 8).map((issue) => (
+                <div key={issue.id} className="rounded-lg border border-slate-100 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-900">{issue.title}</p>
+                      <p className="text-xs text-slate-500 capitalize">
+                        {issue.category} · {issue.raised_by_user?.full_name ?? '—'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge color="blue">{issue.status.replace(/_/g, ' ')}</Badge>
+                      {issue.run_id && (
+                        <Link to={`/reports/${issue.run_id}`} className="text-xs text-brand-600 hover:underline">
+                          Run
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-1 text-slate-700">{o.description}</p>
-              </div>
-            ))}
-            {observations.length === 0 && <p className="text-sm text-slate-500">No observations.</p>}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
 
-        <Card title="Open corrective actions">
-          <div className="space-y-2">
-            {actions.map((a) => (
-              <div key={a.id} className="rounded-lg border border-slate-100 p-3 text-sm">
-                <p className="font-medium">{a.title}</p>
-                <Badge color="gray">{a.status}</Badge>
-              </div>
-            ))}
-            {actions.length === 0 && <p className="text-sm text-slate-500">No open actions.</p>}
-          </div>
-        </Card>
-      </div>
-
-      {showObsModal && (
+      {showMaintModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-            <h2 className="text-lg font-semibold">Raise observation</h2>
+            <h2 className="text-lg font-semibold">Raise maintenance issue</h2>
+            <p className="mt-1 text-xs text-slate-500">Routed to the maintenance crew for the selected category.</p>
             <div className="mt-4 space-y-3">
+              <Input label="Title" value={maintTitle} onChange={(e) => setMaintTitle(e.target.value)} />
               <label className="block text-sm">
                 Category
                 <select
-                  value={obsCategory}
-                  onChange={(e) => setObsCategory(e.target.value)}
+                  value={maintCategory}
+                  onChange={(e) => setMaintCategory(e.target.value as IssueCategory)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
-                  <option value="process">Process</option>
-                  <option value="safety">Safety</option>
-                  <option value="quality">Quality</option>
-                  <option value="equipment">Equipment</option>
+                  {(maintCategories.length ? maintCategories : [
+                    { value: 'quality', label: 'Quality' },
+                    { value: 'safety', label: 'Safety' },
+                    { value: 'energy', label: 'Energy' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'process', label: 'Process' },
+                  ]).map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="block text-sm">
                 Severity
                 <select
-                  value={obsSeverity}
-                  onChange={(e) => setObsSeverity(e.target.value)}
+                  value={maintSeverity}
+                  onChange={(e) => setMaintSeverity(e.target.value as IssueSeverity)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="low">Low</option>
@@ -302,8 +264,8 @@ export function SupervisorMonitor() {
               <label className="block text-sm">
                 Related run (optional)
                 <select
-                  value={obsRunId}
-                  onChange={(e) => setObsRunId(e.target.value)}
+                  value={maintRunId}
+                  onChange={(e) => setMaintRunId(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="">None</option>
@@ -317,65 +279,22 @@ export function SupervisorMonitor() {
               <label className="block text-sm">
                 Description
                 <textarea
-                  value={obsDescription}
-                  onChange={(e) => setObsDescription(e.target.value)}
+                  value={maintDescription}
+                  onChange={(e) => setMaintDescription(e.target.value)}
                   rows={4}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </label>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setShowObsModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={submitObservation} disabled={savingObs || !obsDescription.trim()}>
-                {savingObs ? 'Saving…' : 'Create'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {actionObservationId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-            <h2 className="text-lg font-semibold">Create corrective action</h2>
-            <div className="mt-4 space-y-3">
-              <Input label="Title" value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} />
-              <label className="block text-sm">
-                Description
-                <textarea
-                  value={actionDescription}
-                  onChange={(e) => setActionDescription(e.target.value)}
-                  rows={3}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block text-sm">
-                Assign to
-                <select
-                  value={actionAssignee}
-                  onChange={(e) => setActionAssignee(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Select…</option>
-                  {plantUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setActionObservationId(null)}>
+              <Button variant="secondary" onClick={() => setShowMaintModal(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={submitAction}
-                disabled={savingAction || !actionTitle.trim() || !actionAssignee}
+                onClick={submitMaintenanceIssue}
+                disabled={savingMaint || !maintTitle.trim() || !maintDescription.trim()}
               >
-                {savingAction ? 'Saving…' : 'Create action'}
+                {savingMaint ? 'Submitting…' : 'Submit issue'}
               </Button>
             </div>
           </div>

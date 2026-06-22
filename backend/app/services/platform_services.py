@@ -23,7 +23,7 @@ from app.schemas.moi import (
     OrgUserCreate,
     OrgUserUpdate,
 )
-from app.models.enums import UserRole
+from app.models.enums import UserRole, ObservationCategory
 from app.services.access_scope import (
     CEO_ASSIGNABLE_ROLES,
     is_ceo_tier,
@@ -110,13 +110,20 @@ class OrgUserService:
 
         self._assert_org_access(actor, org_id)
         if not is_platform_admin(actor) and data.role not in CEO_ASSIGNABLE_ROLES:
-            raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, or worker roles")
+            raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, worker, or maintenance roles")
 
         existing = await session.execute(select(User).where(User.email == data.email))
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        validate_user_scope(data.role, org_id, data.department_id, data.process_id)
+        validate_user_scope(
+            data.role,
+            org_id,
+            data.department_id,
+            data.process_id,
+            data.plant_id,
+            data.maintenance_division,
+        )
 
         if data.role == UserRole.HOD:
             hod_check = await session.execute(
@@ -139,6 +146,7 @@ class OrgUserService:
             plant_id=data.plant_id,
             department_id=data.department_id,
             process_id=data.process_id if data.role == UserRole.SUPERVISOR else None,
+            maintenance_division=data.maintenance_division if data.role == UserRole.MAINTENANCE else None,
             designation=data.designation,
             phone=data.phone,
             is_active=True,
@@ -161,12 +169,23 @@ class OrgUserService:
             if user.role in {UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CEO, UserRole.ORG_ADMIN}:
                 raise HTTPException(status_code=403, detail="Cannot modify this user")
             if data.role and data.role not in CEO_ASSIGNABLE_ROLES:
-                raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, or worker roles")
+                raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, worker, or maintenance roles")
 
         new_role = data.role or user.role
         new_dept = data.department_id if data.department_id is not None else user.department_id
         new_process = data.process_id if data.process_id is not None else user.process_id
-        validate_user_scope(new_role, org_id, new_dept, new_process if new_role == UserRole.SUPERVISOR else None)
+        new_plant = data.plant_id if data.plant_id is not None else user.plant_id
+        new_maint_div = (
+            data.maintenance_division if data.maintenance_division is not None else user.maintenance_division
+        )
+        validate_user_scope(
+            new_role,
+            org_id,
+            new_dept,
+            new_process if new_role == UserRole.SUPERVISOR else None,
+            new_plant,
+            new_maint_div if new_role == UserRole.MAINTENANCE else None,
+        )
 
         if data.full_name is not None:
             user.full_name = data.full_name.strip()
@@ -174,10 +193,14 @@ class OrgUserService:
             user.role = data.role
             if data.role != UserRole.SUPERVISOR:
                 user.process_id = None
+            if data.role != UserRole.MAINTENANCE:
+                user.maintenance_division = None
         if data.department_id is not None:
             user.department_id = data.department_id
         if data.process_id is not None and (data.role or user.role) == UserRole.SUPERVISOR:
             user.process_id = data.process_id
+        if data.maintenance_division is not None and (data.role or user.role) == UserRole.MAINTENANCE:
+            user.maintenance_division = data.maintenance_division
         if data.plant_id is not None:
             user.plant_id = data.plant_id
         if data.designation is not None:

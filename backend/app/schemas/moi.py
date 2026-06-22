@@ -9,6 +9,7 @@ from app.models.enums import (
     CorrectiveActionStatus,
     EventSeverity,
     EventSource,
+    MaintenanceIssueStatus,
     ObservationCategory,
     ObservationSeverity,
     ProcessRunType,
@@ -38,6 +39,7 @@ class UserBrief(BaseModel):
     plant_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
     process_id: Optional[UUID] = None
+    maintenance_division: Optional[ObservationCategory] = None
     is_active: bool = True
 
     model_config = {"from_attributes": True}
@@ -53,6 +55,7 @@ class OrgUserCreate(BaseModel):
     plant_id: Optional[UUID] = None
     designation: Optional[str] = None
     phone: Optional[str] = None
+    maintenance_division: Optional[ObservationCategory] = None
 
 
 class OrgUserUpdate(BaseModel):
@@ -65,6 +68,7 @@ class OrgUserUpdate(BaseModel):
     phone: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = Field(default=None, min_length=6)
+    maintenance_division: Optional[ObservationCategory] = None
 
 
 class MessageCreate(BaseModel):
@@ -110,11 +114,14 @@ class MessageResponse(BaseModel):
 
 class NotificationResponse(BaseModel):
     id: UUID
-    message_id: UUID
+    message_id: Optional[UUID] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[UUID] = None
     notification_type: str
     read_at: Optional[datetime] = None
     created_at: datetime
     message: Optional[MessageResponse] = None
+    maintenance_issue: Optional["MaintenanceIssueResponse"] = None
 
     model_config = {"from_attributes": True}
 
@@ -439,6 +446,47 @@ class ObservationResponse(BaseModel):
     observed_by: UUID
     observed_at: datetime
     status: str
+    model_config = {"from_attributes": True}
+
+
+class MaintenanceIssueCreate(BaseModel):
+    plant_id: Optional[UUID] = None
+    run_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
+    category: ObservationCategory
+    title: str = Field(min_length=1, max_length=300)
+    description: str = Field(min_length=1)
+    severity: ObservationSeverity
+
+
+class MaintenanceIssueClose(BaseModel):
+    resolution_notes: str = Field(min_length=1)
+
+
+class MaintenanceIssueResponse(BaseModel):
+    id: UUID
+    organisation_id: UUID
+    plant_id: UUID
+    run_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
+    category: ObservationCategory
+    title: str
+    description: str
+    severity: ObservationSeverity
+    status: MaintenanceIssueStatus
+    raised_by: UUID
+    raised_at: datetime
+    assigned_to: Optional[UUID] = None
+    assigned_at: Optional[datetime] = None
+    closed_by: Optional[UUID] = None
+    closed_at: Optional[datetime] = None
+    resolution_notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    raised_by_user: Optional[UserBrief] = None
+    assigned_to_user: Optional[UserBrief] = None
+    closed_by_user: Optional[UserBrief] = None
+
     model_config = {"from_attributes": True}
 
 

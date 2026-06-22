@@ -19,6 +19,7 @@ import { SupervisorMonitor } from './pages/operations/SupervisorMonitor';
 import { RunReportPage } from './pages/reports/RunReportPage';
 import { MyRunsPage } from './pages/operations/MyRunsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { MaintenanceQueuePage } from './pages/maintenance/MaintenanceQueuePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import {
   hasRole,
@@ -30,6 +31,7 @@ import {
   CEO_ROLES,
   HOD_ROLES,
   SUPERVISOR_ONLY_ROLES,
+  MAINTENANCE_ROLES,
 } from './utils/roles';
 
 function RoleRedirect() {
@@ -38,6 +40,7 @@ function RoleRedirect() {
   if (user.role === 'super_admin' || user.role === 'admin') return <Navigate to="/admin" replace />;
   if (hasRole(user.role, CEO_ROLES)) return <Navigate to="/executive" replace />;
   if (hasRole(user.role, HOD_ROLES)) return <Navigate to="/hod" replace />;
+  if (hasRole(user.role, MAINTENANCE_ROLES)) return <Navigate to="/maintenance" replace />;
   if (hasRole(user.role, SUPERVISOR_ONLY_ROLES)) return <Navigate to="/supervisor" replace />;
   if (hasRole(user.role, WORKER_ROLES)) return <Navigate to="/shift" replace />;
   return <Navigate to="/shift" replace />;
@@ -75,9 +78,20 @@ function AppRoutes() {
 
           <Route path="messages" element={<MessagesPage />} />
 
+          <Route element={<ProtectedRoute allowedRoles={MAINTENANCE_ROLES} />}>
+            <Route path="maintenance" element={<MaintenanceQueuePage />} />
+          </Route>
+
           <Route
             element={
-              <ProtectedRoute allowedRoles={[...PLATFORM_ADMIN_ROLES, ...SUPERVISOR_ROLES, ...WORKER_ROLES]} />
+              <ProtectedRoute
+                allowedRoles={[
+                  ...PLATFORM_ADMIN_ROLES,
+                  ...HOD_ROLES,
+                  ...SUPERVISOR_ONLY_ROLES,
+                  ...WORKER_ROLES,
+                ]}
+              />
             }
           >
             <Route path="shift" element={<ShiftDashboard />} />

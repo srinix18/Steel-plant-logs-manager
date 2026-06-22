@@ -5,6 +5,7 @@ const CEO_ROLES: UserRole[] = ['ceo', 'org_admin'];
 const HOD_ROLES: UserRole[] = ['hod', 'plant_admin'];
 const SUPERVISOR_ONLY_ROLES: UserRole[] = ['supervisor', 'department'];
 const WORKER_ROLES: UserRole[] = ['worker', 'member'];
+const MAINTENANCE_ROLES: UserRole[] = ['maintenance'];
 
 const CEO_TIER_ROLES: UserRole[] = [...PLATFORM_ADMIN_ROLES, ...CEO_ROLES];
 const HOD_TIER_ROLES: UserRole[] = [...CEO_TIER_ROLES, ...HOD_ROLES];
@@ -39,6 +40,10 @@ export function isSupervisorTier(role: UserRole): boolean {
   return hasRole(role, SUPERVISOR_ROLES);
 }
 
+export function isMaintenance(role: UserRole): boolean {
+  return hasRole(role, MAINTENANCE_ROLES);
+}
+
 export {
   ADMIN_ROLES,
   PLATFORM_ADMIN_ROLES,
@@ -49,4 +54,5 @@ export {
   SUPERVISOR_ROLES,
   SUPERVISOR_ONLY_ROLES,
   WORKER_ROLES,
+  MAINTENANCE_ROLES,
 };

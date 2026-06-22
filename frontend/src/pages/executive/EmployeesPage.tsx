@@ -10,12 +10,22 @@ import {
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import type { OrgUserPayload, Process, User, UserRole } from '../../types';
+import type { IssueCategory } from '../../api/maintenance';
+import { fetchMaintenanceCategories } from '../../api/maintenance';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
 
-const ASSIGNABLE_ROLES: UserRole[] = ['hod', 'supervisor', 'worker'];
+const ASSIGNABLE_ROLES: UserRole[] = ['hod', 'supervisor', 'worker', 'maintenance'];
+
+const DEFAULT_CATEGORIES: { value: IssueCategory; label: string }[] = [
+  { value: 'quality', label: 'Quality' },
+  { value: 'safety', label: 'Safety' },
+  { value: 'energy', label: 'Energy' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'process', label: 'Process' },
+];
 
 export function EmployeesPage() {
   const { user } = useAuth();
@@ -24,6 +34,7 @@ export function EmployeesPage() {
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
   const [plants, setPlants] = useState<Awaited<ReturnType<typeof fetchPlants>>>([]);
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
@@ -37,6 +48,7 @@ export function EmployeesPage() {
     process_id: '',
     plant_id: '',
     designation: '',
+    maintenance_division: 'equipment',
   });
 
   const load = async () => {
@@ -58,6 +70,7 @@ export function EmployeesPage() {
 
   useEffect(() => {
     load().catch((e) => setError(getErrorMessage(e)));
+    fetchMaintenanceCategories().then(setCategories).catch(() => {});
   }, [orgId]);
 
   const plantId = useMemo(() => plants.find((p) => p.organisation_id === orgId)?.id ?? plants[0]?.id, [plants, orgId]);
@@ -73,6 +86,7 @@ export function EmployeesPage() {
       process_id: '',
       plant_id: plantId ?? '',
       designation: '',
+      maintenance_division: 'equipment',
     });
     setShowModal(true);
   };
@@ -88,6 +102,7 @@ export function EmployeesPage() {
       process_id: emp.process_id ?? '',
       plant_id: emp.plant_id ?? plantId ?? '',
       designation: emp.designation ?? '',
+      maintenance_division: (emp.maintenance_division as IssueCategory) ?? 'equipment',
     });
     setShowModal(true);
   };
@@ -110,6 +125,7 @@ export function EmployeesPage() {
           role: form.role,
           department_id: form.department_id || null,
           process_id: form.role === 'supervisor' ? form.process_id || null : null,
+          maintenance_division: form.role === 'maintenance' ? form.maintenance_division || null : null,
           plant_id: form.plant_id || null,
           designation: form.designation || null,
           password: form.password || undefined,
@@ -119,6 +135,7 @@ export function EmployeesPage() {
           ...form,
           department_id: form.department_id || null,
           process_id: form.role === 'supervisor' ? form.process_id || null : null,
+          maintenance_division: form.role === 'maintenance' ? form.maintenance_division || null : null,
           plant_id: form.plant_id || null,
         });
       }
@@ -137,7 +154,7 @@ export function EmployeesPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Employees</h1>
-          <p className="mt-1 text-sm text-slate-500">Assign HoD, supervisor, or worker roles in your organisation.</p>
+          <p className="mt-1 text-sm text-slate-500">Assign HoD, supervisor, worker, or maintenance crew in your organisation.</p>
         </div>
         <Button onClick={openCreate}>Add employee</Button>
       </div>
@@ -159,8 +176,13 @@ export function EmployeesPage() {
             { key: 'dept', header: 'Department', render: (u) => deptName(u.department_id) },
             {
               key: 'process',
-              header: 'Process',
-              render: (u) => (u.role === 'supervisor' ? processName(u.process_id) : '—'),
+              header: 'Process / category',
+              render: (u) =>
+                u.role === 'supervisor'
+                  ? processName(u.process_id)
+                  : u.role === 'maintenance'
+                    ? (u.maintenance_division ?? '—').replace(/^./, (c) => c.toUpperCase())
+                    : '—',
             },
             {
               key: 'actions',
@@ -249,6 +271,24 @@ export function EmployeesPage() {
                     {processes.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.code} — {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {form.role === 'maintenance' && (
+                <label className="block text-sm">
+                  <span className="text-slate-600">Maintenance category</span>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    value={form.maintenance_division ?? 'equipment'}
+                    onChange={(e) =>
+                      setForm({ ...form, maintenance_division: e.target.value as IssueCategory })
+                    }
+                  >
+                    {categories.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
                       </option>
                     ))}
                   </select>

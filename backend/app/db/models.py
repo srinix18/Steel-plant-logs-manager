@@ -19,6 +19,10 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, new_uuid
+from app.db.types import (
+    MaintenanceIssueStatusString,
+    ObservationCategoryString,
+)
 from app.models.enums import (
     AssetStatus,
     CorrectiveActionPriority,
@@ -26,6 +30,7 @@ from app.models.enums import (
     EventSeverity,
     EventSource,
     FieldType,
+    MaintenanceIssueStatus,
     MaterialType,
     ObservationCategory,
     ObservationSeverity,
@@ -37,6 +42,12 @@ from app.models.enums import (
     UserRole,
     ValueSource,
 )
+
+
+def _userrole_db_values(enum_cls):
+    """Map UserRole to PostgreSQL labels (legacy UPPER names + new lowercase values)."""
+    use_value = {UserRole.CEO, UserRole.HOD, UserRole.MAINTENANCE}
+    return [m.value if m in use_value else m.name for m in enum_cls]
 
 
 class Organisation(Base, TimestampMixin):
@@ -158,11 +169,14 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, values_callable=_userrole_db_values), nullable=False)
     organisation_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("organisations.id"), nullable=True)
     plant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("plants.id"), nullable=True)
     department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
     process_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("processes.id"), nullable=True)
+    maintenance_division: Mapped[Optional[ObservationCategory]] = mapped_column(
+        ObservationCategoryString(), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     employee_uid: Mapped[Optional[str]] = mapped_column(String(32), unique=True, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
@@ -479,6 +493,35 @@ class CorrectiveAction(Base, TimestampMixin):
     observation: Mapped["Observation"] = relationship(back_populates="corrective_actions")
 
 
+class MaintenanceIssue(Base, TimestampMixin):
+    __tablename__ = "maintenance_issues"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    category: Mapped[ObservationCategory] = mapped_column(Enum(ObservationCategory), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[ObservationSeverity] = mapped_column(Enum(ObservationSeverity), nullable=False)
+    status: Mapped[MaintenanceIssueStatus] = mapped_column(
+        Enum(MaintenanceIssueStatus), default=MaintenanceIssueStatus.OPEN
+    )
+    raised_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    raised_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    assigned_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    raiser: Mapped["User"] = relationship(foreign_keys=[raised_by])
+    assignee: Mapped[Optional["User"]] = relationship(foreign_keys=[assigned_to])
+    closer: Mapped[Optional["User"]] = relationship(foreign_keys=[closed_by])
+    run: Mapped[Optional["ProcessRun"]] = relationship()
+
+
 class RunRemark(Base):
     __tablename__ = "run_remarks"
 
@@ -560,7 +603,9 @@ class UserNotification(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id"), nullable=False)
+    message_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("messages.id"), nullable=True)
+    entity_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     notification_type: Mapped[str] = mapped_column(String(50), default="message")
     read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

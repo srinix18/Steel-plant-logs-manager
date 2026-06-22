@@ -15,6 +15,7 @@ Development seed credentials for the Chandan Steel SMS demo environment. **Do no
 | Employees (CEO) | http://localhost:5173/executive/employees |
 | Department overview (HoD) | http://localhost:5173/hod |
 | Operations activity (supervisor) | http://localhost:5173/supervisor |
+| Maintenance queue | http://localhost:5173/maintenance |
 | Messages & alerts | http://localhost:5173/messages |
 | Backend API | http://localhost:8000 |
 | API docs (Swagger) | http://localhost:8000/docs |
@@ -33,6 +34,11 @@ Start the app with `start.bat` (or `scripts/start.ps1`).
 | Supervisor (CCM) | CCM Shift Incharge | `ccm.supervisor@chandansteel.com` | `ccm123` | SMS — CCM log sheet only |
 | Supervisor (legacy) | SMS Supervisor | `supervisor@chandansteel.com` | `supervisor123` | SMS — IAF (migrated) |
 | Worker | Plant Melter | `melter@chandansteel.com` | `worker123` | SMS department — own runs |
+| Maintenance (Quality) | Quality Maintenance | `maint.quality@chandansteel.com` | `maint123` | Quality issues |
+| Maintenance (Safety) | Safety Maintenance | `maint.safety@chandansteel.com` | `maint123` | Safety issues |
+| Maintenance (Energy) | Energy Maintenance | `maint.energy@chandansteel.com` | `maint123` | Energy issues |
+| Maintenance (Equipment) | Equipment Maintenance | `maint.equipment@chandansteel.com` | `maint123` | Equipment issues |
+| Maintenance (Process) | Process Maintenance | `maint.process@chandansteel.com` | `maint123` | Process issues |
 
 ### Login API
 
@@ -51,12 +57,13 @@ Content-Type: application/json
 | Role | Default landing | Highlights |
 |------|-----------------|------------|
 | **Super Admin** | `/admin` | Full platform administration. Unchanged from before. |
-| **CEO** | `/executive` | Org-wide overview, employee management (assign HoD / supervisor / worker), broadcast messages. |
+| **CEO** | `/executive` | Org-wide overview, employee management (assign HoD / supervisor / worker / maintenance), broadcast messages. |
 | **HoD** | `/hod` | All processes in their department — runs, observations, reports. |
 | **Supervisor** | `/supervisor` | Single process/log sheet scope (IAF, AOD, or CCM). |
 | **Worker** | `/shift` | Shift dashboard, My Runs, own heats only. |
+| **Maintenance** | `/maintenance` | Category-scoped issue queue (assign, close with audit). |
 
-All roles have **Messages & Alerts** in the sidebar.
+All roles have **Messages & Alerts** in the sidebar (including maintenance issue notifications).
 
 ## Admin account overrides
 

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.db.models import Department, Organisation, Plant, Process, User
-from app.models.enums import UserRole
+from app.models.enums import ObservationCategory, UserRole
 
 
 async def seed_org_role_users(session: AsyncSession) -> None:
@@ -51,7 +51,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "full_name": "SMS Head of Department",
             "role": UserRole.HOD,
             "designation": "HOD (Production)",
-            "employee_uid": "SMS-SMS-0001",
+            "employee_uid": "CHANDAN-HOD-0001",
             "process_id": None,
         },
         {
@@ -60,7 +60,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "full_name": "IAF Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "IAF Supervisor",
-            "employee_uid": "SMS-SMS-0002",
+            "employee_uid": "CHANDAN-IAF-SUP-0001",
             "process_code": "IAF",
         },
         {
@@ -69,7 +69,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "full_name": "AOD Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "AOD Supervisor",
-            "employee_uid": "SMS-SMS-0003",
+            "employee_uid": "CHANDAN-AOD-SUP-0001",
             "process_code": "AOD",
         },
         {
@@ -78,38 +78,39 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "full_name": "CCM Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "CCM Supervisor",
-            "employee_uid": "SMS-SMS-0004",
+            "employee_uid": "CHANDAN-CCM-SUP-0001",
             "process_code": "CCM",
         },
     ]
 
     for spec in seeds:
-        existing = await session.execute(select(User).where(User.email == spec["email"]))
-        if existing.scalar_one_or_none():
-            continue
-
-        process_id = None
-        if spec.get("process_code"):
-            proc = processes.get(spec["process_code"])
-            if not proc:
+        with session.no_autoflush:
+            existing = await session.execute(select(User).where(User.email == spec["email"]))
+            if existing.scalar_one_or_none():
                 continue
-            process_id = proc.id
 
-        session.add(
-            User(
-                email=spec["email"],
-                hashed_password=get_password_hash(spec["password"]),
-                full_name=spec["full_name"],
-                role=spec["role"],
-                organisation_id=org.id,
-                plant_id=plant.id,
-                department_id=dept.id,
-                process_id=process_id,
-                designation=spec["designation"],
-                employee_uid=spec["employee_uid"],
-                is_active=True,
+            process_id = None
+            if spec.get("process_code"):
+                proc = processes.get(spec["process_code"])
+                if not proc:
+                    continue
+                process_id = proc.id
+
+            session.add(
+                User(
+                    email=spec["email"],
+                    hashed_password=get_password_hash(spec["password"]),
+                    full_name=spec["full_name"],
+                    role=spec["role"],
+                    organisation_id=org.id,
+                    plant_id=plant.id,
+                    department_id=dept.id,
+                    process_id=process_id,
+                    designation=spec["designation"],
+                    employee_uid=spec["employee_uid"],
+                    is_active=True,
+                )
             )
-        )
 
     # Migrate legacy supervisor to IAF scope
     legacy = await session.execute(select(User).where(User.email == "supervisor@chandansteel.com"))
@@ -118,5 +119,33 @@ async def seed_org_role_users(session: AsyncSession) -> None:
     if legacy_user and iaf:
         legacy_user.process_id = iaf.id
         legacy_user.designation = legacy_user.designation or "IAF Supervisor"
+
+    maint_seeds = [
+        ("maint.quality@chandansteel.com", "Quality Maintenance", ObservationCategory.QUALITY, "SMS-SMS-M001"),
+        ("maint.safety@chandansteel.com", "Safety Maintenance", ObservationCategory.SAFETY, "SMS-SMS-M002"),
+        ("maint.energy@chandansteel.com", "Energy Maintenance", ObservationCategory.ENERGY, "SMS-SMS-M003"),
+        ("maint.equipment@chandansteel.com", "Equipment Maintenance", ObservationCategory.EQUIPMENT, "SMS-SMS-M004"),
+        ("maint.process@chandansteel.com", "Process Maintenance", ObservationCategory.PROCESS, "SMS-SMS-M005"),
+    ]
+    for email, name, division, uid in maint_seeds:
+        with session.no_autoflush:
+            existing = await session.execute(select(User).where(User.email == email))
+            if existing.scalar_one_or_none():
+                continue
+            session.add(
+                User(
+                    email=email,
+                    hashed_password=get_password_hash("maint123"),
+                    full_name=name,
+                    role=UserRole.MAINTENANCE,
+                    organisation_id=org.id,
+                    plant_id=plant.id,
+                    department_id=dept.id,
+                    maintenance_division=division,
+                    designation=f"{division.value.title()} Crew",
+                    employee_uid=uid,
+                    is_active=True,
+                )
+            )
 
     await session.flush()

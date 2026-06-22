@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.db.models import Message, MessageAttachment, MessageRecipient, User, UserNotification
+from app.db.models import Message, MessageAttachment, MessageRecipient, MaintenanceIssue, User, UserNotification
 from app.models.enums import UserRole
 from app.schemas.moi import MessageAttachmentResponse, MessageCreate, MessageResponse, NotificationResponse
 from app.services.access_scope import (
@@ -199,16 +199,27 @@ class MessageService:
         items: list[NotificationResponse] = []
         for n in result.scalars():
             msg_resp = None
+            maint_resp = None
             if n.message:
                 msg_resp = self._to_message_response(n.message, n.read_at)
+            if n.entity_type == "maintenance_issue" and n.entity_id:
+                from app.services.maintenance_issue_service import MaintenanceIssueService
+
+                try:
+                    maint_resp = await MaintenanceIssueService().get_issue(session, user, n.entity_id)
+                except HTTPException:
+                    maint_resp = None
             items.append(
                 NotificationResponse(
                     id=n.id,
                     message_id=n.message_id,
+                    entity_type=n.entity_type,
+                    entity_id=n.entity_id,
                     notification_type=n.notification_type,
                     read_at=n.read_at,
                     created_at=n.created_at,
                     message=msg_resp,
+                    maintenance_issue=maint_resp,
                 )
             )
         return items
@@ -243,15 +254,26 @@ class MessageService:
             await session.flush()
 
         msg_resp = None
+        maint_resp = None
         if notification.message:
             msg_resp = self._to_message_response(notification.message, notification.read_at)
+        if notification.entity_type == "maintenance_issue" and notification.entity_id:
+            from app.services.maintenance_issue_service import MaintenanceIssueService
+
+            try:
+                maint_resp = await MaintenanceIssueService().get_issue(session, user, notification.entity_id)
+            except HTTPException:
+                maint_resp = None
         return NotificationResponse(
             id=notification.id,
             message_id=notification.message_id,
+            entity_type=notification.entity_type,
+            entity_id=notification.entity_id,
             notification_type=notification.notification_type,
             read_at=notification.read_at,
             created_at=notification.created_at,
             message=msg_resp,
+            maintenance_issue=maint_resp,
         )
 
     async def unread_count(self, session: AsyncSession, user: User) -> int:
