@@ -1,7 +1,17 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { fetchUnreadCount } from '../../api/messages';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
-import { hasRole, ADMIN_ROLES, SUPERVISOR_ROLES, WORKER_ROLES } from '../../utils/roles';
+import {
+  hasRole,
+  CEO_ROLES,
+  HOD_TIER_ROLES,
+  HOD_ROLES,
+  SUPERVISOR_ROLES,
+  SUPERVISOR_ONLY_ROLES,
+  WORKER_ROLES,
+} from '../../utils/roles';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -13,25 +23,39 @@ const sectionClass = 'px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wi
 export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount()
+      .then(setUnread)
+      .catch(() => setUnread(0));
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const isAdmin = user && hasRole(user.role, ADMIN_ROLES);
-  const isSupervisor = user && hasRole(user.role, SUPERVISOR_ROLES);
-  const showShiftDashboard =
-    user &&
-    !isAdmin &&
-    (hasRole(user.role, WORKER_ROLES) || user.role === 'supervisor' || user.role === 'department');
+  if (!user) return null;
+
+  const isPlatformAdmin = user.role === 'super_admin' || user.role === 'admin';
+  const isCeo = hasRole(user.role, CEO_ROLES);
+  const isHod = hasRole(user.role, HOD_ROLES) && !isCeo;
+  const isSupervisorOnly = hasRole(user.role, SUPERVISOR_ONLY_ROLES);
+  const isSupervisorTier = hasRole(user.role, SUPERVISOR_ROLES);
+  const isWorker = hasRole(user.role, WORKER_ROLES);
+
+  const showShift =
+    isWorker ||
+    isSupervisorOnly ||
+    (hasRole(user.role, HOD_TIER_ROLES) && !isPlatformAdmin);
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-6 py-5">
         <h1 className="text-lg font-bold text-brand-700">MOI Platform</h1>
-        <p className="mt-1 truncate text-xs text-slate-500">{user?.full_name}</p>
-        <p className="text-xs capitalize text-slate-400">{user?.role?.replace(/_/g, ' ')}</p>
+        <p className="mt-1 truncate text-xs text-slate-500">{user.full_name}</p>
+        <p className="text-xs capitalize text-slate-400">{user.role.replace(/_/g, ' ')}</p>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
@@ -39,7 +63,16 @@ export function Sidebar() {
           My Profile
         </NavLink>
 
-        {isAdmin && (
+        <NavLink to="/messages" className={linkClass}>
+          Messages &amp; Alerts
+          {unread > 0 && (
+            <span className="ml-2 inline-flex rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+              {unread}
+            </span>
+          )}
+        </NavLink>
+
+        {isPlatformAdmin && (
           <>
             <p className={sectionClass}>Administration</p>
             <NavLink to="/admin" end className={linkClass}>
@@ -63,35 +96,49 @@ export function Sidebar() {
           </>
         )}
 
-        {(isSupervisor || isAdmin) && (
+        {isCeo && !isPlatformAdmin && (
+          <>
+            <p className={sectionClass}>Executive</p>
+            <NavLink to="/executive" end className={linkClass}>
+              Overview
+            </NavLink>
+            <NavLink to="/executive/employees" className={linkClass}>
+              Employees
+            </NavLink>
+          </>
+        )}
+
+        {isHod && (
+          <>
+            <p className={sectionClass}>Department</p>
+            <NavLink to="/hod" className={linkClass}>
+              Overview
+            </NavLink>
+          </>
+        )}
+
+        {isSupervisorTier && (
           <>
             <p className={sectionClass}>Operations</p>
-            {isSupervisor && (
+            {isSupervisorOnly && (
               <NavLink to="/supervisor" className={linkClass}>
                 Operations Activity
               </NavLink>
             )}
-            {showShiftDashboard && (
-              <>
-                <NavLink to="/shift" className={linkClass}>
-                  Shift Dashboard
-                </NavLink>
-                <NavLink to="/my-runs" className={linkClass}>
-                  My Runs
-                </NavLink>
-              </>
-            )}
           </>
         )}
 
-        {!isAdmin && !isSupervisor && showShiftDashboard && (
+        {showShift && (
           <>
+            {!isSupervisorOnly && !isWorker && <p className={sectionClass}>Shop floor</p>}
             <NavLink to="/shift" className={linkClass}>
               Shift Dashboard
             </NavLink>
-            <NavLink to="/my-runs" className={linkClass}>
-              My Runs
-            </NavLink>
+            {(isWorker || isSupervisorOnly) && (
+              <NavLink to="/my-runs" className={linkClass}>
+                My Runs
+              </NavLink>
+            )}
           </>
         )}
       </nav>

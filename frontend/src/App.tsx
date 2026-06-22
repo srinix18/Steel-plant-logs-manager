@@ -9,6 +9,10 @@ import { AdminDepartmentsPage } from './pages/admin/AdminDepartmentsPage';
 import { LogSheetPage } from './pages/admin/LogSheetPage';
 import { AdminActivityPage } from './pages/admin/AdminActivityPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { ExecutiveOverviewPage } from './pages/executive/ExecutiveOverviewPage';
+import { EmployeesPage } from './pages/executive/EmployeesPage';
+import { HodDashboardPage } from './pages/hod/HodDashboardPage';
+import { MessagesPage } from './pages/messages/MessagesPage';
 import { ShiftDashboard } from './pages/operations/ShiftDashboard';
 import { HeatWorkspace } from './pages/operations/HeatWorkspace';
 import { SupervisorMonitor } from './pages/operations/SupervisorMonitor';
@@ -16,13 +20,25 @@ import { RunReportPage } from './pages/reports/RunReportPage';
 import { MyRunsPage } from './pages/operations/MyRunsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { hasRole, ADMIN_ROLES, SUPERVISOR_ROLES, WORKER_ROLES } from './utils/roles';
+import {
+  hasRole,
+  PLATFORM_ADMIN_ROLES,
+  CEO_TIER_ROLES,
+  HOD_TIER_ROLES,
+  SUPERVISOR_ROLES,
+  WORKER_ROLES,
+  CEO_ROLES,
+  HOD_ROLES,
+  SUPERVISOR_ONLY_ROLES,
+} from './utils/roles';
 
 function RoleRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (hasRole(user.role, ADMIN_ROLES)) return <Navigate to="/admin" replace />;
-  if (hasRole(user.role, SUPERVISOR_ROLES)) return <Navigate to="/supervisor" replace />;
+  if (user.role === 'super_admin' || user.role === 'admin') return <Navigate to="/admin" replace />;
+  if (hasRole(user.role, CEO_ROLES)) return <Navigate to="/executive" replace />;
+  if (hasRole(user.role, HOD_ROLES)) return <Navigate to="/hod" replace />;
+  if (hasRole(user.role, SUPERVISOR_ONLY_ROLES)) return <Navigate to="/supervisor" replace />;
   if (hasRole(user.role, WORKER_ROLES)) return <Navigate to="/shift" replace />;
   return <Navigate to="/shift" replace />;
 }
@@ -35,7 +51,7 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<RoleRedirect />} />
 
-          <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+          <Route element={<ProtectedRoute allowedRoles={PLATFORM_ADMIN_ROLES} />}>
             <Route path="admin" element={<AdminDashboard />} />
             <Route path="admin/organisations" element={<AdminOrganisationsPage />} />
             <Route path="admin/departments" element={<AdminDepartmentsPage />} />
@@ -44,11 +60,26 @@ function AppRoutes() {
             <Route path="admin/users" element={<AdminUsersPage />} />
           </Route>
 
+          <Route element={<ProtectedRoute allowedRoles={CEO_TIER_ROLES} />}>
+            <Route path="executive" element={<ExecutiveOverviewPage />} />
+            <Route path="executive/employees" element={<EmployeesPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={HOD_TIER_ROLES} />}>
+            <Route path="hod" element={<HodDashboardPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={SUPERVISOR_ROLES} />}>
             <Route path="supervisor" element={<SupervisorMonitor />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={[...ADMIN_ROLES, ...SUPERVISOR_ROLES, ...WORKER_ROLES]} />}>
+          <Route path="messages" element={<MessagesPage />} />
+
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={[...PLATFORM_ADMIN_ROLES, ...SUPERVISOR_ROLES, ...WORKER_ROLES]} />
+            }
+          >
             <Route path="shift" element={<ShiftDashboard />} />
           </Route>
 

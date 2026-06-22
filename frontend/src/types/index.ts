@@ -2,6 +2,8 @@ type JsonObject = { [key: string]: unknown };
 
 export type UserRole =
   | 'super_admin'
+  | 'ceo'
+  | 'hod'
   | 'org_admin'
   | 'plant_admin'
   | 'supervisor'
@@ -18,6 +20,8 @@ export interface User {
   organisation_id?: string | null;
   plant_id?: string | null;
   department_id?: string | null;
+  process_id?: string | null;
+  is_active?: boolean;
   employee_uid?: string | null;
   phone?: string | null;
   designation?: string | null;
@@ -171,6 +175,61 @@ export interface DashboardMetrics {
   active_runs: number;
   open_observations: number;
   open_corrective_actions: number;
+}
+
+export interface MessageAttachment {
+  id: string;
+  message_id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface AppMessage {
+  id: string;
+  organisation_id: string;
+  sender_id: string;
+  subject: string;
+  body: string;
+  is_broadcast: boolean;
+  created_at: string;
+  sender?: { id: string; full_name: string; role: UserRole };
+  attachments: MessageAttachment[];
+  read_at?: string | null;
+}
+
+export interface AppNotification {
+  id: string;
+  message_id: string;
+  notification_type: string;
+  read_at?: string | null;
+  created_at: string;
+  message?: AppMessage | null;
+}
+
+export interface OrgUserPayload {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+  department_id?: string | null;
+  process_id?: string | null;
+  plant_id?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+}
+
+export interface OrgUserUpdatePayload {
+  full_name?: string;
+  role?: UserRole;
+  department_id?: string | null;
+  process_id?: string | null;
+  plant_id?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  is_active?: boolean;
+  password?: string;
 }
 
 export interface LoginResponse {

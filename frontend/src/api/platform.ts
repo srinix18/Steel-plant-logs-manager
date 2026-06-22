@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Department, GradeElement, MaterialCatalogItem, Organisation, Plant, Process, ProcessInstance, Shift, SteelGrade, User } from '../types';
+import type { Department, GradeElement, MaterialCatalogItem, Organisation, Plant, Process, ProcessInstance, Shift, SteelGrade, User, OrgUserPayload, OrgUserUpdatePayload } from '../types';
 
 export async function fetchOrganisations(): Promise<Organisation[]> {
   const { data } = await apiClient.get<Organisation[]>('/organisations');
@@ -63,5 +63,24 @@ export async function fetchMaterials(materialType?: 'scrap' | 'alloy'): Promise<
   const { data } = await apiClient.get<MaterialCatalogItem[]>('/materials', {
     params: materialType ? { material_type: materialType } : {},
   });
+  return data;
+}
+
+export async function fetchOrgUsers(orgId: string): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>(`/organisations/${orgId}/users`);
+  return data;
+}
+
+export async function createOrgUser(orgId: string, payload: OrgUserPayload): Promise<User> {
+  const { data } = await apiClient.post<User>(`/organisations/${orgId}/users`, payload);
+  return data;
+}
+
+export async function updateOrgUser(
+  orgId: string,
+  userId: string,
+  payload: OrgUserUpdatePayload
+): Promise<User> {
+  const { data } = await apiClient.patch<User>(`/organisations/${orgId}/users/${userId}`, payload);
   return data;
 }
