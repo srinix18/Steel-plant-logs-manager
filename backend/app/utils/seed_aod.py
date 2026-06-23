@@ -8,11 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Asset,
     AssetGroup,
-    Department,
     GradeElementSpec,
     MaterialCatalog,
-    Organisation,
-    Plant,
     Process,
     ProcessInstance,
     SteelGrade,
@@ -25,6 +22,7 @@ from app.db.models import (
     WorkflowTransitionDef,
 )
 from app.models.enums import FieldType, MaterialType, ProcessInstanceStatus, TemplateScopeType, TemplateVersionStatus
+from app.utils.chandan_org import get_chandan_department, get_chandan_organisation, get_chandan_plant
 
 AOD_ELEMENTS = ["C", "SI", "MN", "P", "S", "CR", "MO", "NI", "CU", "N2", "CO", "W", "AL", "SN", "TI"]
 
@@ -144,8 +142,7 @@ async def _ensure_grade_elements(session: AsyncSession, org_id) -> None:
 
 
 async def seed_aod_template(session: AsyncSession) -> None:
-    org_result = await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))
-    org = org_result.scalar_one_or_none()
+    org = await get_chandan_organisation(session)
     if not org:
         return
 
@@ -153,15 +150,11 @@ async def seed_aod_template(session: AsyncSession) -> None:
     if tpl_result.scalar_one_or_none():
         return
 
-    plant_result = await session.execute(select(Plant).where(Plant.organisation_id == org.id, Plant.code == "SMS"))
-    plant = plant_result.scalar_one_or_none()
+    plant = await get_chandan_plant(session, org.id)
     if not plant:
         return
 
-    dept_result = await session.execute(
-        select(Department).where(Department.plant_id == plant.id, Department.code == "SMS")
-    )
-    dept = dept_result.scalar_one_or_none()
+    dept = await get_chandan_department(session, plant.id, "SMS")
     if not dept:
         return
 

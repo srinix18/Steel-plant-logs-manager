@@ -12,6 +12,18 @@ import type {
 } from '../../types';
 import { Button } from '../ui/Button';
 import {
+  DelayRegisterTable,
+  buildEmptyDelayRegister,
+  getDelayRegisterConfig,
+  parseDelayRegister,
+} from './DelayRegisterTable';
+import {
+  HourlyProductionMatrix,
+  buildEmptyHourlyMatrix,
+  getHourlyMatrixConfig,
+  parseHourlyMatrix,
+} from './HourlyProductionMatrix';
+import {
   BlowProcessMatrix,
   buildBlowProcessSection,
   getBlowProcessConfig,
@@ -24,6 +36,9 @@ import {
   getProductionLogConfig,
   parseProductionLog,
 } from './ConcastProductionTable';
+import {
+  ProductionRegisterTable,
+} from './ProductionRegisterTable';
 import { FieldsSection } from './FieldsSection';
 import { RemarkThread } from './RemarkThread';
 import {
@@ -85,6 +100,21 @@ export function initSectionDataMap(
         map[section.key] = parseProductionLog(raw, columns, defaultEmptyRows);
         break;
       }
+      case 'production_register_table': {
+        const { columns, defaultEmptyRows } = getProductionLogConfig(section);
+        map[section.key] = parseProductionLog(raw, columns, defaultEmptyRows);
+        break;
+      }
+      case 'delay_register_table': {
+        const { defaultEmptyRows } = getDelayRegisterConfig(section);
+        map[section.key] = parseDelayRegister(raw, defaultEmptyRows);
+        break;
+      }
+      case 'hourly_production_matrix': {
+        const { hours, rows } = getHourlyMatrixConfig(section);
+        map[section.key] = parseHourlyMatrix(raw, hours, rows);
+        break;
+      }
       default:
         break;
     }
@@ -125,6 +155,21 @@ export function initPreviewSectionData(
       case 'production_log_table': {
         const { columns, defaultEmptyRows } = getProductionLogConfig(section);
         map[section.key] = buildEmptyProductionLog(columns, defaultEmptyRows);
+        break;
+      }
+      case 'production_register_table': {
+        const { columns, defaultEmptyRows } = getProductionLogConfig(section);
+        map[section.key] = buildEmptyProductionLog(columns, defaultEmptyRows);
+        break;
+      }
+      case 'delay_register_table': {
+        const { defaultEmptyRows } = getDelayRegisterConfig(section);
+        map[section.key] = buildEmptyDelayRegister(defaultEmptyRows);
+        break;
+      }
+      case 'hourly_production_matrix': {
+        const { hours, rows } = getHourlyMatrixConfig(section);
+        map[section.key] = buildEmptyHourlyMatrix(hours, rows);
         break;
       }
       default:
@@ -327,17 +372,73 @@ export function SectionRenderer({
     );
   }
 
-  if (section.section_type === 'production_log_table') {
+  if (section.section_type === 'delay_register_table') {
+    const { defaultEmptyRows } = getDelayRegisterConfig(section);
+    const data =
+      (sectionData[section.key] as ReturnType<typeof parseDelayRegister>) ??
+      buildEmptyDelayRegister(defaultEmptyRows);
+    return (
+      <div>
+        <DelayRegisterTable
+          data={data}
+          plantId={ctx.plantId}
+          plantUsers={ctx.plantUsers ?? []}
+          onChange={(d) => onSectionDataChange(section.key, d)}
+          readOnly={readOnly}
+        />
+        {showSave && onSaveSection && !readOnly && (
+          <Button className="mt-4" onClick={() => onSaveSection(section)} disabled={saving}>
+            {saving ? 'Saving...' : `Save ${section.title}`}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (section.section_type === 'hourly_production_matrix') {
+    const { hours, rows } = getHourlyMatrixConfig(section);
+    const data =
+      (sectionData[section.key] as ReturnType<typeof parseHourlyMatrix>) ??
+      buildEmptyHourlyMatrix(hours, rows);
+    return (
+      <div>
+        <HourlyProductionMatrix
+          hours={hours}
+          rows={rows}
+          data={data}
+          onChange={(d) => onSectionDataChange(section.key, d)}
+          readOnly={readOnly}
+        />
+        {showSave && onSaveSection && !readOnly && (
+          <Button className="mt-4" onClick={() => onSaveSection(section)} disabled={saving}>
+            {saving ? 'Saving...' : `Save ${section.title}`}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (section.section_type === 'production_log_table' || section.section_type === 'production_register_table') {
     const { columns, defaultEmptyRows } = getProductionLogConfig(section);
     const data =
       (sectionData[section.key] as ProductionLogSectionData) ??
       buildEmptyProductionLog(columns, defaultEmptyRows);
+    const Table =
+      section.section_type === 'production_register_table'
+        ? ProductionRegisterTable
+        : ConcastProductionTable;
+    const coilPurpose =
+      (section.config.coil_picker_purpose as 'drawing' | undefined) ??
+      (section.key === 'input_material' || section.key === 'output_material' ? 'drawing' : undefined);
     return (
       <div>
-        <ConcastProductionTable
+        <Table
           columns={columns}
           data={data}
           grades={ctx.steelGrades ?? []}
+          plantId={ctx.plantId}
+          runId={ctx.runId}
+          coilPurpose={coilPurpose}
           onChange={(d) => onSectionDataChange(section.key, d)}
           readOnly={readOnly}
         />

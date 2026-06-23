@@ -22,6 +22,22 @@ Development seed credentials for the Chandan Steel SMS demo environment. **Do no
 
 Start the app with `start.bat` (or `scripts/start.ps1`).
 
+## Organisation structure (Chandan Steel)
+
+**Plant:** Chandan Steels (`CS`)
+
+| Dept code | Department | Notes |
+|-----------|------------|-------|
+| `SMS` | Steel Melting Shop | IAF, AOD, CCM log sheets (seeded) |
+| `ROLLING` | Rolling Mill | **F/PRD/05** shift production report |
+| `WIRE` | Wire Division | **F/PRD/06** furnace, **F/PRD/07** wire drawing |
+| `BBD` | Bright Bar Division | **F51 PR 39/005/01-13** production register (daily); peeling planned |
+| `FORGE` | Forge Shop | **F/PRD/08** grinding material details (daily, planned) |
+
+All five departments sit under the single Chandan Steels plant. Demo users below are scoped to SMS unless noted.
+
+See [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) for the full process and template matrix.
+
 ## Seed users
 
 | Role | Full name | Email | Password | Scope |
@@ -39,6 +55,38 @@ Start the app with `start.bat` (or `scripts/start.ps1`).
 | Maintenance (Energy) | Energy Maintenance | `maint.energy@chandansteel.com` | `maint123` | Energy issues |
 | Maintenance (Equipment) | Equipment Maintenance | `maint.equipment@chandansteel.com` | `maint123` | Equipment issues |
 | Maintenance (Process) | Process Maintenance | `maint.process@chandansteel.com` | `maint123` | Process issues |
+| HoD (Rolling Mill) | Rolling Mill HoD | `hod.rolling@chandansteel.com` | `hod123` | Rolling Mill department |
+| Supervisor (Rolling Mill) | Rolling Mill Shift Incharge | `supervisor.rolling@chandansteel.com` | `rolling123` | RMILL shift report |
+| Worker (Rolling Mill) | Rolling Mill Operator | `worker.rolling@chandansteel.com` | `rolling123` | RMILL shift entry |
+| HoD (Wire Division) | Wire Division HoD | `hod.wire@chandansteel.com` | `hod123` | Wire Division department |
+| Supervisor (Wire) | Wire Division Shift Incharge | `supervisor.wire@chandansteel.com` | `wire123` | WFURN / WDRAW shift reports |
+| Worker (Wire) | Wire Division Operator | `worker.wire@chandansteel.com` | `wire123` | WFURN / WDRAW shift entry |
+| HoD (Bright Bar) | Bright Bar Division HoD | `hod.bbd@chandansteel.com` | `hod123` | Bright Bar Division department |
+| Supervisor (Bright Bar) | Bright Bar Shift Incharge | `supervisor.bbd@chandansteel.com` | `bbd123` | BBAR daily register |
+| Worker (Bright Bar) | Bright Bar Production Clerk | `worker.bbd@chandansteel.com` | `bbd123` | BBAR daily entry |
+| HoD (Forge Shop) | Forge Shop HoD | `hod.forge@chandansteel.com` | `hod123` | Forge Shop department (planned) |
+| Supervisor (Forge) | Forge Shop Shift Incharge | `supervisor.forge@chandansteel.com` | `forge123` | GRIND daily register (planned) |
+| Worker (Forge) | Grinding Operator | `worker.forge@chandansteel.com` | `forge123` | GRIND daily entry (planned) |
+
+### Rolling Mill delay codes (F/PRD/05)
+
+Configurable per plant via `GET /api/v1/delay-codes`. Default codes: EL, MC, HP, OP, OT, SC, AG, SS, QC, RS, GS, RM, PC. Delay register rows sync to **Delay Event** records and can spawn observations / corrective actions when assigned.
+
+### Wire Furnace coil traceability (F/PRD/06)
+
+Process **WFURN** under Wire Division. Input coil rows upsert into the `coils` master on save (`GET /api/v1/coils?plant_id=&run_id=` for picker). Furnace output rows link to input coils via `coil_ref`; saving output marks the coil **completed**.
+
+### Wire Drawing coil lifecycle (F/PRD/07)
+
+Process **WDRAW** (dry machine `WD-01`, wet machine `WD-02`). Drawing inlet picker uses `GET /api/v1/coils?purpose=drawing` (coils with status **completed** after annealing). Saving **output material** marks the inlet coil **consumed** and registers a new finish coil with `parent_coil_id` for full traceability back to heat.
+
+### Bright Bar production register (F51 PR 39/005/01-13)
+
+Process **BBAR** under Bright Bar Division. **Daily** run type (no shift binding). Finished-goods output register: grade, heat, sizes, coil count/weight, auto-calculated total weight, and customer picker (`GET /api/v1/customers`). Register **No** uses the process run number. **Peeling** is planned under BBD; grinding is **not** part of Bright Bar.
+
+### Forge Shop grinding register (F/PRD/08, planned)
+
+Process **GRIND** under Forge Shop. **Grinding Material Details (Work Centre Wise)** — daily register for work-centre grinding jobs on forged products (product, dimensions, grade, heat, quantities, manpower, contractor). Header: work centre + date. Not a shift workflow. Stakeholders confirmed this sheet belongs to Forge Shop, not Bright Bar Division.
 
 ### Login API
 

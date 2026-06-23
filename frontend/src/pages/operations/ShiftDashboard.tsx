@@ -12,6 +12,15 @@ const PROCESS_OPTIONS = [
   { code: 'IAF', label: 'IAF — Induction Furnace', instanceLabel: 'Furnace', runType: 'heat' as const },
   { code: 'AOD', label: 'AOD — Argon Oxygen Decarburization', instanceLabel: 'AOD Vessel', runType: 'ladle_metallurgy' as const },
   { code: 'CCM', label: 'CCM — Continuous Casting', instanceLabel: 'Caster Line', runType: 'cast' as const },
+  { code: 'RMILL', label: 'Rolling Mill Production', instanceLabel: 'Mill Line', runType: 'shift' as const },
+  { code: 'WFURN', label: 'Wire Furnace Production', instanceLabel: 'Annealing Furnace', runType: 'shift' as const },
+  { code: 'WDRAW', label: 'Wire Drawing Production', instanceLabel: 'Drawing Machine', runType: 'shift' as const },
+  {
+    code: 'BBAR',
+    label: 'Bright Bar Production Register',
+    instanceLabel: 'Production Line',
+    runType: 'daily' as const,
+  },
 ];
 
 export function ShiftDashboard() {
@@ -52,6 +61,7 @@ export function ShiftDashboard() {
   }, [processCode, processes]);
 
   const isConcast = processCode === 'CCM';
+  const isDaily = processMeta.runType === 'daily';
 
   const handleStartRun = async () => {
     if (!selectedInstance) return;
@@ -109,22 +119,24 @@ export function ShiftDashboard() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700">Shift</label>
-            <select
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
-              value={selectedShift}
-              onChange={(e) => setSelectedShift(e.target.value)}
-            >
-              <option value="">Select shift</option>
-              {shifts.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {!isConcast && (
+          {!isDaily && (
+            <div>
+              <label className="text-sm font-medium text-slate-700">Shift</label>
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
+                value={selectedShift}
+                onChange={(e) => setSelectedShift(e.target.value)}
+              >
+                <option value="">Select shift</option>
+                {shifts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {!isConcast && !isDaily && (
             <div className="sm:col-span-2">
               <label className="text-sm font-medium text-slate-700">Grade</label>
               <select
@@ -145,11 +157,15 @@ export function ShiftDashboard() {
         <Button className="mt-4 w-full py-3 text-base" onClick={handleStartRun} disabled={!selectedInstance || starting}>
           {starting
             ? 'Starting...'
-            : isConcast
-              ? 'Start Shift Log'
-              : processCode === 'AOD'
-                ? 'Start AOD Run'
-                : 'Start Heat'}
+            : isDaily
+              ? 'Start Daily Register'
+              : isConcast
+                ? 'Start Shift Log'
+                : processCode === 'AOD'
+                  ? 'Start AOD Run'
+                  : processMeta.runType === 'shift'
+                    ? 'Start Shift Report'
+                    : 'Start Heat'}
         </Button>
       </div>
 

@@ -4,25 +4,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
-from app.db.models import Department, Organisation, Plant, Process, User
+from app.db.models import Process, User
 from app.models.enums import ObservationCategory, UserRole
+from app.utils.chandan_org import get_chandan_department, get_chandan_organisation, get_chandan_plant
 
 
 async def seed_org_role_users(session: AsyncSession) -> None:
-    org_result = await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))
-    org = org_result.scalar_one_or_none()
+    org = await get_chandan_organisation(session)
     if not org:
         return
 
-    plant_result = await session.execute(select(Plant).where(Plant.organisation_id == org.id, Plant.code == "SMS"))
-    plant = plant_result.scalar_one_or_none()
+    plant = await get_chandan_plant(session, org.id)
     if not plant:
         return
 
-    dept_result = await session.execute(
-        select(Department).where(Department.plant_id == plant.id, Department.code == "SMS")
-    )
-    dept = dept_result.scalar_one_or_none()
+    dept = await get_chandan_department(session, plant.id, "SMS")
     if not dept:
         return
 
@@ -111,6 +107,166 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                     is_active=True,
                 )
             )
+
+    rolling_dept = await get_chandan_department(session, plant.id, "ROLLING")
+    if rolling_dept:
+        rmill_proc = await session.execute(
+            select(Process).where(Process.department_id == rolling_dept.id, Process.code == "RMILL")
+        )
+        rmill = rmill_proc.scalar_one_or_none()
+        rolling_seeds = [
+            {
+                "email": "hod.rolling@chandansteel.com",
+                "password": "hod123",
+                "full_name": "Rolling Mill HoD",
+                "role": UserRole.HOD,
+                "designation": "HOD (Rolling Mill)",
+                "employee_uid": "CHANDAN-HOD-RM-0001",
+            },
+            {
+                "email": "supervisor.rolling@chandansteel.com",
+                "password": "rolling123",
+                "full_name": "Rolling Mill Shift Incharge",
+                "role": UserRole.SUPERVISOR,
+                "designation": "Rolling Mill Supervisor",
+                "employee_uid": "CHANDAN-RM-SUP-0001",
+                "process_id": rmill.id if rmill else None,
+            },
+            {
+                "email": "worker.rolling@chandansteel.com",
+                "password": "rolling123",
+                "full_name": "Rolling Mill Operator",
+                "role": UserRole.WORKER,
+                "designation": "Mill Operator",
+                "employee_uid": "CHANDAN-RM-WKR-0001",
+            },
+        ]
+        for spec in rolling_seeds:
+            with session.no_autoflush:
+                existing = await session.execute(select(User).where(User.email == spec["email"]))
+                if existing.scalar_one_or_none():
+                    continue
+                session.add(
+                    User(
+                        email=spec["email"],
+                        hashed_password=get_password_hash(spec["password"]),
+                        full_name=spec["full_name"],
+                        role=spec["role"],
+                        organisation_id=org.id,
+                        plant_id=plant.id,
+                        department_id=rolling_dept.id,
+                        process_id=spec.get("process_id"),
+                        designation=spec["designation"],
+                        employee_uid=spec["employee_uid"],
+                        is_active=True,
+                    )
+                )
+
+    wire_dept = await get_chandan_department(session, plant.id, "WIRE")
+    if wire_dept:
+        wire_seeds = [
+            {
+                "email": "hod.wire@chandansteel.com",
+                "password": "hod123",
+                "full_name": "Wire Division HoD",
+                "role": UserRole.HOD,
+                "designation": "HOD (Wire Division)",
+                "employee_uid": "CHANDAN-HOD-WIRE-0001",
+            },
+            {
+                "email": "supervisor.wire@chandansteel.com",
+                "password": "wire123",
+                "full_name": "Wire Division Shift Incharge",
+                "role": UserRole.SUPERVISOR,
+                "designation": "Wire Division Supervisor",
+                "employee_uid": "CHANDAN-WIRE-SUP-0001",
+            },
+            {
+                "email": "worker.wire@chandansteel.com",
+                "password": "wire123",
+                "full_name": "Wire Division Operator",
+                "role": UserRole.WORKER,
+                "designation": "Wire Division Operator",
+                "employee_uid": "CHANDAN-WIRE-WKR-0001",
+            },
+        ]
+        for spec in wire_seeds:
+            with session.no_autoflush:
+                existing = await session.execute(select(User).where(User.email == spec["email"]))
+                user = existing.scalar_one_or_none()
+                if user:
+                    user.designation = spec["designation"]
+                    user.full_name = spec["full_name"]
+                    user.process_id = None
+                    continue
+                session.add(
+                    User(
+                        email=spec["email"],
+                        hashed_password=get_password_hash(spec["password"]),
+                        full_name=spec["full_name"],
+                        role=spec["role"],
+                        organisation_id=org.id,
+                        plant_id=plant.id,
+                        department_id=wire_dept.id,
+                        process_id=spec.get("process_id"),
+                        designation=spec["designation"],
+                        employee_uid=spec["employee_uid"],
+                        is_active=True,
+                    )
+                )
+
+    bbd_dept = await get_chandan_department(session, plant.id, "BBD")
+    if bbd_dept:
+        bbd_seeds = [
+            {
+                "email": "hod.bbd@chandansteel.com",
+                "password": "hod123",
+                "full_name": "Bright Bar Division HoD",
+                "role": UserRole.HOD,
+                "designation": "HOD (Bright Bar Division)",
+                "employee_uid": "CHANDAN-HOD-BBD-0001",
+            },
+            {
+                "email": "supervisor.bbd@chandansteel.com",
+                "password": "bbd123",
+                "full_name": "Bright Bar Shift Incharge",
+                "role": UserRole.SUPERVISOR,
+                "designation": "Bright Bar Supervisor",
+                "employee_uid": "CHANDAN-BBD-SUP-0001",
+            },
+            {
+                "email": "worker.bbd@chandansteel.com",
+                "password": "bbd123",
+                "full_name": "Bright Bar Production Clerk",
+                "role": UserRole.WORKER,
+                "designation": "Bright Bar Operator",
+                "employee_uid": "CHANDAN-BBD-WKR-0001",
+            },
+        ]
+        for spec in bbd_seeds:
+            with session.no_autoflush:
+                existing = await session.execute(select(User).where(User.email == spec["email"]))
+                user = existing.scalar_one_or_none()
+                if user:
+                    user.designation = spec["designation"]
+                    user.full_name = spec["full_name"]
+                    user.process_id = None
+                    continue
+                session.add(
+                    User(
+                        email=spec["email"],
+                        hashed_password=get_password_hash(spec["password"]),
+                        full_name=spec["full_name"],
+                        role=spec["role"],
+                        organisation_id=org.id,
+                        plant_id=plant.id,
+                        department_id=bbd_dept.id,
+                        process_id=spec.get("process_id"),
+                        designation=spec["designation"],
+                        employee_uid=spec["employee_uid"],
+                        is_active=True,
+                    )
+                )
 
     # Migrate legacy supervisor to IAF scope
     legacy = await session.execute(select(User).where(User.email == "supervisor@chandansteel.com"))

@@ -5,8 +5,11 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.enums import (
+    CoilStatus,
     CorrectiveActionPriority,
     CorrectiveActionStatus,
+    DelayCodeCategory,
+    DelayEventStatus,
     EventSeverity,
     EventSource,
     MaintenanceIssueStatus,
@@ -592,3 +595,103 @@ class DashboardMetrics(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+# Rolling Mill — delay codes and events
+class DelayCodeResponse(BaseModel):
+    id: UUID
+    plant_id: UUID
+    code: str
+    description: str
+    category: DelayCodeCategory
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class DelayCodeCreate(BaseModel):
+    plant_id: UUID
+    code: str = Field(min_length=1, max_length=10)
+    description: str = Field(min_length=1, max_length=300)
+    category: DelayCodeCategory
+    is_active: bool = True
+
+
+class DelayCodeUpdate(BaseModel):
+    description: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    category: Optional[DelayCodeCategory] = None
+    is_active: Optional[bool] = None
+
+
+class DelayEventResponse(BaseModel):
+    id: UUID
+    run_id: UUID
+    plant_id: UUID
+    row_key: str
+    delay_code_id: Optional[UUID] = None
+    time_from: Optional[str] = None
+    time_to: Optional[str] = None
+    time_lost_minutes: Optional[int] = None
+    reason: Optional[str] = None
+    action_taken: Optional[str] = None
+    assigned_to: Optional[UUID] = None
+    status: DelayEventStatus
+    observation_id: Optional[UUID] = None
+    closed_at: Optional[datetime] = None
+    closed_by: Optional[UUID] = None
+    delay_code: Optional[DelayCodeResponse] = None
+    model_config = {"from_attributes": True}
+
+
+class DelayEventUpdate(BaseModel):
+    assigned_to: Optional[UUID] = None
+    action_taken: Optional[str] = None
+    status: Optional[DelayEventStatus] = None
+
+
+class HeatLookupResponse(BaseModel):
+    run_id: UUID
+    run_number: str
+    heat_no: str
+    grade_id: Optional[UUID] = None
+    process_code: Optional[str] = None
+
+
+# Wire Division — coils
+class CoilResponse(BaseModel):
+    id: UUID
+    plant_id: UUID
+    department_id: UUID
+    coil_no: str
+    work_order_no: Optional[str] = None
+    grade_id: Optional[UUID] = None
+    heat_run_id: Optional[UUID] = None
+    heat_no: Optional[str] = None
+    size_mm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    status: CoilStatus
+    parent_coil_id: Optional[UUID] = None
+    source_run_id: Optional[UUID] = None
+    registered_by: UUID
+    model_config = {"from_attributes": True}
+
+
+class CoilLookupResponse(BaseModel):
+    id: UUID
+    coil_no: str
+    status: CoilStatus
+    work_order_no: Optional[str] = None
+    grade_id: Optional[UUID] = None
+    heat_no: Optional[str] = None
+    size_mm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    parent_coil_id: Optional[UUID] = None
+
+
+# Bright Bar — customers
+class CustomerResponse(BaseModel):
+    id: UUID
+    plant_id: UUID
+    name: str
+    code: Optional[str] = None
+    is_active: bool = True
+    model_config = {"from_attributes": True}

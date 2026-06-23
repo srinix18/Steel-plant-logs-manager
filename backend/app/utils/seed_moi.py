@@ -44,16 +44,16 @@ async def seed_all(session: AsyncSession) -> None:
     if existing.scalar_one_or_none():
         return
 
-    org = Organisation(name="Chandan Steel Ltd.", code="CHANDAN", description="SMS Division client")
+    org = Organisation(name="Chandan Steel Ltd.", code="CHANDAN", description="Chandan Steel divisions")
     session.add(org)
     await session.flush()
 
     plant = Plant(
         organisation_id=org.id,
-        name="SMS Plant",
-        code="SMS",
+        name="Chandan Steels",
+        code="CS",
         timezone="Asia/Kolkata",
-        location="Steel Melting Shop",
+        location="Chandan Steels",
     )
     session.add(plant)
     await session.flush()

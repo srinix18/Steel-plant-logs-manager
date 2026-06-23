@@ -354,6 +354,8 @@ export interface ProductionLogColumnDef {
   fields?: ProductionLogObjectField[];
   zones?: string[];
   asset_group?: string;
+  options?: string[];
+  formula?: string;
 }
 
 export interface StrandPairValue {
@@ -387,6 +389,23 @@ export interface LadleTempValue {
   after_purging: number | null;
 }
 
+export interface FurnaceZonesValue {
+  heat_zone_1: number | null;
+  heat_zone_2: number | null;
+  soak_zone_1: number | null;
+  soak_zone_2: number | null;
+}
+
+export interface HeatRefValue {
+  run_id: string;
+  heat_no: string;
+}
+
+export interface CoilRefValue {
+  coil_id: string;
+  coil_no: string;
+}
+
 export type ProductionLogCellValue =
   | string
   | number
@@ -395,7 +414,10 @@ export type ProductionLogCellValue =
   | ZoneStrandValue
   | TimeRangeValue
   | MouldTubeValue
-  | LadleTempValue;
+  | LadleTempValue
+  | FurnaceZonesValue
+  | HeatRefValue
+  | CoilRefValue;
 
 export interface ProductionLogRow {
   values: Record<string, ProductionLogCellValue>;
@@ -411,6 +433,7 @@ export interface SectionRenderContext {
   scrapMaterials: MaterialCatalogItem[];
   steelGrades?: SteelGrade[];
   plantUsers?: User[];
+  plantId?: string;
   currentUserId?: string;
   currentUser?: User;
   runId?: string;

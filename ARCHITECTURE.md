@@ -1,5 +1,9 @@
 # Dynamic Logbook Management System — Architecture
 
+> **Current platform:** The live codebase is the **Manufacturing Operations Intelligence (MOI)** platform — FastAPI, SQLAlchemy 2.0, PostgreSQL, React. See [README.md](README.md) for stack and quick start. For Chandan Steel department/process/template mapping see [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md).
+
+The sections below describe an earlier MongoDB-based logbook MVP design kept for historical reference.
+
 ## Overview
 
 A production-ready MVP for organizations to create customizable logbook templates, collect structured form data, and enforce role-based access control. The system uses a **normalized document model** in MongoDB (collections mirror relational tables with UUID foreign keys) to support future analytics, ML, and audit modules.

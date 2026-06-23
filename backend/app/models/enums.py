@@ -55,6 +55,7 @@ class FieldType(str, enum.Enum):
     ASSET_REF = "asset_ref"
     MATERIAL_REF = "material_ref"
     GRADE_REF = "grade_ref"
+    HEAT_REF = "heat_ref"
     REPEATABLE_GROUP = "repeatable_group"
     TABLE = "table"
     CALCULATED = "calculated"
@@ -62,6 +63,8 @@ class FieldType(str, enum.Enum):
 
 class ProcessRunType(str, enum.Enum):
     HEAT = "heat"
+    SHIFT = "shift"
+    DAILY = "daily"
     LADLE_METALLURGY = "ladle_metallurgy"
     CAST = "cast"
     INSPECTION = "inspection"
@@ -110,6 +113,23 @@ class MaintenanceIssueStatus(str, enum.Enum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     CLOSED = "closed"
+
+
+class DelayCodeCategory(str, enum.Enum):
+    EQUIPMENT = "equipment"
+    PROCESS = "process"
+
+
+class DelayEventStatus(str, enum.Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class CoilStatus(str, enum.Enum):
+    REGISTERED = "registered"
+    IN_FURNACE = "in_furnace"
+    COMPLETED = "completed"
+    CONSUMED = "consumed"
 
 
 class CorrectiveActionStatus(str, enum.Enum):

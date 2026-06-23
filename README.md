@@ -16,6 +16,10 @@ Production-grade platform for steel plant operations — digitizing logbooks, pr
 Organisation → Plant → Department → Process → Process Instance → Template → TemplateVersion → Process Run
 ```
 
+**Chandan Steels (`CS`) departments:** SMS, Rolling Mill, Wire Division, Bright Bar Division, Forge Shop.
+
+Full process/template mapping: [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md)
+
 ## Quick Start
 
 ### 1. PostgreSQL

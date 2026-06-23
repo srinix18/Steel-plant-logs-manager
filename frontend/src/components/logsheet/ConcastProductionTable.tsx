@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
 import type {
+  CoilRefValue,
+  FurnaceZonesValue,
+  HeatRefValue,
   LadleTempValue,
   ProductionLogCellValue,
   ProductionLogColumnDef,
@@ -7,6 +11,9 @@ import type {
   SteelGrade,
   TemplateSection,
 } from '../../types';
+import { lookupHeatNo, type HeatLookup } from '../../api/rollingMill';
+import { fetchCoils, type CoilRecord } from '../../api/coils';
+import { fetchCustomers, type Customer } from '../../api/customers';
 import { Button } from '../ui/Button';
 import { MouldTubeCell, emptyMouldTube } from './MouldTubeCell';
 import { StrandPairCell, emptyStrandPair } from './StrandPairCell';
@@ -31,6 +38,37 @@ function cellHasValue(val: ProductionLogCellValue): boolean {
 
 function rowHasData(row: ProductionLogRow, columns: ProductionLogColumnDef[]): boolean {
   return columns.some((col) => cellHasValue(row.values[col.key] ?? null));
+}
+
+function evalProductionFormula(
+  formula: string,
+  values: Record<string, ProductionLogCellValue>,
+): number | null {
+  const trimmed = formula.trim();
+  if (trimmed.includes('*')) {
+    const parts = trimmed.split('*').map((p) => p.trim());
+    if (parts.length === 2) {
+      const left = values[parts[0]];
+      const right = values[parts[1]];
+      if (typeof left === 'number' && typeof right === 'number') {
+        return left * right;
+      }
+    }
+  }
+  return null;
+}
+
+function applyCalculatedColumns(
+  columns: ProductionLogColumnDef[],
+  values: Record<string, ProductionLogCellValue>,
+): Record<string, ProductionLogCellValue> {
+  const next = { ...values };
+  for (const col of columns) {
+    if (col.type === 'calculated' && col.formula) {
+      next[col.key] = evalProductionFormula(col.formula, next);
+    }
+  }
+  return next;
 }
 
 export function getProductionLogConfig(section: TemplateSection) {
@@ -63,6 +101,12 @@ function emptyCellValue(col: ProductionLogColumnDef): ProductionLogCellValue {
       return emptyZoneStrand();
     case 'mould_tube':
       return emptyMouldTube();
+    case 'furnace_zones':
+      return { heat_zone_1: null, heat_zone_2: null, soak_zone_1: null, soak_zone_2: null };
+    case 'heat_ref':
+      return { run_id: '', heat_no: '' };
+    case 'coil_ref':
+      return { coil_id: '', coil_no: '' };
     default:
       return null;
   }
@@ -114,6 +158,8 @@ function columnColSpan(col: ProductionLogColumnDef): number {
       return 4;
     case 'mould_tube':
       return 4;
+    case 'furnace_zones':
+      return 4;
     default:
       return 1;
   }
@@ -131,6 +177,8 @@ function subHeaders(col: ProductionLogColumnDef): string[] {
       return ['Z1 · ST1', 'Z1 · ST2', 'Z2 · ST1', 'Z2 · ST2'];
     case 'mould_tube':
       return ['S1 No', 'S1 Life', 'S2 No', 'S2 Life'];
+    case 'furnace_zones':
+      return ['HZ 1', 'HZ 2', 'SZ 1', 'SZ 2'];
     default:
       return [col.label];
   }
@@ -178,7 +226,7 @@ function strandCastDuration(
   return minutes != null ? formatDurationMinutes(minutes) : null;
 }
 
-interface ConcastProductionTableProps {
+export interface ConcastProductionTableProps {
   columns: ProductionLogColumnDef[];
   data: ProductionLogSectionData;
   grades: SteelGrade[];
@@ -186,6 +234,9 @@ interface ConcastProductionTableProps {
   readOnly?: boolean;
   compact?: boolean;
   filterEmptyRows?: boolean;
+  plantId?: string;
+  runId?: string;
+  coilPurpose?: 'drawing';
 }
 
 export function ConcastProductionTable({
@@ -196,15 +247,40 @@ export function ConcastProductionTable({
   readOnly,
   compact,
   filterEmptyRows,
+  plantId,
+  runId,
+  coilPurpose,
 }: ConcastProductionTableProps) {
   const allRows = data.rows.length > 0 ? data.rows : buildEmptyProductionLog(columns).rows;
   const rows = filterEmptyRows ? allRows.filter((row) => rowHasData(row, columns)) : allRows;
   const cellText = compact ? 'text-[7px]' : 'text-[10px]';
   const tableClass = compact ? COMPACT_TABLE_XS : 'min-w-full border border-slate-300 text-xs';
+  const hasCoilRef = columns.some((c) => c.type === 'coil_ref');
+  const hasCustomerRef = columns.some((c) => c.type === 'customer_ref');
+  const [coils, setCoils] = useState<CoilRecord[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+
+  useEffect(() => {
+    if (!hasCoilRef || !plantId || !runId || readOnly) return;
+    fetchCoils({ plantId, runId, purpose: coilPurpose })
+      .then(setCoils)
+      .catch(() => setCoils([]));
+  }, [hasCoilRef, plantId, runId, readOnly, coilPurpose]);
+
+  useEffect(() => {
+    if (!hasCustomerRef || !plantId) return;
+    fetchCustomers(plantId)
+      .then(setCustomers)
+      .catch(() => setCustomers([]));
+  }, [hasCustomerRef, plantId]);
 
   const updateCell = (rowIndex: number, key: string, value: ProductionLogCellValue) => {
     onChange({
-      rows: rows.map((row, i) => (i === rowIndex ? { values: { ...row.values, [key]: value } } : row)),
+      rows: rows.map((row, i) => {
+        if (i !== rowIndex) return row;
+        const values = applyCalculatedColumns(columns, { ...row.values, [key]: value });
+        return { values };
+      }),
     });
   };
 
@@ -328,6 +404,106 @@ export function ConcastProductionTable({
       );
     }
 
+    if (col.type === 'furnace_zones') {
+      const zoneVal = (val as FurnaceZonesValue) ?? {
+        heat_zone_1: null,
+        heat_zone_2: null,
+        soak_zone_1: null,
+        soak_zone_2: null,
+      };
+      const keys: (keyof FurnaceZonesValue)[] = ['heat_zone_1', 'heat_zone_2', 'soak_zone_1', 'soak_zone_2'];
+      if (readOnly) {
+        return (
+          <div className={`flex gap-1 ${cellText}`}>
+            {keys.map((k) => (
+              <span key={k} className="min-w-[3rem] text-center">
+                {zoneVal[k] ?? '—'}
+              </span>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <div className="flex gap-1">
+          {keys.map((k) => (
+            <input
+              key={k}
+              type="number"
+              value={zoneVal[k] ?? ''}
+              onChange={(e) => {
+                const next = { ...zoneVal };
+                next[k] = e.target.value === '' ? null : Number(e.target.value);
+                updateCell(rowIndex, col.key, next);
+              }}
+              className="w-[3.5rem] rounded border border-slate-200 px-1 py-0.5 text-center text-[10px]"
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (col.type === 'heat_ref') {
+      const heatVal = (val as HeatRefValue) ?? { run_id: '', heat_no: '' };
+      if (readOnly) {
+        return <span className={cellText}>{heatVal.heat_no || '—'}</span>;
+      }
+      return (
+        <HeatRefInput
+          value={heatVal}
+          onChange={(v) => updateCell(rowIndex, col.key, v)}
+          grades={grades}
+          onGradePick={(gradeId) => {
+            if (gradeId) updateCell(rowIndex, 'grade_id', gradeId);
+          }}
+        />
+      );
+    }
+
+    if (col.type === 'coil_ref') {
+      const coilVal = (val as CoilRefValue) ?? { coil_id: '', coil_no: '' };
+      if (readOnly) {
+        return <span className={cellText}>{coilVal.coil_no || '—'}</span>;
+      }
+      return (
+        <CoilRefInput
+          value={coilVal}
+          coils={coils}
+          coilPurpose={coilPurpose}
+          onChange={(v) => updateCell(rowIndex, col.key, v)}
+          onOpen={
+            plantId && runId
+              ? () => {
+                  fetchCoils({ plantId, runId, purpose: coilPurpose })
+                    .then(setCoils)
+                    .catch(() => setCoils([]));
+                }
+              : undefined
+          }
+        />
+      );
+    }
+
+    if (col.type === 'dropdown') {
+      const options = col.options ?? [];
+      if (readOnly) {
+        return <span className={cellText}>{String(val ?? '—')}</span>;
+      }
+      return (
+        <select
+          value={String(val ?? '')}
+          onChange={(e) => updateCell(rowIndex, col.key, e.target.value)}
+          className="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
+        >
+          <option value="">—</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     if (col.type === 'grade_ref') {
       if (readOnly) {
         const grade = grades.find((g) => g.id === val);
@@ -346,6 +522,51 @@ export function ConcastProductionTable({
             </option>
           ))}
         </select>
+      );
+    }
+
+    if (col.type === 'customer_ref') {
+      if (readOnly) {
+        const customer = customers.find((c) => c.id === val);
+        return <span className={cellText}>{customer?.name ?? String(val ?? '—')}</span>;
+      }
+      return (
+        <select
+          value={String(val ?? '')}
+          onChange={(e) => updateCell(rowIndex, col.key, e.target.value || null)}
+          className="w-full min-w-[5rem] rounded border border-slate-200 px-1 py-0.5 text-[10px]"
+        >
+          <option value="">—</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (col.type === 'calculated') {
+      const computed =
+        val !== null && val !== undefined && val !== ''
+          ? val
+          : evalProductionFormula(col.formula ?? '', rows[rowIndex]?.values ?? {});
+      const display =
+        typeof computed === 'number' && !Number.isNaN(computed) ? String(computed) : '—';
+      return <span className={cellText}>{display}</span>;
+    }
+
+    if (col.type === 'textarea') {
+      if (readOnly) {
+        return <span className={cellText}>{String(val ?? '—')}</span>;
+      }
+      return (
+        <textarea
+          value={String(val ?? '')}
+          onChange={(e) => updateCell(rowIndex, col.key, e.target.value)}
+          rows={2}
+          className="w-full min-w-[6rem] rounded border border-slate-200 px-1 py-0.5 text-[10px]"
+        />
       );
     }
 
@@ -457,8 +678,108 @@ export function ConcastProductionTable({
       </div>
       {!readOnly && (
         <Button type="button" variant="secondary" className="mt-3" onClick={addRow}>
-          Add casting row
+          Add row
         </Button>
+      )}
+    </div>
+  );
+}
+
+function CoilRefInput({
+  value,
+  coils,
+  coilPurpose,
+  onChange,
+  onOpen,
+}: {
+  value: CoilRefValue;
+  coils: CoilRecord[];
+  coilPurpose?: 'drawing';
+  onChange: (v: CoilRefValue) => void;
+  onOpen?: () => void;
+}) {
+  const pickable =
+    coilPurpose === 'drawing'
+      ? coils.filter((c) => c.status === 'completed')
+      : coils.filter((c) => c.status !== 'completed' && c.status !== 'consumed');
+  return (
+    <select
+      value={value.coil_id || ''}
+      onFocus={onOpen}
+      onChange={(e) => {
+        const picked = pickable.find((c) => c.id === e.target.value);
+        onChange(
+          picked
+            ? { coil_id: picked.id, coil_no: picked.coil_no }
+            : { coil_id: '', coil_no: '' },
+        );
+      }}
+      className="w-full min-w-[5rem] rounded border border-slate-200 px-1 py-0.5 text-[10px]"
+    >
+      <option value="">—</option>
+      {pickable.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.coil_no}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function HeatRefInput({
+  value,
+  onChange,
+  onGradePick,
+}: {
+  value: HeatRefValue;
+  onChange: (v: HeatRefValue) => void;
+  grades: SteelGrade[];
+  onGradePick: (gradeId: string) => void;
+}) {
+  const [suggestions, setSuggestions] = useState<HeatLookup[]>([]);
+
+  const search = async (q: string) => {
+    onChange({ ...value, heat_no: q, run_id: '' });
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const hits = await lookupHeatNo(q);
+      setSuggestions(hits);
+      if (hits[0]?.grade_id) onGradePick(hits[0].grade_id);
+    } catch {
+      setSuggestions([]);
+    }
+  };
+
+  return (
+    <div className="relative min-w-[6rem]">
+      <input
+        type="text"
+        value={value.heat_no}
+        onChange={(e) => search(e.target.value)}
+        className="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px]"
+        placeholder="Heat no."
+      />
+      {suggestions.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-32 w-full overflow-auto rounded border border-slate-200 bg-white text-[10px] shadow">
+          {suggestions.map((s) => (
+            <li key={s.run_id}>
+              <button
+                type="button"
+                className="block w-full px-2 py-1 text-left hover:bg-slate-50"
+                onClick={() => {
+                  onChange({ run_id: s.run_id, heat_no: s.heat_no });
+                  if (s.grade_id) onGradePick(s.grade_id);
+                  setSuggestions([]);
+                }}
+              >
+                {s.heat_no}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

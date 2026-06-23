@@ -7,7 +7,7 @@ import {
   transitionProcessRun,
   updateProcessRun,
 } from '../../api/processRuns';
-import { fetchGradeElements, fetchMaterials, fetchPlantUsers, fetchShifts, fetchSteelGrades, fetchUsersLookup } from '../../api/platform';
+import { fetchGradeElements, fetchMaterials, fetchPlantUsers, fetchPlants, fetchShifts, fetchSteelGrades, fetchUsersLookup } from '../../api/platform';
 import { collectUserRefIds, mergeUsers } from '../../utils/userLookup';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,6 +45,7 @@ export function HeatWorkspace() {
   const [alloyMaterials, setAlloyMaterials] = useState<MaterialCatalogItem[]>([]);
   const [scrapMaterials, setScrapMaterials] = useState<MaterialCatalogItem[]>([]);
   const [plantUsers, setPlantUsers] = useState<Awaited<ReturnType<typeof fetchPlantUsers>>>([]);
+  const [plantId, setPlantId] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -83,9 +84,12 @@ export function HeatWorkspace() {
       if (user?.id) userIds.push(user.id);
       const lookupUsers = await fetchUsersLookup([...new Set(userIds)]);
       if (user?.plant_id) {
+        setPlantId(user.plant_id);
         const fromPlant = await fetchPlantUsers(user.plant_id);
         setPlantUsers(mergeUsers(fromPlant, lookupUsers, user ? [user] : []));
       } else {
+        const plants = await fetchPlants();
+        if (plants[0]) setPlantId(plants[0].id);
         setPlantUsers(mergeUsers(lookupUsers, user ? [user] : []));
       }
 
@@ -197,6 +201,7 @@ export function HeatWorkspace() {
     scrapMaterials,
     steelGrades,
     plantUsers,
+    plantId,
     currentUserId: user?.id,
     currentUser: user ?? undefined,
     runId: run.id,

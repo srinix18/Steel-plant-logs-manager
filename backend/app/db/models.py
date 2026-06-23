@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -25,8 +26,11 @@ from app.db.types import (
 )
 from app.models.enums import (
     AssetStatus,
+    CoilStatus,
     CorrectiveActionPriority,
     CorrectiveActionStatus,
+    DelayCodeCategory,
+    DelayEventStatus,
     EventSeverity,
     EventSource,
     FieldType,
@@ -389,6 +393,7 @@ class ProcessRun(Base, TimestampMixin):
     events: Mapped[list["OperationalEvent"]] = relationship(back_populates="run")
     observations: Mapped[list["Observation"]] = relationship(back_populates="run")
     remarks: Mapped[list["RunRemark"]] = relationship(back_populates="run")
+    delay_events: Mapped[list["DelayEvent"]] = relationship(back_populates="run")
 
 
 class RunFieldValue(Base, TimestampMixin):
@@ -491,6 +496,77 @@ class CorrectiveAction(Base, TimestampMixin):
     closed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     observation: Mapped["Observation"] = relationship(back_populates="corrective_actions")
+
+
+class DelayCode(Base, TimestampMixin):
+    __tablename__ = "delay_codes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(10), nullable=False)
+    description: Mapped[str] = mapped_column(String(300), nullable=False)
+    category: Mapped[DelayCodeCategory] = mapped_column(Enum(DelayCodeCategory), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint("plant_id", "code", name="uq_delay_code_plant_code"),)
+
+
+class DelayEvent(Base, TimestampMixin):
+    __tablename__ = "delay_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("process_runs.id"), nullable=False)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    row_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    delay_code_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("delay_codes.id"), nullable=True)
+    time_from: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+    time_to: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+    time_lost_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text)
+    action_taken: Mapped[Optional[str]] = mapped_column(Text)
+    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    status: Mapped[DelayEventStatus] = mapped_column(Enum(DelayEventStatus), default=DelayEventStatus.OPEN)
+    observation_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("observations.id"), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    run: Mapped["ProcessRun"] = relationship(back_populates="delay_events")
+    delay_code: Mapped[Optional["DelayCode"]] = relationship()
+
+    __table_args__ = (UniqueConstraint("run_id", "row_key", name="uq_delay_event_run_row"),)
+
+
+class Coil(Base, TimestampMixin):
+    __tablename__ = "coils"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    coil_no: Mapped[str] = mapped_column(String(100), nullable=False)
+    work_order_no: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    grade_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("steel_grades.id"), nullable=True)
+    heat_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
+    heat_no: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    size_mm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status: Mapped[CoilStatus] = mapped_column(Enum(CoilStatus), default=CoilStatus.REGISTERED)
+    parent_coil_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("coils.id"), nullable=True)
+    source_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
+    registered_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("plant_id", "coil_no", name="uq_coil_plant_no"),)
+
+
+class Customer(Base, TimestampMixin):
+    __tablename__ = "customers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint("plant_id", "name", name="uq_customer_plant_name"),)
 
 
 class MaintenanceIssue(Base, TimestampMixin):

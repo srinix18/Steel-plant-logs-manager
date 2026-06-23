@@ -8,9 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Asset,
     AssetGroup,
-    Department,
-    Organisation,
-    Plant,
     Process,
     ProcessInstance,
     Template,
@@ -22,6 +19,7 @@ from app.db.models import (
     WorkflowTransitionDef,
 )
 from app.models.enums import FieldType, ProcessInstanceStatus, TemplateScopeType, TemplateVersionStatus
+from app.utils.chandan_org import get_chandan_department, get_chandan_organisation, get_chandan_plant
 
 CASTING_COLUMNS = [
     {"key": "heat_no", "label": "Heat No.", "type": "text", "group": "Basic"},
@@ -122,8 +120,7 @@ async def _get_or_create_asset_group(session: AsyncSession, plant_id, code: str,
 
 
 async def seed_concast_template(session: AsyncSession) -> None:
-    org_result = await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))
-    org = org_result.scalar_one_or_none()
+    org = await get_chandan_organisation(session)
     if not org:
         return
 
@@ -131,15 +128,11 @@ async def seed_concast_template(session: AsyncSession) -> None:
     if tpl_result.scalar_one_or_none():
         return
 
-    plant_result = await session.execute(select(Plant).where(Plant.organisation_id == org.id, Plant.code == "SMS"))
-    plant = plant_result.scalar_one_or_none()
+    plant = await get_chandan_plant(session, org.id)
     if not plant:
         return
 
-    dept_result = await session.execute(
-        select(Department).where(Department.plant_id == plant.id, Department.code == "SMS")
-    )
-    dept = dept_result.scalar_one_or_none()
+    dept = await get_chandan_department(session, plant.id, "SMS")
     if not dept:
         return
 

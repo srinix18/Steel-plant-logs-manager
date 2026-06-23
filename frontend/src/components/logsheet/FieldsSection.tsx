@@ -50,6 +50,19 @@ function renderField(
     );
   }
 
+  if (f.field_type === 'time') {
+    return (
+      <Input
+        label={f.label}
+        type="time"
+        value={value}
+        onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
+        required={f.required}
+        disabled={readOnly}
+      />
+    );
+  }
+
   if (f.field_type === 'number') {
     return (
       <Input

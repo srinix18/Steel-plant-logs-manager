@@ -20,6 +20,10 @@ import {
 import { AodLogSheetReport } from '../../components/reports/AodLogSheetReport';
 import { ConcastLogSheetReport } from '../../components/reports/ConcastLogSheetReport';
 import { IafLogSheetReport } from '../../components/reports/IafLogSheetReport';
+import { RollingMillLogSheetReport } from '../../components/reports/RollingMillLogSheetReport';
+import { WireFurnaceLogSheetReport } from '../../components/reports/WireFurnaceLogSheetReport';
+import { WireDrawingLogSheetReport } from '../../components/reports/WireDrawingLogSheetReport';
+import { BrightBarProductionReport } from '../../components/reports/BrightBarProductionReport';
 import { MaintenanceIssuesSection } from '../../components/reports/MaintenanceIssuesSection';
 import type {
   GradeElement,
@@ -39,6 +43,10 @@ const SHEET_REPORTS: Record<string, ComponentType<LogSheetReportProps>> = {
   'F/PRD/02': IafLogSheetReport,
   'F/PRD/03': AodLogSheetReport,
   'F/PRD/04': ConcastLogSheetReport,
+  'F/PRD/05': RollingMillLogSheetReport,
+  'F/PRD/06': WireFurnaceLogSheetReport,
+  'F/PRD/07': WireDrawingLogSheetReport,
+  'F51 PR 39/005/01-13': BrightBarProductionReport,
 };
 
 export function RunReportPage() {

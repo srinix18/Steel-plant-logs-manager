@@ -317,6 +317,12 @@ class ProcessRunService:
                     )
 
         if data.section_data:
+            from app.db.models import Department, Process
+            from app.services.coil_service import CoilService
+            from app.services.delay_event_service import DelayEventService
+
+            delay_service = DelayEventService()
+            coil_service = CoilService()
             for item in data.section_data:
                 existing = await session.execute(
                     select(RunSectionData).where(
@@ -330,6 +336,30 @@ class ProcessRunService:
                 else:
                     session.add(
                         RunSectionData(run_id=run_id, section_key=item.section_key, data=item.data)
+                    )
+                process = await session.get(Process, run.process_id)
+                plant_id = None
+                dept_id = None
+                if process:
+                    dept = await session.get(Department, process.department_id)
+                    if dept:
+                        plant_id = dept.plant_id
+                        dept_id = dept.id
+                if item.section_key == "delay_register" and plant_id:
+                    await delay_service.sync_delay_register(
+                        session, user, run_id, plant_id, item.data
+                    )
+                if item.section_key == "input_coils" and plant_id and dept_id:
+                    await coil_service.upsert_coils_from_input_register(
+                        session, run_id, plant_id, dept_id, user.id, item.data
+                    )
+                if item.section_key == "furnace_output" and plant_id:
+                    await coil_service.sync_furnace_output(session, plant_id, item.data)
+                if item.section_key == "input_material" and plant_id:
+                    await coil_service.sync_drawing_input(session, plant_id, item.data)
+                if item.section_key == "output_material" and plant_id and dept_id:
+                    await coil_service.sync_drawing_output(
+                        session, run_id, plant_id, dept_id, user.id, item.data
                     )
 
         if data.field_values or data.section_data:
