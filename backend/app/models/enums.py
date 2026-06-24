@@ -4,6 +4,7 @@ import enum
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "super_admin"
     CEO = "ceo"
+    HR = "hr"
     HOD = "hod"
     ORG_ADMIN = "org_admin"
     PLANT_ADMIN = "plant_admin"
@@ -123,6 +124,20 @@ class DelayCodeCategory(str, enum.Enum):
 class DelayEventStatus(str, enum.Enum):
     OPEN = "open"
     CLOSED = "closed"
+
+
+class EmploymentStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ON_LEAVE = "on_leave"
+    RESIGNED = "resigned"
+    TERMINATED = "terminated"
+
+
+class AttendanceStatus(str, enum.Enum):
+    PRESENT = "present"
+    ABSENT = "absent"
+    LEAVE = "leave"
+    HALF_DAY = "half_day"
 
 
 class CoilStatus(str, enum.Enum):

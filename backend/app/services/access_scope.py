@@ -16,6 +16,7 @@ HOD_ROLES = {UserRole.HOD, UserRole.PLANT_ADMIN}
 SUPERVISOR_ONLY_ROLES = {UserRole.SUPERVISOR, UserRole.DEPARTMENT}
 WORKER_ROLES = {UserRole.WORKER, UserRole.MEMBER}
 MAINTENANCE_ROLES = {UserRole.MAINTENANCE}
+HR_ROLES = {UserRole.HR}
 
 CEO_TIER_ROLES = PLATFORM_ADMIN_ROLES | CEO_ROLES
 HOD_TIER_ROLES = CEO_TIER_ROLES | HOD_ROLES
@@ -62,6 +63,10 @@ def is_worker(user: User) -> bool:
 
 def is_maintenance(user: User) -> bool:
     return user.role in MAINTENANCE_ROLES
+
+
+def is_hr(user: User) -> bool:
+    return user.role in HR_ROLES
 
 
 def can_raise_maintenance_issue(user: User) -> bool:
@@ -251,7 +256,45 @@ def can_message(sender: User, recipient: User) -> bool:
     return False
 
 
-CEO_ASSIGNABLE_ROLES = {UserRole.HOD, UserRole.SUPERVISOR, UserRole.WORKER, UserRole.MAINTENANCE}
+CEO_ASSIGNABLE_ROLES = {UserRole.HR, UserRole.HOD, UserRole.SUPERVISOR, UserRole.WORKER, UserRole.MAINTENANCE}
+
+WORKFORCE_EMPLOYEE_ROLES = CEO_ASSIGNABLE_ROLES | {UserRole.HOD, UserRole.PLANT_ADMIN}
+
+
+def can_manage_workforce(actor: User, department_id: UUID | None = None) -> bool:
+    if is_platform_admin(actor) or is_hr(actor):
+        return True
+    if is_hod_tier(actor) and not is_ceo_tier(actor):
+        return department_id is None or actor.department_id == department_id
+    return False
+
+
+def can_mark_workforce_ops(actor: User, department_id: UUID) -> bool:
+    if is_platform_admin(actor) or is_hr(actor):
+        return True
+    if is_hod_tier(actor) and not is_ceo_tier(actor):
+        return actor.department_id == department_id
+    if is_supervisor_only(actor):
+        return actor.department_id == department_id
+    return False
+
+
+def assert_workforce_manage(actor: User, department_id: UUID | None = None) -> None:
+    if not can_manage_workforce(actor, department_id):
+        raise HTTPException(status_code=403, detail="Workforce management access denied")
+
+
+def assert_workforce_ops(actor: User, department_id: UUID) -> None:
+    if not can_mark_workforce_ops(actor, department_id):
+        raise HTTPException(status_code=403, detail="Workforce operations access denied")
+
+
+def apply_workforce_department_scope(query: Select, user: User, department_col) -> Select:
+    if is_platform_admin(user) or is_hr(user):
+        return query
+    if user.department_id:
+        return query.where(department_col == user.department_id)
+    return query.where(False)
 
 
 def validate_user_scope(
@@ -264,6 +307,8 @@ def validate_user_scope(
 ) -> None:
     if role == UserRole.CEO and not organisation_id:
         raise HTTPException(status_code=400, detail="CEO requires organisation_id")
+    if role == UserRole.HR and not organisation_id:
+        raise HTTPException(status_code=400, detail="HR requires organisation_id")
     if role == UserRole.HOD:
         if not organisation_id or not department_id:
             raise HTTPException(status_code=400, detail="HoD requires organisation_id and department_id")

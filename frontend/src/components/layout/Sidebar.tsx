@@ -6,7 +6,9 @@ import { Button } from '../ui/Button';
 import {
   hasRole,
   CEO_ROLES,
+  HR_ROLES,
   HOD_ROLES,
+  WORKFORCE_ADMIN_ROLES,
   SUPERVISOR_ONLY_ROLES,
   WORKER_ROLES,
   MAINTENANCE_ROLES,
@@ -43,6 +45,10 @@ export function Sidebar() {
   const isSupervisorOnly = hasRole(user.role, SUPERVISOR_ONLY_ROLES);
   const isWorker = hasRole(user.role, WORKER_ROLES);
   const isMaintenance = hasRole(user.role, MAINTENANCE_ROLES);
+  const isHr = hasRole(user.role, HR_ROLES);
+  const showWorkforceAdmin = hasRole(user.role, WORKFORCE_ADMIN_ROLES);
+  const showWorkforceDashboard = isHr || isHod || isSupervisorOnly || isCeo;
+  const showWorkforceOps = isHr || isHod || isSupervisorOnly;
 
   const showShift =
     isWorker ||
@@ -132,6 +138,44 @@ export function Sidebar() {
               Issue queue
             </NavLink>
           </>
+        )}
+
+        {showWorkforceDashboard && (
+          <>
+            <p className={sectionClass}>Workforce Management</p>
+            <NavLink to="/workforce/dashboard" className={linkClass}>
+              Workforce Dashboard
+            </NavLink>
+            {showWorkforceAdmin && (
+              <>
+                <NavLink to="/workforce/employees" className={linkClass}>
+                  Employees
+                </NavLink>
+                <NavLink to="/workforce/contractors" className={linkClass}>
+                  Contractors
+                </NavLink>
+                <NavLink to="/workforce/shift-assignments" className={linkClass}>
+                  Shift Assignments
+                </NavLink>
+              </>
+            )}
+            {showWorkforceOps && (
+              <>
+                <NavLink to="/workforce/attendance" className={linkClass}>
+                  Attendance
+                </NavLink>
+                <NavLink to="/workforce/handover" className={linkClass}>
+                  Shift Handover Notes
+                </NavLink>
+              </>
+            )}
+          </>
+        )}
+
+        {isWorker && (
+          <NavLink to="/workforce/my-attendance" className={linkClass}>
+            My Attendance
+          </NavLink>
         )}
 
         {showShift && (

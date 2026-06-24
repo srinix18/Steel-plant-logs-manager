@@ -3,6 +3,7 @@ type JsonObject = { [key: string]: unknown };
 export type UserRole =
   | 'super_admin'
   | 'ceo'
+  | 'hr'
   | 'hod'
   | 'org_admin'
   | 'plant_admin'
@@ -28,6 +29,140 @@ export interface User {
   phone?: string | null;
   designation?: string | null;
   date_of_joining?: string | null;
+  employment_status?: EmploymentStatus | null;
+}
+
+export type EmploymentStatus = 'active' | 'on_leave' | 'resigned' | 'terminated';
+export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day';
+
+export interface Contractor {
+  id: string;
+  organisation_id: string;
+  code: string;
+  name: string;
+  contact_person?: string | null;
+  phone?: string | null;
+  is_active: boolean;
+}
+
+export interface ContractWorker {
+  id: string;
+  contractor_id: string;
+  full_name: string;
+  department_id: string;
+  phone?: string | null;
+  is_active: boolean;
+  contractor_name?: string | null;
+  department_code?: string | null;
+}
+
+export interface ShiftAssignment {
+  id: string;
+  user_id: string;
+  department_id: string;
+  shift_id: string;
+  effective_date: string;
+  user_name?: string | null;
+  employee_uid?: string | null;
+  department_code?: string | null;
+  shift_code?: string | null;
+}
+
+export interface AttendanceRecord {
+  id?: string | null;
+  attendance_date: string;
+  user_id: string;
+  department_id: string;
+  shift_id: string;
+  status: AttendanceStatus;
+  remarks?: string | null;
+  marked_by_id: string;
+  marked_at: string;
+  user_name?: string | null;
+}
+
+export interface ContractorAttendance {
+  id: string;
+  attendance_date: string;
+  contractor_id: string;
+  department_id: string;
+  shift_id: string;
+  workers_present: number;
+  workers_absent: number;
+  remarks?: string | null;
+  marked_by_id: string;
+  marked_at: string;
+  contractor_name?: string | null;
+}
+
+export interface ShiftHandoverNote {
+  id: string;
+  note_date: string;
+  department_id: string;
+  shift_id: string;
+  author_id: string;
+  note: string;
+  created_at: string;
+  author_name?: string | null;
+  department_code?: string | null;
+  shift_code?: string | null;
+}
+
+export interface DepartmentAttendanceSummary {
+  department_id: string;
+  department_code: string;
+  department_name: string;
+  expected: number;
+  present: number;
+  understaffed_by: number;
+}
+
+export interface WorkforceDailySummary {
+  attendance_date: string;
+  employees_present: number;
+  employees_absent: number;
+  employees_expected: number;
+  contract_workers_present: number;
+  contract_workers_absent: number;
+  departments_understaffed: string[];
+  shift_notes_submitted: number;
+  pending_shift_notes: number;
+  departments: DepartmentAttendanceSummary[];
+}
+
+export interface WorkforceEmployeePayload {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+  department_id?: string | null;
+  process_id?: string | null;
+  plant_id?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  maintenance_division?: string | null;
+  employment_status?: EmploymentStatus;
+  date_of_joining?: string | null;
+}
+
+export interface WorkforceEmployeeUpdatePayload {
+  full_name?: string;
+  role?: UserRole;
+  department_id?: string | null;
+  process_id?: string | null;
+  plant_id?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  is_active?: boolean;
+  password?: string;
+  maintenance_division?: string | null;
+  employment_status?: EmploymentStatus;
+  date_of_joining?: string | null;
+}
+
+export interface WorkforceMeResponse {
+  shift_assignment?: ShiftAssignment | null;
+  recent_attendance: AttendanceRecord[];
 }
 
 export interface RunRemarkAttachment {

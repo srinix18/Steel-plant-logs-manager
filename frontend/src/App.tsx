@@ -20,15 +20,24 @@ import { RunReportPage } from './pages/reports/RunReportPage';
 import { MyRunsPage } from './pages/operations/MyRunsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { MaintenanceQueuePage } from './pages/maintenance/MaintenanceQueuePage';
+import { WorkforceDashboardPage } from './pages/workforce/WorkforceDashboardPage';
+import { WorkforceEmployeesPage } from './pages/workforce/WorkforceEmployeesPage';
+import { WorkforceContractorsPage } from './pages/workforce/WorkforceContractorsPage';
+import { ShiftAssignmentsPage } from './pages/workforce/ShiftAssignmentsPage';
+import { AttendanceEntryPage } from './pages/workforce/AttendanceEntryPage';
+import { ShiftHandoverPage } from './pages/workforce/ShiftHandoverPage';
+import { MyAttendancePage } from './pages/workforce/MyAttendancePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import {
   hasRole,
   PLATFORM_ADMIN_ROLES,
   CEO_TIER_ROLES,
   HOD_TIER_ROLES,
+  WORKFORCE_ADMIN_ROLES,
   SUPERVISOR_ROLES,
   WORKER_ROLES,
   CEO_ROLES,
+  HR_ROLES,
   HOD_ROLES,
   SUPERVISOR_ONLY_ROLES,
   MAINTENANCE_ROLES,
@@ -39,6 +48,7 @@ function RoleRedirect() {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin' || user.role === 'admin') return <Navigate to="/admin" replace />;
   if (hasRole(user.role, CEO_ROLES)) return <Navigate to="/executive" replace />;
+  if (hasRole(user.role, HR_ROLES)) return <Navigate to="/workforce/dashboard" replace />;
   if (hasRole(user.role, HOD_ROLES)) return <Navigate to="/hod" replace />;
   if (hasRole(user.role, MAINTENANCE_ROLES)) return <Navigate to="/maintenance" replace />;
   if (hasRole(user.role, SUPERVISOR_ONLY_ROLES)) return <Navigate to="/supervisor" replace />;
@@ -101,6 +111,27 @@ function AppRoutes() {
           <Route path="reports/:runId" element={<RunReportPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="my-runs" element={<MyRunsPage />} />
+
+          <Route element={<ProtectedRoute allowedRoles={WORKFORCE_ADMIN_ROLES} />}>
+            <Route path="workforce" element={<Navigate to="/workforce/dashboard" replace />} />
+            <Route path="workforce/employees" element={<WorkforceEmployeesPage />} />
+            <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
+            <Route path="workforce/shift-assignments" element={<ShiftAssignmentsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[...WORKFORCE_ADMIN_ROLES, ...CEO_ROLES, ...SUPERVISOR_ONLY_ROLES]} />}>
+            <Route path="workforce/dashboard" element={<WorkforceDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[...WORKFORCE_ADMIN_ROLES, ...SUPERVISOR_ONLY_ROLES]} />}>
+            <Route path="workforce/attendance" element={<AttendanceEntryPage />} />
+            <Route path="workforce/handover" element={<ShiftHandoverPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={WORKER_ROLES} />}>
+            <Route path="workforce/my-attendance" element={<MyAttendancePage />} />
+          </Route>
+
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

@@ -26,7 +26,9 @@ from app.db.types import (
 )
 from app.models.enums import (
     AssetStatus,
+    AttendanceStatus,
     CoilStatus,
+    EmploymentStatus,
     CorrectiveActionPriority,
     CorrectiveActionStatus,
     DelayCodeCategory,
@@ -50,7 +52,7 @@ from app.models.enums import (
 
 def _userrole_db_values(enum_cls):
     """Map UserRole to PostgreSQL labels (legacy UPPER names + new lowercase values)."""
-    use_value = {UserRole.CEO, UserRole.HOD, UserRole.MAINTENANCE}
+    use_value = {UserRole.CEO, UserRole.HR, UserRole.HOD, UserRole.MAINTENANCE}
     return [m.value if m in use_value else m.name for m in enum_cls]
 
 
@@ -186,6 +188,9 @@ class User(Base, TimestampMixin):
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     date_of_joining: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    employment_status: Mapped[EmploymentStatus] = mapped_column(
+        String(32), default=EmploymentStatus.ACTIVE.value, nullable=False
+    )
 
 
 class Shift(Base, TimestampMixin):
@@ -779,3 +784,123 @@ class MLFeatureSnapshot(Base):
     run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("process_runs.id"), unique=True, nullable=False)
     feature_vector: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Contractor(Base, TimestampMixin):
+    __tablename__ = "contractors"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    contact_person: Mapped[Optional[str]] = mapped_column(String(200))
+    phone: Mapped[Optional[str]] = mapped_column(String(32))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    workers: Mapped[list["ContractWorker"]] = relationship(back_populates="contractor")
+
+    __table_args__ = (UniqueConstraint("organisation_id", "code", name="uq_contractor_org_code"),)
+
+
+class ContractWorker(Base, TimestampMixin):
+    __tablename__ = "contract_workers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    contractor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contractors.id"), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(32))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    contractor: Mapped["Contractor"] = relationship(back_populates="workers")
+    department: Mapped["Department"] = relationship()
+
+
+class ShiftAssignment(Base, TimestampMixin):
+    __tablename__ = "shift_assignments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    shift_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shifts.id"), nullable=False)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    user: Mapped["User"] = relationship()
+    department: Mapped["Department"] = relationship()
+    shift: Mapped["Shift"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "department_id", "shift_id", "effective_date", name="uq_shift_assignment"
+        ),
+    )
+
+
+class AttendanceRecord(Base, TimestampMixin):
+    __tablename__ = "attendance_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    attendance_date: Mapped[date] = mapped_column(Date, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    shift_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shifts.id"), nullable=False)
+    status: Mapped[AttendanceStatus] = mapped_column(String(32), nullable=False)
+    remarks: Mapped[Optional[str]] = mapped_column(Text)
+    marked_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    marked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    department: Mapped["Department"] = relationship()
+    shift: Mapped["Shift"] = relationship()
+    marked_by: Mapped["User"] = relationship(foreign_keys=[marked_by_id])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "attendance_date", "user_id", "department_id", "shift_id", name="uq_attendance_record"
+        ),
+    )
+
+
+class ContractorAttendance(Base, TimestampMixin):
+    __tablename__ = "contractor_attendance"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    attendance_date: Mapped[date] = mapped_column(Date, nullable=False)
+    contractor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contractors.id"), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    shift_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shifts.id"), nullable=False)
+    workers_present: Mapped[int] = mapped_column(Integer, default=0)
+    workers_absent: Mapped[int] = mapped_column(Integer, default=0)
+    remarks: Mapped[Optional[str]] = mapped_column(Text)
+    marked_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    marked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    contractor: Mapped["Contractor"] = relationship()
+    department: Mapped["Department"] = relationship()
+    shift: Mapped["Shift"] = relationship()
+    marked_by: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "attendance_date",
+            "contractor_id",
+            "department_id",
+            "shift_id",
+            name="uq_contractor_attendance",
+        ),
+    )
+
+
+class ShiftHandoverNote(Base, TimestampMixin):
+    __tablename__ = "shift_handover_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    note_date: Mapped[date] = mapped_column(Date, nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    shift_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shifts.id"), nullable=False)
+    author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+
+    department: Mapped["Department"] = relationship()
+    shift: Mapped["Shift"] = relationship()
+    author: Mapped["User"] = relationship()

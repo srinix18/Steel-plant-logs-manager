@@ -17,6 +17,9 @@ Development seed credentials for the Chandan Steel SMS demo environment. **Do no
 | Operations activity (supervisor) | http://localhost:5173/supervisor |
 | Maintenance queue | http://localhost:5173/maintenance |
 | Messages & alerts | http://localhost:5173/messages |
+| Workforce dashboard | http://localhost:5173/workforce/dashboard |
+| Workforce attendance | http://localhost:5173/workforce/attendance |
+| My attendance (worker) | http://localhost:5173/workforce/my-attendance |
 | Backend API | http://localhost:8000 |
 | API docs (Swagger) | http://localhost:8000/docs |
 
@@ -33,8 +36,11 @@ Start the app with `start.bat` (or `scripts/start.ps1`).
 | `WIRE` | Wire Division | **F/PRD/06** furnace, **F/PRD/07** wire drawing |
 | `BBD` | Bright Bar Division | **F51 PR 39/005/01-13** production register (daily); peeling planned |
 | `FORGE` | Forge Shop | **F/PRD/08** grinding material details (daily, planned) |
+| `QUAL` | Quality | Workforce attendance grouping |
+| `MAINT` | Maintenance | Workforce attendance grouping |
+| `UTIL` | Utilities | Workforce attendance grouping |
 
-All five departments sit under the single Chandan Steels plant. Demo users below are scoped to SMS unless noted.
+All departments sit under the single Chandan Steels plant. Demo users below are scoped to SMS unless noted.
 
 See [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) for the full process and template matrix.
 
@@ -44,6 +50,7 @@ See [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) for the f
 |------|-----------|-------|----------|-------|
 | Super Admin | System Admin | `admin@logbook.app` | `admin123` | Platform-wide |
 | CEO | Chandan CEO | `ceo@chandansteel.com` | `ceo123` | Chandan Steel — all departments |
+| HR | HR Workforce Manager | `hr@chandansteel.com` | `hr123` | Workforce management — all departments |
 | HoD | SMS Head of Department | `hod@chandansteel.com` | `hod123` | SMS department (all processes) |
 | Supervisor (IAF) | IAF Shift Incharge | `iaf.supervisor@chandansteel.com` | `iaf123` | SMS — IAF log sheet only |
 | Supervisor (AOD) | AOD Shift Incharge | `aod.supervisor@chandansteel.com` | `aod123` | SMS — AOD log sheet only |
@@ -105,10 +112,11 @@ Content-Type: application/json
 | Role | Default landing | Highlights |
 |------|-----------------|------------|
 | **Super Admin** | `/admin` | Full platform administration. Unchanged from before. |
-| **CEO** | `/executive` | Org-wide overview, employee management (assign HoD / supervisor / worker / maintenance), broadcast messages. |
-| **HoD** | `/hod` | All processes in their department — runs, observations, reports. |
-| **Supervisor** | `/supervisor` | Single process/log sheet scope (IAF, AOD, or CCM). |
-| **Worker** | `/shift` | Shift dashboard, My Runs, own heats only. |
+| **CEO** | `/executive` | Org-wide overview and leadership dashboards (including Workforce Dashboard visibility), broadcast messages. |
+| **HR** | `/workforce/dashboard` | Full Workforce Management control across departments (employee master, contractors, shift assignment, attendance, handover). |
+| **HoD** | `/hod` | All processes in their department — runs, observations, reports. **Workforce** for own department (employees, attendance, handover). |
+| **Supervisor** | `/supervisor` | Single process/log sheet scope. **Workforce → Attendance** and shift handover notes for their department. |
+| **Worker** | `/shift` | Shift dashboard, My Runs, **My Attendance**, own heats only. |
 | **Maintenance** | `/maintenance` | Category-scoped issue queue (assign, close with audit). |
 
 All roles have **Messages & Alerts** in the sidebar (including maintenance issue notifications).
@@ -123,7 +131,20 @@ The super admin email and password can be changed before first seed via environm
 | `SEED_ADMIN_PASSWORD` | `admin123` |
 | `SEED_ADMIN_NAME` | `System Admin` |
 
-CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent). The CEO can also manage employees at **Executive → Employees**.
+CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent). Workforce demo data (contractors, shift assignments, sample handover note) is seeded by `seed_workforce.py`.
+
+## Workforce Management (V1)
+
+| Feature | CEO | HR | HoD | Supervisor | Worker |
+|---------|-----|----|-----|------------|--------|
+| Workforce dashboard | Plant-wide view | All departments | Department | Department | — |
+| Employee / contractor master | View | Full control | Department | — | — |
+| Shift assignments | View | Full control | Department | — | — |
+| Mark attendance | View | Full control | Department | Department | — |
+| Shift handover notes | View | Full control | Department | Department | — |
+| View own attendance | — | — | — | — | Yes |
+
+Demo contractors: **ABC Labour Services**, **XYZ Contractors**. SMS Shift A has a sample previous-shift handover note for the Shift Dashboard banner.
 
 ## Database (local dev)
 

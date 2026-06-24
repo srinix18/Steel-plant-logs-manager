@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { fetchActiveRuns, createProcessRun } from '../../api/processRuns';
 import { fetchPlants, fetchProcessInstances, fetchProcesses, fetchShifts, fetchSteelGrades } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
-import type { Process, ProcessInstance, ProcessRun, Shift, SteelGrade } from '../../types';
+import { fetchPreviousHandover } from '../../api/workforce';
+import { useAuth } from '../../contexts/AuthContext';
+import type { Process, ProcessInstance, ProcessRun, Shift, ShiftHandoverNote, SteelGrade } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -25,6 +27,7 @@ const PROCESS_OPTIONS = [
 
 export function ShiftDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [processes, setProcesses] = useState<Process[]>([]);
   const [processCode, setProcessCode] = useState('IAF');
   const [instances, setInstances] = useState<ProcessInstance[]>([]);
@@ -36,6 +39,7 @@ export function ShiftDashboard() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  const [previousHandover, setPreviousHandover] = useState<ShiftHandoverNote | null>(null);
 
   const processMeta = PROCESS_OPTIONS.find((p) => p.code === processCode) ?? PROCESS_OPTIONS[0];
 
@@ -59,6 +63,16 @@ export function ShiftDashboard() {
       setInstances([]);
     }
   }, [processCode, processes]);
+
+  useEffect(() => {
+    if (!user?.department_id || !selectedShift) {
+      setPreviousHandover(null);
+      return;
+    }
+    fetchPreviousHandover(user.department_id, selectedShift)
+      .then(setPreviousHandover)
+      .catch(() => setPreviousHandover(null));
+  }, [user?.department_id, selectedShift]);
 
   const isConcast = processCode === 'CCM';
   const isDaily = processMeta.runType === 'daily';
@@ -86,6 +100,18 @@ export function ShiftDashboard() {
       <h1 className="mb-2 text-2xl font-bold text-slate-900">Shift Dashboard</h1>
       <p className="mb-6 text-sm text-slate-500">SMS — Start a heat, AOD run, or Concast shift log</p>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      {previousHandover && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <p className="text-sm font-semibold text-amber-900">
+            Previous shift handover (Shift {previousHandover.shift_code}, {previousHandover.note_date})
+          </p>
+          <p className="mt-2 text-sm text-amber-950">{previousHandover.note}</p>
+          {previousHandover.author_name && (
+            <p className="mt-2 text-xs text-amber-800">— {previousHandover.author_name}</p>
+          )}
+        </div>
+      )}
 
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Start New Run</h2>

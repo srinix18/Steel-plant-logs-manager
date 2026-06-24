@@ -194,11 +194,31 @@ function Start-DockerPostgresWindows {
     return $false
 }
 
+function Test-BackendHealthy {
+    param([int]$Port = $BackendPort)
+    try {
+        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 2
+        return $resp.StatusCode -eq 200
+    } catch {
+        return $false
+    }
+}
+
+function Test-FrontendHealthy {
+    param([int]$Port = $FrontendPort)
+    try {
+        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 2
+        return $resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500
+    } catch {
+        return $false
+    }
+}
+
 function Ensure-PostgresRunning {
     $port = Get-PostgresPort
 
     if (Test-PostgresPortOpen -Port $port) {
-        Write-Ok "PostgreSQL is reachable on localhost:$port"
+        Write-Ok "PostgreSQL already running on localhost:$port (skipping container start)"
         return
     }
 
@@ -248,6 +268,53 @@ function Stop-PortProcess([int]$Port, [string]$Label) {
     Start-Sleep -Seconds 1
 }
 
+function Stop-ProcessTree {
+    param([int]$ProcessId)
+
+    if ($ProcessId -le 4) { return }
+
+    Get-CimInstance Win32_Process -Filter "ParentProcessId=$ProcessId" -ErrorAction SilentlyContinue |
+        ForEach-Object { Stop-ProcessTree -ProcessId $_.ProcessId }
+
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+function Stop-BackendForRestart {
+    param([int]$Port = $BackendPort)
+
+    $listeners = @(Get-PortProcessIds -Port $Port)
+    foreach ($procId in $listeners) {
+        $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+        if ($proc) {
+            Write-Warn "Stopping backend on port $Port (PID $procId, $($proc.ProcessName))"
+        }
+        Stop-ProcessTree -ProcessId $procId
+    }
+
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.CommandLine -and (
+                $_.CommandLine -match 'uvicorn' -and $_.CommandLine -match 'app\.main:app'
+            )
+        } |
+        ForEach-Object {
+            Write-Warn "Stopping uvicorn process (PID $($_.ProcessId))"
+            Stop-ProcessTree -ProcessId $_.ProcessId
+        }
+
+    for ($i = 0; $i -lt 15; $i++) {
+        if ((Get-PortProcessIds -Port $Port).Count -eq 0) {
+            if ($listeners.Count -gt 0) {
+                Write-Ok "Restarting backend on port $Port"
+            }
+            return
+        }
+        Start-Sleep -Milliseconds 400
+    }
+
+    throw "Port $Port is still in use. Run .\scripts\stop.ps1 or close the backend window manually."
+}
+
 function Ensure-PortFree([int]$Port, [string]$Label) {
     $pids = Get-PortProcessIds -Port $Port
     if ($pids.Count -eq 0) {
@@ -258,6 +325,38 @@ function Ensure-PortFree([int]$Port, [string]$Label) {
         throw "Port $Port is still in use. Run .\scripts\stop.ps1 or close the app using that port."
     }
     Write-Ok "Freed port $Port for $Label"
+}
+
+# Returns $true if a new process should be started; $false if the service is already healthy on the port.
+function Prepare-ServiceStart {
+    param(
+        [int]$Port,
+        [string]$Label,
+        [scriptblock]$HealthCheck
+    )
+
+    $pids = Get-PortProcessIds -Port $Port
+    if ($pids.Count -eq 0) {
+        return $true
+    }
+
+    if (& $HealthCheck) {
+        Write-Ok "$Label already running on port $Port (skipping new window)"
+        return $false
+    }
+
+    Stop-PortProcess -Port $Port -Label $Label
+    if ((Get-PortProcessIds -Port $Port).Count -eq 0) {
+        Write-Ok "Freed port $Port for $Label"
+        return $true
+    }
+
+    if (& $HealthCheck) {
+        Write-Ok "$Label already running on port $Port (skipping new window)"
+        return $false
+    }
+
+    throw "Port $Port is still in use by another application. Run .\scripts\stop.ps1 or close the process using that port."
 }
 
 function Ensure-EnvFiles {

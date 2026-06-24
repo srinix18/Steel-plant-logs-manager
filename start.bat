@@ -13,7 +13,8 @@ if errorlevel 1 (
     echo.
     echo Start failed. See messages above.
     echo.
-    echo If PostgreSQL is not running, try postgres.bat first.
+    echo If backend/frontend ports are busy, run stop.bat first.
+    echo If PostgreSQL is not running, run postgres.bat.
     pause
     exit /b 1
 )

@@ -5,11 +5,13 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.enums import (
+    AttendanceStatus,
     CoilStatus,
     CorrectiveActionPriority,
     CorrectiveActionStatus,
     DelayCodeCategory,
     DelayEventStatus,
+    EmploymentStatus,
     EventSeverity,
     EventSource,
     MaintenanceIssueStatus,
@@ -59,6 +61,7 @@ class OrgUserCreate(BaseModel):
     designation: Optional[str] = None
     phone: Optional[str] = None
     maintenance_division: Optional[ObservationCategory] = None
+    employment_status: Optional[EmploymentStatus] = EmploymentStatus.ACTIVE
 
 
 class OrgUserUpdate(BaseModel):
@@ -72,6 +75,8 @@ class OrgUserUpdate(BaseModel):
     is_active: Optional[bool] = None
     password: Optional[str] = Field(default=None, min_length=6)
     maintenance_division: Optional[ObservationCategory] = None
+    employment_status: Optional[EmploymentStatus] = None
+    date_of_joining: Optional[date] = None
 
 
 class MessageCreate(BaseModel):
@@ -134,6 +139,7 @@ class UserProfile(UserBrief):
     phone: Optional[str] = None
     designation: Optional[str] = None
     date_of_joining: Optional[date] = None
+    employment_status: Optional[EmploymentStatus] = EmploymentStatus.ACTIVE
 
 
 class UserProfileUpdate(BaseModel):
@@ -695,3 +701,193 @@ class CustomerResponse(BaseModel):
     code: Optional[str] = None
     is_active: bool = True
     model_config = {"from_attributes": True}
+
+
+# Workforce Management
+class WorkforceEmployeeCreate(OrgUserCreate):
+    employment_status: EmploymentStatus = EmploymentStatus.ACTIVE
+    date_of_joining: Optional[date] = None
+
+
+class WorkforceEmployeeUpdate(OrgUserUpdate):
+    employment_status: Optional[EmploymentStatus] = None
+    date_of_joining: Optional[date] = None
+
+
+class ContractorCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=32)
+    name: str = Field(min_length=1, max_length=200)
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool = True
+
+
+class ContractorUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ContractorResponse(BaseModel):
+    id: UUID
+    organisation_id: UUID
+    code: str
+    name: str
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class ContractWorkerCreate(BaseModel):
+    contractor_id: UUID
+    full_name: str = Field(min_length=1, max_length=200)
+    department_id: UUID
+    phone: Optional[str] = None
+    is_active: bool = True
+
+
+class ContractWorkerUpdate(BaseModel):
+    full_name: Optional[str] = None
+    department_id: Optional[UUID] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ContractWorkerResponse(BaseModel):
+    id: UUID
+    contractor_id: UUID
+    full_name: str
+    department_id: UUID
+    phone: Optional[str] = None
+    is_active: bool
+    contractor_name: Optional[str] = None
+    department_code: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class ShiftAssignmentCreate(BaseModel):
+    user_id: UUID
+    department_id: UUID
+    shift_id: UUID
+    effective_date: date
+
+
+class ShiftAssignmentUpdate(BaseModel):
+    department_id: Optional[UUID] = None
+    shift_id: Optional[UUID] = None
+    effective_date: Optional[date] = None
+
+
+class ShiftAssignmentResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    department_id: UUID
+    shift_id: UUID
+    effective_date: date
+    user_name: Optional[str] = None
+    employee_uid: Optional[str] = None
+    department_code: Optional[str] = None
+    shift_code: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class AttendanceEntryItem(BaseModel):
+    user_id: UUID
+    status: AttendanceStatus = AttendanceStatus.PRESENT
+    remarks: Optional[str] = None
+
+
+class AttendanceBulkSave(BaseModel):
+    attendance_date: date
+    department_id: UUID
+    shift_id: UUID
+    entries: list[AttendanceEntryItem]
+
+
+class AttendanceRecordResponse(BaseModel):
+    id: Optional[UUID] = None
+    attendance_date: date
+    user_id: UUID
+    department_id: UUID
+    shift_id: UUID
+    status: AttendanceStatus
+    remarks: Optional[str] = None
+    marked_by_id: UUID
+    marked_at: datetime
+    user_name: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class ContractorAttendanceCreate(BaseModel):
+    attendance_date: date
+    contractor_id: UUID
+    department_id: UUID
+    shift_id: UUID
+    workers_present: int = Field(ge=0)
+    workers_absent: int = Field(ge=0)
+    remarks: Optional[str] = None
+
+
+class ContractorAttendanceResponse(BaseModel):
+    id: UUID
+    attendance_date: date
+    contractor_id: UUID
+    department_id: UUID
+    shift_id: UUID
+    workers_present: int
+    workers_absent: int
+    remarks: Optional[str] = None
+    marked_by_id: UUID
+    marked_at: datetime
+    contractor_name: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class ShiftHandoverCreate(BaseModel):
+    note_date: date
+    department_id: UUID
+    shift_id: UUID
+    note: str = Field(min_length=1)
+
+
+class ShiftHandoverResponse(BaseModel):
+    id: UUID
+    note_date: date
+    department_id: UUID
+    shift_id: UUID
+    author_id: UUID
+    note: str
+    created_at: datetime
+    author_name: Optional[str] = None
+    department_code: Optional[str] = None
+    shift_code: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class DepartmentAttendanceSummary(BaseModel):
+    department_id: UUID
+    department_code: str
+    department_name: str
+    expected: int
+    present: float
+    understaffed_by: int
+
+
+class WorkforceDailySummary(BaseModel):
+    attendance_date: date
+    employees_present: int
+    employees_absent: int
+    employees_expected: int
+    contract_workers_present: int
+    contract_workers_absent: int
+    departments_understaffed: list[str]
+    shift_notes_submitted: int
+    pending_shift_notes: int
+    departments: list[DepartmentAttendanceSummary]
+
+
+class WorkforceMeResponse(BaseModel):
+    shift_assignment: Optional[ShiftAssignmentResponse] = None
+    recent_attendance: list[AttendanceRecordResponse] = Field(default_factory=list)

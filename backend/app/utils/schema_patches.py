@@ -14,7 +14,7 @@ _USER_COLUMN_PATCHES = (
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_employee_uid ON users (employee_uid) WHERE employee_uid IS NOT NULL",
 )
 
-_USERROLE_VALUES = ("ceo", "hod", "maintenance")
+_USERROLE_VALUES = ("ceo", "hr", "hod", "maintenance")
 
 _MESSAGE_TABLE_PATCHES = (
     """
@@ -172,6 +172,95 @@ _CUSTOMER_PATCHES = (
 
 _PROCESSRUNTYPE_VALUES = ("shift", "daily")
 
+_WORKFORCE_PATCHES = (
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS employment_status VARCHAR(32) DEFAULT 'active'",
+    "UPDATE users SET employment_status = 'active' WHERE employment_status IS NULL",
+    """
+    CREATE TABLE IF NOT EXISTS contractors (
+        id UUID PRIMARY KEY,
+        organisation_id UUID NOT NULL REFERENCES organisations(id),
+        code VARCHAR(32) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        contact_person VARCHAR(200),
+        phone VARCHAR(32),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (organisation_id, code)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS contract_workers (
+        id UUID PRIMARY KEY,
+        contractor_id UUID NOT NULL REFERENCES contractors(id),
+        full_name VARCHAR(200) NOT NULL,
+        department_id UUID NOT NULL REFERENCES departments(id),
+        phone VARCHAR(32),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS shift_assignments (
+        id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id),
+        department_id UUID NOT NULL REFERENCES departments(id),
+        shift_id UUID NOT NULL REFERENCES shifts(id),
+        effective_date DATE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (user_id, department_id, shift_id, effective_date)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS attendance_records (
+        id UUID PRIMARY KEY,
+        attendance_date DATE NOT NULL,
+        user_id UUID NOT NULL REFERENCES users(id),
+        department_id UUID NOT NULL REFERENCES departments(id),
+        shift_id UUID NOT NULL REFERENCES shifts(id),
+        status VARCHAR(32) NOT NULL,
+        remarks TEXT,
+        marked_by_id UUID NOT NULL REFERENCES users(id),
+        marked_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (attendance_date, user_id, department_id, shift_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS contractor_attendance (
+        id UUID PRIMARY KEY,
+        attendance_date DATE NOT NULL,
+        contractor_id UUID NOT NULL REFERENCES contractors(id),
+        department_id UUID NOT NULL REFERENCES departments(id),
+        shift_id UUID NOT NULL REFERENCES shifts(id),
+        workers_present INTEGER DEFAULT 0,
+        workers_absent INTEGER DEFAULT 0,
+        remarks TEXT,
+        marked_by_id UUID NOT NULL REFERENCES users(id),
+        marked_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (attendance_date, contractor_id, department_id, shift_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS shift_handover_notes (
+        id UUID PRIMARY KEY,
+        note_date DATE NOT NULL,
+        department_id UUID NOT NULL REFERENCES departments(id),
+        shift_id UUID NOT NULL REFERENCES shifts(id),
+        author_id UUID NOT NULL REFERENCES users(id),
+        note TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_handover_dept_shift_date ON shift_handover_notes (department_id, shift_id, note_date)",
+)
+
 
 async def apply_schema_patches(conn: AsyncConnection) -> None:
     for value in _USERROLE_VALUES:
@@ -214,6 +303,12 @@ async def apply_schema_patches(conn: AsyncConnection) -> None:
             pass
 
     for stmt in _CUSTOMER_PATCHES:
+        try:
+            await conn.execute(text(stmt))
+        except Exception:
+            pass
+
+    for stmt in _WORKFORCE_PATCHES:
         try:
             await conn.execute(text(stmt))
         except Exception:

@@ -17,6 +17,7 @@ from app.utils.seed_wire_drawing import seed_wire_drawing_template
 from app.utils.seed_bright_bar import seed_bright_bar_template
 from app.utils.seed_org_roles import seed_org_role_users
 from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
+from app.utils.seed_workforce import seed_workforce_demo
 
 
 @asynccontextmanager
@@ -37,6 +38,7 @@ async def lifespan(_: FastAPI):
         await patch_extra_steel_grades(session)
         await patch_workflow_roles(session)
         await seed_org_role_users(session)
+        await seed_workforce_demo(session)
         await session.commit()
     yield
 

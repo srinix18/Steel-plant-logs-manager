@@ -19,20 +19,23 @@ Ensure-EnvFiles
 Ensure-PostgresRunning
 
 Write-Step "Preparing ports"
-Ensure-PortFree -Port $BackendPort -Label "backend"
-Ensure-PortFree -Port $FrontendPort -Label "frontend"
+Stop-BackendForRestart -Port $BackendPort
+$startFrontend = Prepare-ServiceStart -Port $FrontendPort -Label "frontend" -HealthCheck { Test-FrontendHealthy -Port $FrontendPort }
 
 Write-Step "Starting backend (http://localhost:$BackendPort)"
 $backendCmd = "Set-Location '$BackendDir'; & '$VenvUvicorn' app.main:app --reload --host 127.0.0.1 --port $BackendPort"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd | Out-Null
 Write-Ok "Backend starting in new window"
-
 Start-Sleep -Seconds 2
 
-Write-Step "Starting frontend (http://localhost:$FrontendPort)"
-$frontendCmd = "Set-Location '$FrontendDir'; npm run dev"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd | Out-Null
-Write-Ok "Frontend starting in new window"
+if ($startFrontend) {
+    Write-Step "Starting frontend (http://localhost:$FrontendPort)"
+    $frontendCmd = "Set-Location '$FrontendDir'; npm run dev"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd | Out-Null
+    Write-Ok "Frontend starting in new window"
+} else {
+    Write-Ok "Using existing frontend at http://localhost:$FrontendPort"
+}
 
 Write-Host ""
 Write-Host "App is starting!" -ForegroundColor Green
@@ -44,6 +47,10 @@ Write-Host ""
 Write-Host "  Admin:     admin@logbook.app / admin123" -ForegroundColor White
 Write-Host "  Worker:    melter@chandansteel.com / worker123" -ForegroundColor White
 Write-Host ""
-Write-Host "Two terminal windows were opened for backend and frontend." -ForegroundColor Gray
-Write-Host "Close those windows to stop the app." -ForegroundColor Gray
+if ($startFrontend) {
+    Write-Host "A new frontend window was opened." -ForegroundColor Gray
+} else {
+    Write-Host "Frontend was already running and was left as-is." -ForegroundColor Gray
+}
+Write-Host "Close backend/frontend windows to stop the app, or run stop.bat." -ForegroundColor Gray
 Write-Host ""

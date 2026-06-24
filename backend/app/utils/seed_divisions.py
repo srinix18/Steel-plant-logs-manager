@@ -13,6 +13,10 @@ DIVISIONS: list[tuple[str, str]] = [
     ("ROLLING", "Rolling Mill"),
     ("WIRE", "Wire Division"),
     ("BBD", "Bright Bar Division"),
+    ("FORGE", "Forge Shop"),
+    ("QUAL", "Quality"),
+    ("MAINT", "Maintenance"),
+    ("UTIL", "Utilities"),
 ]
 
 

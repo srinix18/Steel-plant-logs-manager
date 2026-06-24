@@ -17,7 +17,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Table } from '../../components/ui/Table';
 
-const ASSIGNABLE_ROLES: UserRole[] = ['hod', 'supervisor', 'worker', 'maintenance'];
+const ASSIGNABLE_ROLES: UserRole[] = ['hr', 'hod', 'supervisor', 'worker', 'maintenance'];
 
 const DEFAULT_CATEGORIES: { value: IssueCategory; label: string }[] = [
   { value: 'quality', label: 'Quality' },

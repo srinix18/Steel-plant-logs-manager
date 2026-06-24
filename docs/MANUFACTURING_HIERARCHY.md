@@ -15,7 +15,10 @@ Organisation (Chandan Steel)
     ├── ROLLING   — Rolling Mill
     ├── WIRE      — Wire Division
     ├── BBD       — Bright Bar Division
-    └── FORGE     — Forge Shop
+    ├── FORGE     — Forge Shop
+    ├── QUAL      — Quality
+    ├── MAINT     — Maintenance
+    └── UTIL      — Utilities
 ```
 
 ---

@@ -27,6 +27,7 @@ from app.models.enums import UserRole, ObservationCategory
 from app.services.access_scope import (
     CEO_ASSIGNABLE_ROLES,
     is_ceo_tier,
+    is_hr,
     is_platform_admin,
     validate_user_scope,
 )
@@ -91,7 +92,7 @@ class OrgUserService:
     def _assert_org_access(self, actor: User, org_id: UUID) -> None:
         if is_platform_admin(actor):
             return
-        if not is_ceo_tier(actor) or actor.organisation_id != org_id:
+        if (not is_ceo_tier(actor) and not is_hr(actor)) or actor.organisation_id != org_id:
             from fastapi import HTTPException
 
             raise HTTPException(status_code=403, detail="Access denied")
@@ -110,7 +111,10 @@ class OrgUserService:
 
         self._assert_org_access(actor, org_id)
         if not is_platform_admin(actor) and data.role not in CEO_ASSIGNABLE_ROLES:
-            raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, worker, or maintenance roles")
+            raise HTTPException(
+                status_code=403,
+                detail="Only CEO/HR can assign HR, HoD, supervisor, worker, or maintenance roles",
+            )
 
         existing = await session.execute(select(User).where(User.email == data.email))
         if existing.scalar_one_or_none():
@@ -169,7 +173,10 @@ class OrgUserService:
             if user.role in {UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CEO, UserRole.ORG_ADMIN}:
                 raise HTTPException(status_code=403, detail="Cannot modify this user")
             if data.role and data.role not in CEO_ASSIGNABLE_ROLES:
-                raise HTTPException(status_code=403, detail="CEO can only assign HoD, supervisor, worker, or maintenance roles")
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only CEO/HR can assign HR, HoD, supervisor, worker, or maintenance roles",
+                )
 
         new_role = data.role or user.role
         new_dept = data.department_id if data.department_id is not None else user.department_id

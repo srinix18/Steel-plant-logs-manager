@@ -18,6 +18,34 @@ async def seed_org_role_users(session: AsyncSession) -> None:
     if not plant:
         return
 
+    hr_dept = await get_chandan_department(session, plant.id, "QUAL")
+
+    hr_seed = {
+        "email": "hr@chandansteel.com",
+        "password": "hr123",
+        "full_name": "HR Workforce Manager",
+        "role": UserRole.HR,
+        "designation": "HR Manager",
+        "employee_uid": "CHANDAN-HR-0001",
+    }
+    with session.no_autoflush:
+        existing_hr = await session.execute(select(User).where(User.email == hr_seed["email"]))
+        if not existing_hr.scalar_one_or_none():
+            session.add(
+                User(
+                    email=hr_seed["email"],
+                    hashed_password=get_password_hash(hr_seed["password"]),
+                    full_name=hr_seed["full_name"],
+                    role=hr_seed["role"],
+                    organisation_id=org.id,
+                    plant_id=plant.id,
+                    department_id=hr_dept.id if hr_dept else None,
+                    designation=hr_seed["designation"],
+                    employee_uid=hr_seed["employee_uid"],
+                    is_active=True,
+                )
+            )
+
     dept = await get_chandan_department(session, plant.id, "SMS")
     if not dept:
         return
