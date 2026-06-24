@@ -15,6 +15,8 @@ import {
   HANDOVER_WRITE_ROLES,
   SHIFT_FLOOR_ROLES,
   WORKFORCE_ADMIN_ROLES,
+  HOD_TIER_ROLES,
+  SUPERVISOR_ROLES,
 } from '../../utils/roles';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -56,6 +58,13 @@ export function Sidebar() {
   const showHandover = hasRole(user.role, HANDOVER_WRITE_ROLES);
 
   const showShift = hasRole(user.role, SHIFT_FLOOR_ROLES);
+  const showFoundationAssets = isPlatformAdmin || hasRole(user.role, HOD_TIER_ROLES);
+  const showFoundationMasters = showFoundationAssets;
+  const showFoundationOps = hasRole(user.role, SUPERVISOR_ROLES) || isMaintenance;
+  const showFoundationAnalytics = isPlatformAdmin || isCeo;
+  const showFoundationDocs = true;
+  const showFoundationSection =
+    showFoundationAssets || showFoundationOps || showFoundationAnalytics || showFoundationDocs;
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -180,6 +189,42 @@ export function Sidebar() {
           <NavLink to="/workforce/my-attendance" className={linkClass}>
             My Attendance
           </NavLink>
+        )}
+
+        {showFoundationSection && (
+          <>
+            <p className={sectionClass}>Plant Foundation</p>
+            {showFoundationAssets && (
+              <NavLink to="/foundation/assets" className={linkClass}>
+                Assets
+              </NavLink>
+            )}
+            {showFoundationMasters && (
+              <NavLink to="/foundation/masters" className={linkClass}>
+                Masters
+              </NavLink>
+            )}
+            {showFoundationOps && (
+              <>
+                <NavLink to="/foundation/observations" className={linkClass}>
+                  Observations
+                </NavLink>
+                <NavLink to="/foundation/corrective-actions" className={linkClass}>
+                  Corrective Actions
+                </NavLink>
+              </>
+            )}
+            {showFoundationDocs && (
+              <NavLink to="/foundation/documents" className={linkClass}>
+                Documents
+              </NavLink>
+            )}
+            {showFoundationAnalytics && (
+              <NavLink to="/foundation/analytics" className={linkClass}>
+                Analytics
+              </NavLink>
+            )}
+          </>
         )}
 
         {showShift && (

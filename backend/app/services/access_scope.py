@@ -7,7 +7,7 @@ from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.db.models import Department, MaintenanceIssue, Plant, Process, ProcessInstance, ProcessRun, User
+from app.db.models import Department, DepartmentDocument, MaintenanceIssue, Observation, Plant, Process, ProcessInstance, ProcessRun, User
 from app.db.types import categories_equal, pg_category_matches_division
 from app.models.enums import ObservationCategory, UserRole
 
@@ -467,6 +467,71 @@ def apply_department_list_scope(query: Select, user: User) -> Select:
     if user.department_id:
         return query.where(Department.id == user.department_id)
     return query.where(Department.id.is_(None))
+
+
+def can_manage_masters(user: User) -> bool:
+    return is_platform_admin(user) or is_ceo_tier(user)
+
+
+def can_manage_assets(user: User) -> bool:
+    return is_platform_admin(user) or is_hod_tier(user)
+
+
+def can_view_foundation(user: User) -> bool:
+    return is_supervisor_tier(user) or is_maintenance(user)
+
+
+def assert_can_manage_masters(user: User) -> None:
+    if not can_manage_masters(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to manage master data")
+
+
+def assert_can_manage_assets(user: User) -> None:
+    if not can_manage_assets(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to manage assets")
+
+
+def can_view_documents(user: User) -> bool:
+    return (
+        is_platform_admin(user)
+        or is_ceo_tier(user)
+        or is_hr(user)
+        or is_hod_tier(user)
+        or is_supervisor_only(user)
+        or is_worker(user)
+        or is_maintenance(user)
+    )
+
+
+def assert_can_view_foundation(user: User) -> None:
+    if not can_view_foundation(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
+def assert_can_view_documents(user: User) -> None:
+    if not can_view_documents(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
+def apply_observation_department_scope(query: Select, user: User) -> Select:
+    if is_platform_admin(user) or is_ceo_tier(user):
+        return query
+    if user.department_id:
+        return query.where(
+            or_(
+                Observation.department_id == user.department_id,
+                Observation.department_id.is_(None),
+            )
+        )
+    return query
+
+
+def apply_document_department_scope(query: Select, user: User) -> Select:
+    if is_platform_admin(user) or is_ceo_tier(user) or is_hr(user):
+        return query
+    if user.department_id:
+        return query.where(DepartmentDocument.department_id == user.department_id)
+    return query.where(False)
 
 
 def validate_user_scope(

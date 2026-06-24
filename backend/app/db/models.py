@@ -138,13 +138,18 @@ class Asset(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
     group_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("asset_groups.id"), nullable=False)
     plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
     asset_no: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[AssetStatus] = mapped_column(Enum(AssetStatus), default=AssetStatus.ACTIVE)
     parent_asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
     life_counters: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    expected_life: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
     plc_tag_prefix: Mapped[Optional[str]] = mapped_column(String(100))
+    installation_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_inspection_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     group: Mapped["AssetGroup"] = relationship(back_populates="assets")
 
@@ -470,6 +475,12 @@ class Observation(Base, TimestampMixin):
     run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
     asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
     event_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("operational_events.id"), nullable=True)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    process_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("processes.id"), nullable=True)
+    maintenance_issue_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("maintenance_issues.id"), nullable=True
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
     category: Mapped[ObservationCategory] = mapped_column(Enum(ObservationCategory), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[ObservationSeverity] = mapped_column(Enum(ObservationSeverity), nullable=False)
@@ -741,6 +752,63 @@ class KPIDefinition(Base, TimestampMixin):
     formula: Mapped[str] = mapped_column(Text, nullable=False)
     dimensions: Mapped[list[str]] = mapped_column(JSONB, default=list)
     refresh_interval_minutes: Mapped[int] = mapped_column(Integer, default=60)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    target_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    frequency: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+
+
+class ProductCatalog(Base, TimestampMixin):
+    __tablename__ = "product_catalog"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint("organisation_id", "code", name="uq_product_org_code"),)
+
+
+class DepartmentDocument(Base, TimestampMixin):
+    __tablename__ = "department_documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    version: Mapped[str] = mapped_column(String(32), default="1.0")
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ApprovalRecord(Base):
+    __tablename__ = "approval_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    comments: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AssetResponsibility(Base, TimestampMixin):
+    __tablename__ = "asset_responsibilities"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    role_label: Mapped[str] = mapped_column(String(100), default="owner")
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (UniqueConstraint("asset_id", "user_id", "role_label", name="uq_asset_resp"),)
 
 
 class FactProcessRun(Base):

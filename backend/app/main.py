@@ -18,7 +18,11 @@ from app.utils.seed_bright_bar import seed_bright_bar_template
 from app.utils.seed_forge_grinding import seed_forge_grinding_template
 from app.utils.seed_org_roles import seed_org_role_users
 from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
+from app.utils.seed_asset_catalog import seed_asset_catalog
 from app.utils.seed_workforce import seed_workforce_demo
+from app.services.masters_service import MastersService
+from sqlalchemy import select
+from app.db.models import Organisation
 
 
 @asynccontextmanager
@@ -41,6 +45,10 @@ async def lifespan(_: FastAPI):
         await patch_workflow_roles(session)
         await seed_org_role_users(session)
         await seed_workforce_demo(session)
+        await seed_asset_catalog(session)
+        org = (await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))).scalar_one_or_none()
+        if org:
+            await MastersService().seed_default_products(session, org.id)
         await session.commit()
     yield
 

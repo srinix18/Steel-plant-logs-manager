@@ -290,6 +290,79 @@ _WORKFORCE_PATCHES = (
     "CREATE INDEX IF NOT EXISTS ix_handover_dept_shift_date ON shift_handover_notes (department_id, shift_id, note_date)",
 )
 
+_FOUNDATION_PATCHES = (
+    "ALTER TABLE assets ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id)",
+    "ALTER TABLE assets ADD COLUMN IF NOT EXISTS installation_date DATE",
+    "ALTER TABLE assets ADD COLUMN IF NOT EXISTS remarks TEXT",
+    "ALTER TABLE assets ADD COLUMN IF NOT EXISTS expected_life JSONB DEFAULT '{}'",
+    "ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_inspection_at TIMESTAMPTZ",
+    "ALTER TABLE observations ADD COLUMN IF NOT EXISTS title VARCHAR(300)",
+    "ALTER TABLE observations ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id)",
+    "ALTER TABLE observations ADD COLUMN IF NOT EXISTS process_id UUID REFERENCES processes(id)",
+    "ALTER TABLE observations ADD COLUMN IF NOT EXISTS maintenance_issue_id UUID REFERENCES maintenance_issues(id)",
+    "ALTER TABLE kpi_definitions ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id)",
+    "ALTER TABLE kpi_definitions ADD COLUMN IF NOT EXISTS target_value DOUBLE PRECISION",
+    "ALTER TABLE kpi_definitions ADD COLUMN IF NOT EXISTS frequency VARCHAR(32)",
+    """
+    CREATE TABLE IF NOT EXISTS product_catalog (
+        id UUID PRIMARY KEY,
+        organisation_id UUID NOT NULL REFERENCES organisations(id),
+        code VARCHAR(50) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        department_id UUID REFERENCES departments(id),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (organisation_id, code)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS department_documents (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        department_id UUID NOT NULL REFERENCES departments(id),
+        category VARCHAR(50) NOT NULL,
+        title VARCHAR(300) NOT NULL,
+        version VARCHAR(32) DEFAULT '1.0',
+        file_name VARCHAR(255) NOT NULL,
+        storage_path VARCHAR(500) NOT NULL,
+        mime_type VARCHAR(100) NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        uploaded_by UUID NOT NULL REFERENCES users(id),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS approval_records (
+        id UUID PRIMARY KEY,
+        entity_type VARCHAR(50) NOT NULL,
+        entity_id UUID NOT NULL,
+        action VARCHAR(32) NOT NULL,
+        user_id UUID NOT NULL REFERENCES users(id),
+        comments TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS asset_responsibilities (
+        id UUID PRIMARY KEY,
+        asset_id UUID NOT NULL REFERENCES assets(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        role_label VARCHAR(100) DEFAULT 'owner',
+        is_primary BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (asset_id, user_id, role_label)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_approval_entity ON approval_records (entity_type, entity_id)",
+    "CREATE INDEX IF NOT EXISTS ix_dept_docs_dept ON department_documents (department_id)",
+)
+
+_CORRECTIVEACTIONSTATUS_VALUES = ("assigned", "completed")
+
 
 async def apply_schema_patches(conn: AsyncConnection) -> None:
     for value in _USERROLE_VALUES:
@@ -366,6 +439,18 @@ async def apply_schema_patches(conn: AsyncConnection) -> None:
             pass
 
     for stmt in _WORKFORCE_PATCHES:
+        try:
+            await conn.execute(text(stmt))
+        except Exception:
+            pass
+
+    for value in _CORRECTIVEACTIONSTATUS_VALUES:
+        try:
+            await conn.execute(text(f"ALTER TYPE correctiveactionstatus ADD VALUE IF NOT EXISTS '{value}'"))
+        except Exception:
+            pass
+
+    for stmt in _FOUNDATION_PATCHES:
         try:
             await conn.execute(text(stmt))
         except Exception:

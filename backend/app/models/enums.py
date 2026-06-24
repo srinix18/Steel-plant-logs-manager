@@ -149,9 +149,44 @@ class CoilStatus(str, enum.Enum):
 
 class CorrectiveActionStatus(str, enum.Enum):
     OPEN = "open"
+    ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
     CLOSED = "closed"
     CANCELLED = "cancelled"
+
+
+class DocumentCategory(str, enum.Enum):
+    SOP = "sop"
+    WORK_INSTRUCTION = "work_instruction"
+    SAFETY_PROCEDURE = "safety_procedure"
+    QUALITY_DOCUMENT = "quality_document"
+    MAINTENANCE_MANUAL = "maintenance_manual"
+    TRAINING_MATERIAL = "training_material"
+
+
+class ApprovalAction(str, enum.Enum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    REVIEWED = "reviewed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CLOSED = "closed"
+
+
+class KpiFrequency(str, enum.Enum):
+    SHIFT = "shift"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class AssetEventType(str, enum.Enum):
+    INSPECTION = "inspection"
+    BREAKDOWN = "breakdown"
+    MAINTENANCE = "maintenance"
+    READING = "reading"
+    MANUAL_ENTRY = "manual_entry"
 
 
 class CorrectiveActionPriority(str, enum.Enum):

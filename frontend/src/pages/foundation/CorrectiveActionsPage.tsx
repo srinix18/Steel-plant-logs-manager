@@ -1,0 +1,1 @@
+export { CorrectiveActionsPage } from './ObservationsPage';

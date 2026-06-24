@@ -27,6 +27,12 @@ import { ShiftAssignmentsPage } from './pages/workforce/ShiftAssignmentsPage';
 import { AttendanceEntryPage } from './pages/workforce/AttendanceEntryPage';
 import { ShiftHandoverPage } from './pages/workforce/ShiftHandoverPage';
 import { MyAttendancePage } from './pages/workforce/MyAttendancePage';
+import { AssetsPage } from './pages/foundation/AssetsPage';
+import { MastersPage } from './pages/foundation/MastersPage';
+import { ObservationsPage } from './pages/foundation/ObservationsPage';
+import { CorrectiveActionsPage } from './pages/foundation/CorrectiveActionsPage';
+import { DocumentsPage } from './pages/foundation/DocumentsPage';
+import { AnalyticsPage } from './pages/foundation/AnalyticsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import {
   hasRole,
@@ -125,6 +131,22 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={WORKER_ROLES} />}>
             <Route path="workforce/my-attendance" element={<MyAttendancePage />} />
+          </Route>
+
+          <Route path="foundation/documents" element={<DocumentsPage />} />
+
+          <Route element={<ProtectedRoute allowedRoles={[...HOD_TIER_ROLES, ...PLATFORM_ADMIN_ROLES]} />}>
+            <Route path="foundation/assets" element={<AssetsPage />} />
+            <Route path="foundation/masters" element={<MastersPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[...SUPERVISOR_ROLES, ...MAINTENANCE_ROLES]} />}>
+            <Route path="foundation/observations" element={<ObservationsPage />} />
+            <Route path="foundation/corrective-actions" element={<CorrectiveActionsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[...CEO_TIER_ROLES, ...PLATFORM_ADMIN_ROLES]} />}>
+            <Route path="foundation/analytics" element={<AnalyticsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />
