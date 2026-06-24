@@ -138,13 +138,14 @@ CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent
 | Feature | CEO | HR | HoD | Supervisor | Worker |
 |---------|-----|----|-----|------------|--------|
 | Workforce dashboard | Plant-wide view | All departments | Department | Department | — |
-| Employee / contractor master | View | Full control | Department | — | — |
+| Employee / contractor master | View | Full control (employees) | Department employees | — | — |
+| Contractors & contract workers | — | Full control | — | — | — |
 | Shift assignments | View | Full control | — | — | — |
 | Mark attendance | View | Full control | — | — | — |
 | Shift handover notes | View | Full control | View (dept) | Write (own dept) | — |
 | View own attendance | — | — | — | — | Yes |
 
-Demo contractors: **ABC Labour Services**, **XYZ Contractors**. SMS Shift A has a sample previous-shift handover note for the Shift Dashboard banner.
+Demo contractors: **ABC Labour Services**, **XYZ Contractors** (org vendors). Contract workers are assigned per department — only SMS has demo workers seeded; other departments show no contractors on attendance until HR adds workers there.
 
 ## Database (local dev)
 

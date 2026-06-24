@@ -389,6 +389,15 @@ def can_manage_shift_assignments(actor: User, department_id: UUID) -> bool:
     return is_platform_admin(actor) or is_hr(actor)
 
 
+def can_manage_contractors(actor: User) -> bool:
+    return is_platform_admin(actor) or is_hr(actor)
+
+
+def assert_manage_contractors(actor: User) -> None:
+    if not can_manage_contractors(actor):
+        raise HTTPException(status_code=403, detail="Contractor management access denied")
+
+
 def can_mark_attendance(actor: User, department_id: UUID) -> bool:
     return is_platform_admin(actor) or is_hr(actor)
 

@@ -45,11 +45,23 @@ export function AttendanceEntryPage() {
     fetchPlants().then((p) => {
       if (p[0]) fetchWorkforceShifts(p[0].id).then(setShifts);
     });
-    fetchContractors().then((c) => {
-      setContractors(c);
-      if (c[0]) setContractorId(c[0].id);
-    });
   }, [user?.department_id]);
+
+  useEffect(() => {
+    if (!departmentId) {
+      setContractors([]);
+      setContractorId('');
+      return;
+    }
+    fetchContractors(departmentId)
+      .then((c) => {
+        setContractors(c);
+        setContractorId(c[0]?.id ?? '');
+        setWorkersPresent(0);
+        setWorkersAbsent(0);
+      })
+      .catch((e) => setError(getErrorMessage(e)));
+  }, [departmentId]);
 
   useEffect(() => {
     if (!departmentId || !shiftId) return;
@@ -58,9 +70,14 @@ export function AttendanceEntryPage() {
       .catch((e) => setError(getErrorMessage(e)));
     fetchContractorAttendance(date, departmentId, shiftId)
       .then((rows) => {
-        if (rows[0] && contractorId === rows[0].contractor_id) {
-          setWorkersPresent(rows[0].workers_present);
-          setWorkersAbsent(rows[0].workers_absent);
+        const row = contractorId ? rows.find((r) => r.contractor_id === contractorId) : rows[0];
+        if (row) {
+          if (!contractorId) setContractorId(row.contractor_id);
+          setWorkersPresent(row.workers_present);
+          setWorkersAbsent(row.workers_absent);
+        } else {
+          setWorkersPresent(0);
+          setWorkersAbsent(0);
         }
       })
       .catch(() => {});
@@ -208,6 +225,12 @@ export function AttendanceEntryPage() {
 
           <Card>
             <h2 className="mb-3 font-semibold text-slate-900">Contractor attendance</h2>
+            {contractors.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No contractors linked to this department. Add contract workers under Workforce → Contractors.
+              </p>
+            ) : (
+            <>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm">
                 <span className="text-slate-600">Contractor</span>
@@ -239,6 +262,8 @@ export function AttendanceEntryPage() {
             <div className="mt-4">
               <Button variant="secondary" onClick={saveContractor}>Save contractor attendance</Button>
             </div>
+            </>
+            )}
           </Card>
         </>
       )}

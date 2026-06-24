@@ -57,8 +57,12 @@ async def update_employee(
 
 
 @router.get("/workforce/contractors", response_model=list[ContractorResponse])
-async def list_contractors(session: DbSession, user: CurrentUser):
-    return await service.list_contractors(session, user)
+async def list_contractors(
+    session: DbSession,
+    user: CurrentUser,
+    department_id: UUID | None = None,
+):
+    return await service.list_contractors(session, user, department_id)
 
 
 @router.post("/workforce/contractors", response_model=ContractorResponse)

@@ -115,6 +115,8 @@ export interface DepartmentAttendanceSummary {
   expected: number;
   present: number;
   understaffed_by: number;
+  contract_workers_present: number;
+  contract_workers_absent: number;
 }
 
 export interface WorkforceDailySummary {

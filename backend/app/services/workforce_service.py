@@ -48,6 +48,7 @@ from app.services.access_scope import (
     CEO_ASSIGNABLE_ROLES,
     WORKFORCE_EMPLOYEE_ROLES,
     apply_workforce_department_scope,
+    assert_manage_contractors,
     assert_manage_shift_assignments,
     assert_mark_attendance,
     assert_workforce_manage,
@@ -166,19 +167,56 @@ class WorkforceService:
             return UserProfile.model_validate(user)
         return profile
 
-    async def list_contractors(self, session: AsyncSession, actor: User) -> list[ContractorResponse]:
-        org_id = self._org_id(actor)
-        assert_workforce_manage(actor)
-        result = await session.execute(
-            select(Contractor).where(Contractor.organisation_id == org_id).order_by(Contractor.name)
+    async def _contractor_ids_for_department(
+        self, session: AsyncSession, department_id: UUID
+    ) -> set[UUID]:
+        worker_ids = await session.execute(
+            select(ContractWorker.contractor_id).where(
+                ContractWorker.department_id == department_id,
+                ContractWorker.is_active.is_(True),
+            )
         )
+        att_ids = await session.execute(
+            select(ContractorAttendance.contractor_id).where(
+                ContractorAttendance.department_id == department_id,
+            )
+        )
+        return set(worker_ids.scalars()) | set(att_ids.scalars())
+
+    async def _assert_contractor_for_department(
+        self, session: AsyncSession, contractor_id: UUID, department_id: UUID
+    ) -> None:
+        eligible = await self._contractor_ids_for_department(session, department_id)
+        if contractor_id not in eligible:
+            raise HTTPException(
+                status_code=400,
+                detail="Contractor is not linked to this department (add contract workers first)",
+            )
+
+    async def list_contractors(
+        self, session: AsyncSession, actor: User, department_id: UUID | None = None
+    ) -> list[ContractorResponse]:
+        org_id = self._org_id(actor)
+        if department_id:
+            assert_mark_attendance(actor, department_id)
+        else:
+            assert_manage_contractors(actor)
+
+        query = select(Contractor).where(Contractor.organisation_id == org_id)
+        if department_id:
+            eligible = await self._contractor_ids_for_department(session, department_id)
+            if not eligible:
+                return []
+            query = query.where(Contractor.id.in_(eligible))
+        query = query.order_by(Contractor.name)
+        result = await session.execute(query)
         return [ContractorResponse.model_validate(c) for c in result.scalars()]
 
     async def create_contractor(
         self, session: AsyncSession, actor: User, data: ContractorCreate
     ) -> ContractorResponse:
         org_id = self._org_id(actor)
-        assert_workforce_manage(actor)
+        assert_manage_contractors(actor)
         existing = await session.execute(
             select(Contractor).where(Contractor.organisation_id == org_id, Contractor.code == data.code)
         )
@@ -192,7 +230,7 @@ class WorkforceService:
     async def update_contractor(
         self, session: AsyncSession, actor: User, contractor_id: UUID, data: ContractorUpdate
     ) -> ContractorResponse:
-        assert_workforce_manage(actor)
+        assert_manage_contractors(actor)
         contractor = await session.get(Contractor, contractor_id)
         if not contractor or contractor.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Contractor not found")
@@ -205,6 +243,7 @@ class WorkforceService:
         self, session: AsyncSession, actor: User, department_id: UUID | None = None
     ) -> list[ContractWorkerResponse]:
         org_id = self._org_id(actor)
+        assert_manage_contractors(actor)
         query = (
             select(ContractWorker)
             .join(Contractor)
@@ -212,10 +251,7 @@ class WorkforceService:
             .where(Contractor.organisation_id == org_id)
         )
         if department_id:
-            assert_workforce_manage(actor, department_id)
             query = query.where(ContractWorker.department_id == department_id)
-        else:
-            query = apply_workforce_department_scope(query, actor, ContractWorker.department_id)
         result = await session.execute(query.order_by(ContractWorker.full_name))
         out: list[ContractWorkerResponse] = []
         for w in result.scalars():
@@ -228,7 +264,7 @@ class WorkforceService:
     async def create_contract_worker(
         self, session: AsyncSession, actor: User, data: ContractWorkerCreate
     ) -> ContractWorkerResponse:
-        assert_workforce_manage(actor, data.department_id)
+        assert_manage_contractors(actor)
         contractor = await session.get(Contractor, data.contractor_id)
         if not contractor or contractor.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Contractor not found")
@@ -244,6 +280,7 @@ class WorkforceService:
     async def update_contract_worker(
         self, session: AsyncSession, actor: User, worker_id: UUID, data: ContractWorkerUpdate
     ) -> ContractWorkerResponse:
+        assert_manage_contractors(actor)
         worker = await session.get(ContractWorker, worker_id)
         if not worker:
             raise HTTPException(status_code=404, detail="Contract worker not found")
@@ -251,11 +288,10 @@ class WorkforceService:
         contractor = worker.contractor
         if not contractor or contractor.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Contract worker not found")
-        dept_id = data.department_id or worker.department_id
-        assert_workforce_manage(actor, dept_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(worker, field, value)
         await session.flush()
+        await session.refresh(worker, ["contractor", "department"])
         resp = ContractWorkerResponse.model_validate(worker)
         resp.contractor_name = contractor.name
         resp.department_code = worker.department.code if worker.department else None
@@ -477,6 +513,7 @@ class WorkforceService:
         self, session: AsyncSession, actor: User, data: ContractorAttendanceCreate
     ) -> ContractorAttendanceResponse:
         assert_mark_attendance(actor, data.department_id)
+        await self._assert_contractor_for_department(session, data.contractor_id, data.department_id)
         existing = await session.execute(
             select(ContractorAttendance).where(
                 ContractorAttendance.attendance_date == data.attendance_date,
@@ -656,6 +693,18 @@ class WorkforceService:
         )
         return sum(_attendance_weight(s) for s in result.scalars())
 
+    async def _contract_attendance_for_department(
+        self, session: AsyncSession, department_id: UUID, on_date: date
+    ) -> tuple[int, int]:
+        result = await session.execute(
+            select(ContractorAttendance).where(
+                ContractorAttendance.department_id == department_id,
+                ContractorAttendance.attendance_date == on_date,
+            )
+        )
+        rows = list(result.scalars())
+        return sum(r.workers_present for r in rows), sum(r.workers_absent for r in rows)
+
     async def department_dashboard(
         self, session: AsyncSession, actor: User, on_date: date
     ) -> list[DepartmentAttendanceSummary]:
@@ -670,6 +719,9 @@ class WorkforceService:
         for dept in depts:
             expected = await self._expected_for_department(session, dept.id, on_date)
             present = await self._present_for_department(session, dept.id, on_date)
+            contract_present, contract_absent = await self._contract_attendance_for_department(
+                session, dept.id, on_date
+            )
             understaffed = max(0, int(round(expected - present)))
             summaries.append(
                 DepartmentAttendanceSummary(
@@ -679,6 +731,8 @@ class WorkforceService:
                     expected=expected,
                     present=round(present, 1),
                     understaffed_by=understaffed if expected > present else 0,
+                    contract_workers_present=contract_present,
+                    contract_workers_absent=contract_absent,
                 )
             )
         return summaries
@@ -691,12 +745,8 @@ class WorkforceService:
         employees_present = int(sum(d.present for d in departments))
         employees_absent = max(0, employees_expected - employees_present)
 
-        ca_query = select(ContractorAttendance).where(ContractorAttendance.attendance_date == on_date)
-        if not is_ceo_tier(actor) and not is_hr(actor) and actor.department_id:
-            ca_query = ca_query.where(ContractorAttendance.department_id == actor.department_id)
-        ca_rows = list((await session.execute(ca_query)).scalars())
-        contract_present = sum(r.workers_present for r in ca_rows)
-        contract_absent = sum(r.workers_absent for r in ca_rows)
+        contract_present = sum(d.contract_workers_present for d in departments)
+        contract_absent = sum(d.contract_workers_absent for d in departments)
 
         understaffed = [
             f"{d.department_name} (-{d.understaffed_by})"

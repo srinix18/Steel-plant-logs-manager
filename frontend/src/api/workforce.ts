@@ -36,8 +36,10 @@ export async function updateWorkforceEmployee(
   return data;
 }
 
-export async function fetchContractors(): Promise<Contractor[]> {
-  const { data } = await apiClient.get<Contractor[]>('/workforce/contractors');
+export async function fetchContractors(departmentId?: string): Promise<Contractor[]> {
+  const { data } = await apiClient.get<Contractor[]>('/workforce/contractors', {
+    params: departmentId ? { department_id: departmentId } : undefined,
+  });
   return data;
 }
 

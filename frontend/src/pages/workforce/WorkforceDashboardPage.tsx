@@ -53,8 +53,11 @@ export function WorkforceDashboardPage() {
               <p className="mt-1 text-2xl font-bold text-red-600">{summary.employees_absent}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium uppercase text-slate-500">Contract workers present</p>
+              <p className="text-xs font-medium uppercase text-slate-500">Contract workers present (total)</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{summary.contract_workers_present}</p>
+              {summary.contract_workers_absent > 0 && (
+                <p className="mt-1 text-xs text-slate-500">{summary.contract_workers_absent} absent</p>
+              )}
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium uppercase text-slate-500">Shift notes</p>
@@ -91,8 +94,14 @@ export function WorkforceDashboardPage() {
                     {d.understaffed_by > 0 && <Badge color="purple">{`-${d.understaffed_by}`}</Badge>}
                   </div>
                   <p className="mt-3 text-lg font-bold text-brand-700">
-                    Present: {d.present} / {d.expected}
+                    Employees: {d.present} / {d.expected}
                   </p>
+                  {(d.contract_workers_present > 0 || d.contract_workers_absent > 0) && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Contractors: {d.contract_workers_present} present
+                      {d.contract_workers_absent > 0 ? `, ${d.contract_workers_absent} absent` : ''}
+                    </p>
+                  )}
                 </div>
               ))}
           </div>

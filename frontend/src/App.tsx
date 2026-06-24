@@ -111,11 +111,11 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allowedRoles={WORKFORCE_ADMIN_ROLES} />}>
             <Route path="workforce" element={<Navigate to="/workforce/dashboard" replace />} />
             <Route path="workforce/employees" element={<WorkforceEmployeesPage />} />
-            <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={WORKFORCE_HR_ROLES} />}>
             <Route path="workforce/shift-assignments" element={<ShiftAssignmentsPage />} />
+            <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
             <Route path="workforce/attendance" element={<AttendanceEntryPage />} />
           </Route>
 

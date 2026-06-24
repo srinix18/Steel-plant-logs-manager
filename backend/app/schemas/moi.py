@@ -873,6 +873,8 @@ class DepartmentAttendanceSummary(BaseModel):
     expected: int
     present: float
     understaffed_by: int
+    contract_workers_present: int = 0
+    contract_workers_absent: int = 0
 
 
 class WorkforceDailySummary(BaseModel):

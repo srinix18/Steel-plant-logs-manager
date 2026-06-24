@@ -3,9 +3,16 @@
 from enum import Enum as PyEnum
 
 from sqlalchemy import String, cast, func
+from sqlalchemy.dialects.postgresql import ENUM as PGENUM
 from sqlalchemy.types import TypeDecorator
 
-from app.models.enums import MaintenanceIssueStatus, ObservationCategory, ObservationSeverity
+from app.models.enums import (
+    MaintenanceIssueStatus,
+    ObservationCategory,
+    ObservationSeverity,
+    ProcessRunOutcome,
+    ProcessRunType,
+)
 
 
 def category_value(cat: ObservationCategory | str) -> str:
@@ -65,3 +72,53 @@ class MaintenanceIssueStatusString(_EnumAsString):
 
     def __init__(self):
         super().__init__(MaintenanceIssueStatus)
+
+
+class _LegacyTolerantPgEnum(TypeDecorator):
+    """PostgreSQL ENUM: write lowercase .value; read legacy UPPER member names too."""
+
+    cache_ok = True
+
+    def __init__(self, enum_cls: type[PyEnum], pg_name: str):
+        self.enum_cls = enum_cls
+        labels: list[str] = []
+        seen: set[str] = set()
+        for member in enum_cls:
+            for label in (member.value, member.name):
+                if label not in seen:
+                    seen.add(label)
+                    labels.append(label)
+        self.impl = PGENUM(*labels, name=pg_name, create_type=False)
+        super().__init__()
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, self.enum_cls):
+            return value.value
+        return str(value).lower()
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, self.enum_cls):
+            return value
+        raw = str(value)
+        try:
+            return self.enum_cls(raw.lower())
+        except ValueError:
+            return self.enum_cls[raw]
+
+
+class ProcessRunTypeEnum(_LegacyTolerantPgEnum):
+    cache_ok = True
+
+    def __init__(self):
+        super().__init__(ProcessRunType, "processruntype")
+
+
+class ProcessRunOutcomeEnum(_LegacyTolerantPgEnum):
+    cache_ok = True
+
+    def __init__(self):
+        super().__init__(ProcessRunOutcome, "processrunoutcome")

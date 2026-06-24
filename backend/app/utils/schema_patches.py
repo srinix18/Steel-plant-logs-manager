@@ -170,7 +170,36 @@ _CUSTOMER_PATCHES = (
     """,
 )
 
-_PROCESSRUNTYPE_VALUES = ("shift", "daily")
+_PROCESSRUNTYPE_VALUES = (
+    "heat",
+    "shift",
+    "daily",
+    "ladle_metallurgy",
+    "cast",
+    "inspection",
+    "maintenance",
+    "quality_check",
+)
+
+_PROCESSRUNTYPE_LEGACY_TO_VALUE = (
+    ("HEAT", "heat"),
+    ("SHIFT", "shift"),
+    ("DAILY", "daily"),
+    ("LADLE_METALLURGY", "ladle_metallurgy"),
+    ("CAST", "cast"),
+    ("INSPECTION", "inspection"),
+    ("MAINTENANCE", "maintenance"),
+    ("QUALITY_CHECK", "quality_check"),
+)
+
+_PROCESSRUNOUTCOME_VALUES = ("accepted", "rejected", "rework", "aborted")
+
+_PROCESSRUNOUTCOME_LEGACY_TO_VALUE = (
+    ("ACCEPTED", "accepted"),
+    ("REJECTED", "rejected"),
+    ("REWORK", "rework"),
+    ("ABORTED", "aborted"),
+)
 
 _WORKFORCE_PATCHES = (
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS employment_status VARCHAR(32) DEFAULT 'active'",
@@ -269,6 +298,34 @@ async def apply_schema_patches(conn: AsyncConnection) -> None:
     for value in _PROCESSRUNTYPE_VALUES:
         try:
             await conn.execute(text(f"ALTER TYPE processruntype ADD VALUE IF NOT EXISTS '{value}'"))
+        except Exception:
+            pass
+
+    for value in _PROCESSRUNOUTCOME_VALUES:
+        try:
+            await conn.execute(text(f"ALTER TYPE processrunoutcome ADD VALUE IF NOT EXISTS '{value}'"))
+        except Exception:
+            pass
+
+    for legacy, normalized in _PROCESSRUNTYPE_LEGACY_TO_VALUE:
+        try:
+            await conn.execute(
+                text(
+                    f"UPDATE process_runs SET run_type = '{normalized}' "
+                    f"WHERE run_type::text = '{legacy}'"
+                )
+            )
+        except Exception:
+            pass
+
+    for legacy, normalized in _PROCESSRUNOUTCOME_LEGACY_TO_VALUE:
+        try:
+            await conn.execute(
+                text(
+                    f"UPDATE process_runs SET outcome = '{normalized}' "
+                    f"WHERE outcome IS NOT NULL AND outcome::text = '{legacy}'"
+                )
+            )
         except Exception:
             pass
 

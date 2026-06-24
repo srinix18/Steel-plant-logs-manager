@@ -149,19 +149,19 @@ export function Sidebar() {
               Workforce Dashboard
             </NavLink>
             {showWorkforceEmployeeAdmin && (
+              <NavLink to="/workforce/employees" className={linkClass}>
+                Employees
+              </NavLink>
+            )}
+            {showShiftAssignments && (
               <>
-                <NavLink to="/workforce/employees" className={linkClass}>
-                  Employees
+                <NavLink to="/workforce/shift-assignments" className={linkClass}>
+                  Shift Assignments
                 </NavLink>
                 <NavLink to="/workforce/contractors" className={linkClass}>
                   Contractors
                 </NavLink>
               </>
-            )}
-            {showShiftAssignments && (
-              <NavLink to="/workforce/shift-assignments" className={linkClass}>
-                Shift Assignments
-              </NavLink>
             )}
             {showAttendance && (
               <NavLink to="/workforce/attendance" className={linkClass}>
