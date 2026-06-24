@@ -34,6 +34,9 @@ import {
   CEO_TIER_ROLES,
   HOD_TIER_ROLES,
   WORKFORCE_ADMIN_ROLES,
+  WORKFORCE_HR_ROLES,
+  HANDOVER_WRITE_ROLES,
+  SHIFT_FLOOR_ROLES,
   SUPERVISOR_ROLES,
   WORKER_ROLES,
   CEO_ROLES,
@@ -92,18 +95,7 @@ function AppRoutes() {
             <Route path="maintenance" element={<MaintenanceQueuePage />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={[
-                  ...PLATFORM_ADMIN_ROLES,
-                  ...HOD_ROLES,
-                  ...SUPERVISOR_ONLY_ROLES,
-                  ...WORKER_ROLES,
-                ]}
-              />
-            }
-          >
+          <Route element={<ProtectedRoute allowedRoles={SHIFT_FLOOR_ROLES} />}>
             <Route path="shift" element={<ShiftDashboard />} />
           </Route>
 
@@ -112,19 +104,22 @@ function AppRoutes() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="my-runs" element={<MyRunsPage />} />
 
-          <Route element={<ProtectedRoute allowedRoles={WORKFORCE_ADMIN_ROLES} />}>
-            <Route path="workforce" element={<Navigate to="/workforce/dashboard" replace />} />
-            <Route path="workforce/employees" element={<WorkforceEmployeesPage />} />
-            <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
-            <Route path="workforce/shift-assignments" element={<ShiftAssignmentsPage />} />
-          </Route>
-
           <Route element={<ProtectedRoute allowedRoles={[...WORKFORCE_ADMIN_ROLES, ...CEO_ROLES, ...SUPERVISOR_ONLY_ROLES]} />}>
             <Route path="workforce/dashboard" element={<WorkforceDashboardPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={[...WORKFORCE_ADMIN_ROLES, ...SUPERVISOR_ONLY_ROLES]} />}>
+          <Route element={<ProtectedRoute allowedRoles={WORKFORCE_ADMIN_ROLES} />}>
+            <Route path="workforce" element={<Navigate to="/workforce/dashboard" replace />} />
+            <Route path="workforce/employees" element={<WorkforceEmployeesPage />} />
+            <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={WORKFORCE_HR_ROLES} />}>
+            <Route path="workforce/shift-assignments" element={<ShiftAssignmentsPage />} />
             <Route path="workforce/attendance" element={<AttendanceEntryPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={HANDOVER_WRITE_ROLES} />}>
             <Route path="workforce/handover" element={<ShiftHandoverPage />} />
           </Route>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchActiveRuns, createProcessRun } from '../../api/processRuns';
 import { fetchPlants, fetchProcessInstances, fetchProcesses, fetchShifts, fetchSteelGrades } from '../../api/platform';
@@ -23,13 +23,19 @@ const PROCESS_OPTIONS = [
     instanceLabel: 'Production Line',
     runType: 'daily' as const,
   },
+  {
+    code: 'GRIND',
+    label: 'Forge Shop — Grinding Material Details',
+    instanceLabel: 'Work Centre',
+    runType: 'daily' as const,
+  },
 ];
 
 export function ShiftDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [processes, setProcesses] = useState<Process[]>([]);
-  const [processCode, setProcessCode] = useState('IAF');
+  const [processCode, setProcessCode] = useState('');
   const [instances, setInstances] = useState<ProcessInstance[]>([]);
   const [activeRuns, setActiveRuns] = useState<ProcessRun[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -41,7 +47,20 @@ export function ShiftDashboard() {
   const [starting, setStarting] = useState(false);
   const [previousHandover, setPreviousHandover] = useState<ShiftHandoverNote | null>(null);
 
-  const processMeta = PROCESS_OPTIONS.find((p) => p.code === processCode) ?? PROCESS_OPTIONS[0];
+  const allowedProcessOptions = useMemo(() => {
+    if (!processes.length) return [];
+    const allowedCodes = new Set(processes.map((p) => p.code));
+    return PROCESS_OPTIONS.filter((p) => allowedCodes.has(p.code));
+  }, [processes]);
+
+  const processMeta = allowedProcessOptions.find((p) => p.code === processCode) ?? allowedProcessOptions[0];
+
+  useEffect(() => {
+    if (!allowedProcessOptions.length) return;
+    if (!allowedProcessOptions.some((p) => p.code === processCode)) {
+      setProcessCode(allowedProcessOptions[0].code);
+    }
+  }, [allowedProcessOptions, processCode]);
 
   useEffect(() => {
     fetchPlants().then((plants) => {
@@ -75,10 +94,10 @@ export function ShiftDashboard() {
   }, [user?.department_id, selectedShift]);
 
   const isConcast = processCode === 'CCM';
-  const isDaily = processMeta.runType === 'daily';
+  const isDaily = processMeta?.runType === 'daily';
 
   const handleStartRun = async () => {
-    if (!selectedInstance) return;
+    if (!selectedInstance || !processMeta) return;
     setStarting(true);
     setError('');
     try {
@@ -98,7 +117,7 @@ export function ShiftDashboard() {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="mb-2 text-2xl font-bold text-slate-900">Shift Dashboard</h1>
-      <p className="mb-6 text-sm text-slate-500">SMS — Start a heat, AOD run, or Concast shift log</p>
+      
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {previousHandover && (
@@ -115,6 +134,10 @@ export function ShiftDashboard() {
 
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Start New Run</h2>
+        {!allowedProcessOptions.length ? (
+          <p className="text-sm text-slate-500">No processes available for your department.</p>
+        ) : (
+        <>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="text-sm font-medium text-slate-700">Process</label>
@@ -123,7 +146,7 @@ export function ShiftDashboard() {
               value={processCode}
               onChange={(e) => setProcessCode(e.target.value)}
             >
-              {PROCESS_OPTIONS.map((p) => (
+              {allowedProcessOptions.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.label}
                 </option>
@@ -131,13 +154,13 @@ export function ShiftDashboard() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700">{processMeta.instanceLabel}</label>
+            <label className="text-sm font-medium text-slate-700">{processMeta?.instanceLabel}</label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
               value={selectedInstance}
               onChange={(e) => setSelectedInstance(e.target.value)}
             >
-              <option value="">Select {processMeta.instanceLabel.toLowerCase()}</option>
+              <option value="">Select {processMeta?.instanceLabel.toLowerCase()}</option>
               {instances.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.name}
@@ -180,7 +203,11 @@ export function ShiftDashboard() {
             </div>
           )}
         </div>
-        <Button className="mt-4 w-full py-3 text-base" onClick={handleStartRun} disabled={!selectedInstance || starting}>
+        <Button
+          className="mt-4 w-full py-3 text-base"
+          onClick={handleStartRun}
+          disabled={!selectedInstance || starting || !processMeta}
+        >
           {starting
             ? 'Starting...'
             : isDaily
@@ -189,10 +216,12 @@ export function ShiftDashboard() {
                 ? 'Start Shift Log'
                 : processCode === 'AOD'
                   ? 'Start AOD Run'
-                  : processMeta.runType === 'shift'
+                  : processMeta?.runType === 'shift'
                     ? 'Start Shift Report'
                     : 'Start Heat'}
         </Button>
+        </>
+        )}
       </div>
 
       <h2 className="mb-3 text-lg font-semibold">Active Runs</h2>

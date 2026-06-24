@@ -3,10 +3,11 @@
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import Select, select
+from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
-from app.db.models import Department, MaintenanceIssue, Plant, Process, ProcessRun, User
+from app.db.models import Department, MaintenanceIssue, Plant, Process, ProcessInstance, ProcessRun, User
 from app.db.types import categories_equal, pg_category_matches_division
 from app.models.enums import ObservationCategory, UserRole
 
@@ -70,7 +71,33 @@ def is_hr(user: User) -> bool:
 
 
 def can_raise_maintenance_issue(user: User) -> bool:
-    return is_platform_admin(user) or is_supervisor_tier(user) or is_worker(user)
+    return is_platform_admin(user) or is_supervisor_only(user) or is_worker(user)
+
+
+def _scope_maintenance_to_department(query: Select, department_id: UUID) -> Select:
+    raiser = aliased(User)
+    return (
+        query.outerjoin(ProcessRun, MaintenanceIssue.run_id == ProcessRun.id)
+        .outerjoin(Process, ProcessRun.process_id == Process.id)
+        .outerjoin(raiser, MaintenanceIssue.raised_by == raiser.id)
+        .where(
+            or_(
+                Process.department_id == department_id,
+                and_(MaintenanceIssue.run_id.is_(None), raiser.department_id == department_id),
+            )
+        )
+    )
+
+
+async def _issue_in_department(session: AsyncSession, issue: MaintenanceIssue, department_id: UUID) -> bool:
+    if issue.run_id:
+        run = await session.get(ProcessRun, issue.run_id)
+        if run:
+            process = await session.get(Process, run.process_id)
+            if process:
+                return process.department_id == department_id
+    raiser = await session.get(User, issue.raised_by)
+    return raiser is not None and raiser.department_id == department_id
 
 
 def apply_maintenance_issue_scope(query: Select, user: User) -> Select:
@@ -80,9 +107,16 @@ def apply_maintenance_issue_scope(query: Select, user: User) -> Select:
         query = query.where(pg_category_matches_division(MaintenanceIssue.category, user.maintenance_division))
         if user.organisation_id:
             query = query.where(MaintenanceIssue.organisation_id == user.organisation_id)
+        if user.department_id:
+            query = _scope_maintenance_to_department(query, user.department_id)
         return query
     if is_ceo_tier(user) and user.organisation_id:
         return query.where(MaintenanceIssue.organisation_id == user.organisation_id)
+    if user.department_id:
+        if is_hod_tier(user) and not is_ceo_tier(user):
+            return _scope_maintenance_to_department(query, user.department_id)
+        if is_supervisor_only(user) or is_worker(user):
+            return _scope_maintenance_to_department(query, user.department_id)
     if user.plant_id:
         return query.where(MaintenanceIssue.plant_id == user.plant_id)
     return query
@@ -96,11 +130,22 @@ async def assert_maintenance_issue_access(session: AsyncSession, issue: Maintena
             raise HTTPException(status_code=403, detail="Access denied")
         if user.organisation_id and issue.organisation_id != user.organisation_id:
             raise HTTPException(status_code=403, detail="Access denied")
+        if user.department_id and not await _issue_in_department(session, issue, user.department_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         return
     if is_ceo_tier(user):
         if user.organisation_id and issue.organisation_id != user.organisation_id:
             raise HTTPException(status_code=403, detail="Access denied")
         return
+    if user.department_id:
+        if is_hod_tier(user) and not is_ceo_tier(user):
+            if not await _issue_in_department(session, issue, user.department_id):
+                raise HTTPException(status_code=403, detail="Access denied")
+            return
+        if is_supervisor_only(user) or is_worker(user):
+            if not await _issue_in_department(session, issue, user.department_id):
+                raise HTTPException(status_code=403, detail="Access denied")
+            return
     if user.plant_id and issue.plant_id != user.plant_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -149,6 +194,74 @@ def apply_run_query_scope(query: Select, user: User) -> Select:
             query = query.where(ProcessRun.process_id == user.process_id)
         return query
     return query
+
+
+async def assert_can_access_process(session: AsyncSession, user: User, process: Process) -> None:
+    if is_platform_admin(user):
+        return
+    if is_ceo_tier(user):
+        if user.organisation_id:
+            dept = await session.get(Department, process.department_id)
+            if not dept:
+                raise HTTPException(status_code=403, detail="Access denied")
+            plant = await session.get(Plant, dept.plant_id)
+            if not plant or plant.organisation_id != user.organisation_id:
+                raise HTTPException(status_code=403, detail="Access denied")
+        return
+    if is_hr(user) or is_maintenance(user):
+        raise HTTPException(status_code=403, detail="Not permitted for this process")
+    if is_hod_tier(user) and not is_ceo_tier(user):
+        if not user.department_id or user.department_id != process.department_id:
+            raise HTTPException(status_code=403, detail="Cannot access processes outside your department")
+        return
+    if is_supervisor_only(user):
+        if user.department_id and user.department_id != process.department_id:
+            raise HTTPException(status_code=403, detail="Cannot access processes outside your department")
+        if user.plant_id and not user.department_id:
+            dept = await session.get(Department, process.department_id)
+            if not dept or dept.plant_id != user.plant_id:
+                raise HTTPException(status_code=403, detail="Cannot access processes outside your plant")
+        if user.process_id and user.process_id != process.id:
+            raise HTTPException(status_code=403, detail="Cannot access processes outside your assigned process")
+        return
+    if is_worker(user):
+        if not user.department_id or user.department_id != process.department_id:
+            raise HTTPException(status_code=403, detail="Cannot access processes outside your department")
+        return
+    raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def assert_can_create_run(session: AsyncSession, instance: ProcessInstance, user: User) -> None:
+    process = await session.get(Process, instance.process_id)
+    if not process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    await assert_can_access_process(session, user, process)
+
+
+def apply_process_list_scope(query: Select, user: User) -> Select:
+    if is_platform_admin(user):
+        return query
+    if is_ceo_tier(user) and user.organisation_id:
+        return query.join(Department, Process.department_id == Department.id).join(
+            Plant, Department.plant_id == Plant.id
+        ).where(Plant.organisation_id == user.organisation_id)
+    if is_hod_tier(user) and not is_ceo_tier(user) and user.department_id:
+        return query.where(Process.department_id == user.department_id)
+    if is_supervisor_only(user):
+        if user.department_id:
+            query = query.where(Process.department_id == user.department_id)
+        elif user.plant_id:
+            query = query.join(Department, Process.department_id == Department.id).where(
+                Department.plant_id == user.plant_id
+            )
+        if user.process_id:
+            query = query.where(Process.id == user.process_id)
+        return query
+    if is_worker(user) and user.department_id:
+        return query.where(Process.department_id == user.department_id)
+    if is_hr(user) or is_maintenance(user):
+        return query.where(Process.id.is_(None))
+    return query.where(Process.id.is_(None))
 
 
 async def assert_run_access(session: AsyncSession, run: ProcessRun, user: User) -> None:
@@ -216,6 +329,9 @@ def can_message(sender: User, recipient: User) -> bool:
     if sender.id == recipient.id:
         return False
 
+    if is_hr(sender) or is_hr(recipient):
+        return True
+
     sender_role = sender.role
     recipient_role = recipient.role
 
@@ -269,14 +385,34 @@ def can_manage_workforce(actor: User, department_id: UUID | None = None) -> bool
     return False
 
 
-def can_mark_workforce_ops(actor: User, department_id: UUID) -> bool:
-    if is_platform_admin(actor) or is_hr(actor):
+def can_manage_shift_assignments(actor: User, department_id: UUID) -> bool:
+    return is_platform_admin(actor) or is_hr(actor)
+
+
+def can_mark_attendance(actor: User, department_id: UUID) -> bool:
+    return is_platform_admin(actor) or is_hr(actor)
+
+
+def can_write_handover(actor: User, department_id: UUID) -> bool:
+    if is_platform_admin(actor) or is_ceo_tier(actor) or is_hr(actor):
         return True
-    if is_hod_tier(actor) and not is_ceo_tier(actor):
-        return actor.department_id == department_id
     if is_supervisor_only(actor):
         return actor.department_id == department_id
     return False
+
+
+def can_view_handover(actor: User, department_id: UUID) -> bool:
+    if can_write_handover(actor, department_id):
+        return True
+    if is_hod_tier(actor) and not is_ceo_tier(actor):
+        return actor.department_id == department_id
+    if is_worker(actor):
+        return actor.department_id == department_id
+    return False
+
+
+def can_mark_workforce_ops(actor: User, department_id: UUID) -> bool:
+    return can_write_handover(actor, department_id)
 
 
 def assert_workforce_manage(actor: User, department_id: UUID | None = None) -> None:
@@ -284,9 +420,28 @@ def assert_workforce_manage(actor: User, department_id: UUID | None = None) -> N
         raise HTTPException(status_code=403, detail="Workforce management access denied")
 
 
+def assert_manage_shift_assignments(actor: User, department_id: UUID) -> None:
+    if not can_manage_shift_assignments(actor, department_id):
+        raise HTTPException(status_code=403, detail="Shift assignment management access denied")
+
+
+def assert_mark_attendance(actor: User, department_id: UUID) -> None:
+    if not can_mark_attendance(actor, department_id):
+        raise HTTPException(status_code=403, detail="Attendance entry access denied")
+
+
+def assert_write_handover(actor: User, department_id: UUID) -> None:
+    if not can_write_handover(actor, department_id):
+        raise HTTPException(status_code=403, detail="Cannot write handover notes for this department")
+
+
+def assert_view_handover(actor: User, department_id: UUID) -> None:
+    if not can_view_handover(actor, department_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 def assert_workforce_ops(actor: User, department_id: UUID) -> None:
-    if not can_mark_workforce_ops(actor, department_id):
-        raise HTTPException(status_code=403, detail="Workforce operations access denied")
+    assert_write_handover(actor, department_id)
 
 
 def apply_workforce_department_scope(query: Select, user: User, department_col) -> Select:
@@ -295,6 +450,14 @@ def apply_workforce_department_scope(query: Select, user: User, department_col) 
     if user.department_id:
         return query.where(department_col == user.department_id)
     return query.where(False)
+
+
+def apply_department_list_scope(query: Select, user: User) -> Select:
+    if is_platform_admin(user) or is_ceo_tier(user) or is_hr(user):
+        return query
+    if user.department_id:
+        return query.where(Department.id == user.department_id)
+    return query.where(Department.id.is_(None))
 
 
 def validate_user_scope(

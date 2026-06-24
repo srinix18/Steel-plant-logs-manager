@@ -17,6 +17,7 @@ from app.services.access_scope import (
     CEO_ROLES,
     can_message,
     is_ceo_tier,
+    is_hr,
     is_platform_admin,
     list_eligible_recipients,
 )
@@ -52,8 +53,8 @@ class MessageService:
             raise HTTPException(status_code=400, detail="Sender must belong to an organisation")
 
         if data.is_broadcast:
-            if not is_ceo_tier(sender) and sender.role not in CEO_ROLES:
-                raise HTTPException(status_code=403, detail="Only CEO can broadcast to entire organisation")
+            if not is_ceo_tier(sender) and not is_hr(sender):
+                raise HTTPException(status_code=403, detail="Only CEO or HR can broadcast to entire organisation")
             result = await session.execute(
                 select(User).where(
                     User.organisation_id == sender.organisation_id,

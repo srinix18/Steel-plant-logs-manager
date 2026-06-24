@@ -15,6 +15,7 @@ from app.utils.seed_rolling_mill import seed_rolling_mill_template
 from app.utils.seed_wire_furnace import seed_wire_furnace_template
 from app.utils.seed_wire_drawing import seed_wire_drawing_template
 from app.utils.seed_bright_bar import seed_bright_bar_template
+from app.utils.seed_forge_grinding import seed_forge_grinding_template
 from app.utils.seed_org_roles import seed_org_role_users
 from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
 from app.utils.seed_workforce import seed_workforce_demo
@@ -31,6 +32,7 @@ async def lifespan(_: FastAPI):
         await seed_wire_furnace_template(session)
         await seed_wire_drawing_template(session)
         await seed_bright_bar_template(session)
+        await seed_forge_grinding_template(session)
         await seed_aod_template(session)
         await patch_aod_calculated_fields(session)
         await seed_concast_template(session)

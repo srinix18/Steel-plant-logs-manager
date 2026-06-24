@@ -56,6 +56,11 @@ def _userrole_db_values(enum_cls):
     return [m.value if m in use_value else m.name for m in enum_cls]
 
 
+def _enum_db_values(enum_cls):
+    """Persist str enum member values (e.g. shift) not names (SHIFT)."""
+    return [m.value for m in enum_cls]
+
+
 class Organisation(Base, TimestampMixin):
     __tablename__ = "organisations"
 
@@ -373,7 +378,9 @@ class ProcessRun(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
     run_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    run_type: Mapped[ProcessRunType] = mapped_column(Enum(ProcessRunType), nullable=False)
+    run_type: Mapped[ProcessRunType] = mapped_column(
+        Enum(ProcessRunType, values_callable=_enum_db_values), nullable=False
+    )
     process_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("processes.id"), nullable=False)
     process_instance_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("process_instances.id"), nullable=False)
     template_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("template_versions.id"), nullable=False)
@@ -388,7 +395,9 @@ class ProcessRun(Base, TimestampMixin):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    outcome: Mapped[Optional[ProcessRunOutcome]] = mapped_column(Enum(ProcessRunOutcome), nullable=True)
+    outcome: Mapped[Optional[ProcessRunOutcome]] = mapped_column(
+        Enum(ProcessRunOutcome, values_callable=_enum_db_values), nullable=True
+    )
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
 
     process_instance: Mapped["ProcessInstance"] = relationship(back_populates="runs")

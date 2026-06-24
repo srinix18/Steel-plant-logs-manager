@@ -64,6 +64,7 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
     rolling_dept = await get_chandan_department(session, plant.id, "ROLLING")
     wire_dept = await get_chandan_department(session, plant.id, "WIRE")
     bbd_dept = await get_chandan_department(session, plant.id, "BBD")
+    forge_dept = await get_chandan_department(session, plant.id, "FORGE")
 
     if sms_dept and contractors.get("ABC"):
         for name in ("Rajesh Singh", "Kumar Das"):
@@ -93,8 +94,16 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
         ("supervisor.wire@chandansteel.com", "WIRE", "C"),
         ("worker.bbd@chandansteel.com", "BBD", "A"),
         ("supervisor.bbd@chandansteel.com", "BBD", "A"),
+        ("worker.forge@chandansteel.com", "FORGE", "B"),
+        ("supervisor.forge@chandansteel.com", "FORGE", "B"),
     ]
-    dept_map = {"SMS": sms_dept, "ROLLING": rolling_dept, "WIRE": wire_dept, "BBD": bbd_dept}
+    dept_map = {
+        "SMS": sms_dept,
+        "ROLLING": rolling_dept,
+        "WIRE": wire_dept,
+        "BBD": bbd_dept,
+        "FORGE": forge_dept,
+    }
     shift_map = {"A": shift_a, "B": shift_b, "C": shift_c}
 
     for email, dept_code, shift_code in assignment_specs:

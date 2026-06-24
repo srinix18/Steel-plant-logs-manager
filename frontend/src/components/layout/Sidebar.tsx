@@ -8,10 +8,13 @@ import {
   CEO_ROLES,
   HR_ROLES,
   HOD_ROLES,
-  WORKFORCE_ADMIN_ROLES,
   SUPERVISOR_ONLY_ROLES,
   WORKER_ROLES,
   MAINTENANCE_ROLES,
+  WORKFORCE_HR_ROLES,
+  HANDOVER_WRITE_ROLES,
+  SHIFT_FLOOR_ROLES,
+  WORKFORCE_ADMIN_ROLES,
 } from '../../utils/roles';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -46,14 +49,13 @@ export function Sidebar() {
   const isWorker = hasRole(user.role, WORKER_ROLES);
   const isMaintenance = hasRole(user.role, MAINTENANCE_ROLES);
   const isHr = hasRole(user.role, HR_ROLES);
-  const showWorkforceAdmin = hasRole(user.role, WORKFORCE_ADMIN_ROLES);
+  const showWorkforceEmployeeAdmin = hasRole(user.role, WORKFORCE_ADMIN_ROLES);
   const showWorkforceDashboard = isHr || isHod || isSupervisorOnly || isCeo;
-  const showWorkforceOps = isHr || isHod || isSupervisorOnly;
+  const showShiftAssignments = hasRole(user.role, WORKFORCE_HR_ROLES);
+  const showAttendance = hasRole(user.role, WORKFORCE_HR_ROLES);
+  const showHandover = hasRole(user.role, HANDOVER_WRITE_ROLES);
 
-  const showShift =
-    isWorker ||
-    isSupervisorOnly ||
-    (isHod && !isPlatformAdmin);
+  const showShift = hasRole(user.role, SHIFT_FLOOR_ROLES);
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -146,7 +148,7 @@ export function Sidebar() {
             <NavLink to="/workforce/dashboard" className={linkClass}>
               Workforce Dashboard
             </NavLink>
-            {showWorkforceAdmin && (
+            {showWorkforceEmployeeAdmin && (
               <>
                 <NavLink to="/workforce/employees" className={linkClass}>
                   Employees
@@ -154,20 +156,22 @@ export function Sidebar() {
                 <NavLink to="/workforce/contractors" className={linkClass}>
                   Contractors
                 </NavLink>
-                <NavLink to="/workforce/shift-assignments" className={linkClass}>
-                  Shift Assignments
-                </NavLink>
               </>
             )}
-            {showWorkforceOps && (
-              <>
-                <NavLink to="/workforce/attendance" className={linkClass}>
-                  Attendance
-                </NavLink>
-                <NavLink to="/workforce/handover" className={linkClass}>
-                  Shift Handover Notes
-                </NavLink>
-              </>
+            {showShiftAssignments && (
+              <NavLink to="/workforce/shift-assignments" className={linkClass}>
+                Shift Assignments
+              </NavLink>
+            )}
+            {showAttendance && (
+              <NavLink to="/workforce/attendance" className={linkClass}>
+                Attendance
+              </NavLink>
+            )}
+            {showHandover && (
+              <NavLink to="/workforce/handover" className={linkClass}>
+                Shift Handover Notes
+              </NavLink>
             )}
           </>
         )}

@@ -296,6 +296,60 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                     )
                 )
 
+    forge_dept = await get_chandan_department(session, plant.id, "FORGE")
+    if forge_dept:
+        grind_proc = await session.execute(
+            select(Process).where(Process.department_id == forge_dept.id, Process.code == "GRIND")
+        )
+        grind = grind_proc.scalar_one_or_none()
+        forge_seeds = [
+            {
+                "email": "hod.forge@chandansteel.com",
+                "password": "hod123",
+                "full_name": "Forge Shop HoD",
+                "role": UserRole.HOD,
+                "designation": "HOD (Forge Shop)",
+                "employee_uid": "CHANDAN-HOD-FORGE-0001",
+            },
+            {
+                "email": "supervisor.forge@chandansteel.com",
+                "password": "forge123",
+                "full_name": "Forge Shop Shift Incharge",
+                "role": UserRole.SUPERVISOR,
+                "designation": "Forge Shop Supervisor",
+                "employee_uid": "CHANDAN-FORGE-SUP-0001",
+                "process_id": grind.id if grind else None,
+            },
+            {
+                "email": "worker.forge@chandansteel.com",
+                "password": "forge123",
+                "full_name": "Grinding Operator",
+                "role": UserRole.WORKER,
+                "designation": "Grinding Operator",
+                "employee_uid": "CHANDAN-FORGE-WKR-0001",
+            },
+        ]
+        for spec in forge_seeds:
+            with session.no_autoflush:
+                existing = await session.execute(select(User).where(User.email == spec["email"]))
+                if existing.scalar_one_or_none():
+                    continue
+                session.add(
+                    User(
+                        email=spec["email"],
+                        hashed_password=get_password_hash(spec["password"]),
+                        full_name=spec["full_name"],
+                        role=spec["role"],
+                        organisation_id=org.id,
+                        plant_id=plant.id,
+                        department_id=forge_dept.id,
+                        process_id=spec.get("process_id"),
+                        designation=spec["designation"],
+                        employee_uid=spec["employee_uid"],
+                        is_active=True,
+                    )
+                )
+
     # Migrate legacy supervisor to IAF scope
     legacy = await session.execute(select(User).where(User.email == "supervisor@chandansteel.com"))
     legacy_user = legacy.scalar_one_or_none()

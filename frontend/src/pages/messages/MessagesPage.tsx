@@ -11,10 +11,13 @@ import {
   uploadMessageAttachment,
   downloadMessageAttachment,
 } from '../../api/messages';
+import { fetchDepartments } from '../../api/platform';
 import { getErrorMessage } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AppMessage, AppNotification, User } from '../../types';
-import { isCeoTier } from '../../utils/roles';
+import type { AppMessage, AppNotification, Department, User } from '../../types';
+import { isCeoTier, isHr } from '../../utils/roles';
+import { resolveRecipientIds, type RecipientToken } from '../../utils/messageRecipients';
+import { RecipientComposer } from '../../components/messages/RecipientComposer';
 import {
   isMaintenanceAlert,
   maintenanceAlertSubtitle,
@@ -36,6 +39,8 @@ export function MessagesPage() {
   const [sent, setSent] = useState<AppMessage[]>([]);
   const [alerts, setAlerts] = useState<AppNotification[]>([]);
   const [recipients, setRecipients] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [recipientTokens, setRecipientTokens] = useState<RecipientToken[]>([]);
   const [selected, setSelected] = useState<AppMessage | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<AppNotification | null>(null);
   const [error, setError] = useState('');
@@ -43,21 +48,21 @@ export function MessagesPage() {
 
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [recipientIds, setRecipientIds] = useState<string[]>([]);
-  const [broadcast, setBroadcast] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
 
   const reload = async () => {
-    const [inboxMsgs, sentMsgs, suggested, notifs] = await Promise.all([
+    const [inboxMsgs, sentMsgs, suggested, notifs, depts] = await Promise.all([
       fetchInbox(),
       fetchSentMessages(),
       fetchSuggestedRecipients(),
       fetchNotifications(),
+      fetchDepartments(),
     ]);
     setInbox(inboxMsgs);
     setSent(sentMsgs);
     setRecipients(suggested);
+    setDepartments(depts);
     setAlerts(notifs);
   };
 
@@ -72,10 +77,6 @@ export function MessagesPage() {
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  };
-
-  const toggleRecipient = (id: string) => {
-    setRecipientIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const openAlert = async (alert: AppNotification) => {
@@ -97,19 +98,24 @@ export function MessagesPage() {
     try {
       setSending(true);
       setError('');
+      const canBroadcast = !!(user && (isCeoTier(user.role) || isHr(user.role)));
+      const { recipientIds, isBroadcast } = resolveRecipientIds(recipientTokens, recipients, canBroadcast);
+      if (!isBroadcast && recipientIds.length === 0) {
+        setError('Add at least one recipient, @all, or a department like @SMS.');
+        return;
+      }
       const msg = await sendMessage({
         subject,
         body,
-        recipient_ids: broadcast ? [] : recipientIds,
-        is_broadcast: broadcast,
+        recipient_ids: isBroadcast ? [] : recipientIds,
+        is_broadcast: isBroadcast,
       });
       for (const file of pendingFiles) {
         await uploadMessageAttachment(msg.id, file);
       }
       setSubject('');
       setBody('');
-      setRecipientIds([]);
-      setBroadcast(false);
+      setRecipientTokens([]);
       setPendingFiles([]);
       setTab('sent');
       await reload();
@@ -121,13 +127,19 @@ export function MessagesPage() {
   };
 
   const list = tab === 'inbox' ? inbox : sent;
-  const canBroadcast = user && isCeoTier(user.role);
+  const canSend =
+    subject.trim().length > 0 &&
+    body.trim().length > 0 &&
+    recipientTokens.length > 0;
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Messages &amp; Alerts</h1>
-        <p className="mt-1 text-sm text-slate-500">In-app mail with role-based recipients and attachments.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Type to find recipients, or use <span className="font-mono">@all</span> /{' '}
+          <span className="font-mono">@DEPT_CODE</span> for groups.
+        </p>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -237,30 +249,12 @@ export function MessagesPage() {
                 onChange={(e) => setBody(e.target.value)}
               />
             </label>
-            {canBroadcast && (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={broadcast} onChange={(e) => setBroadcast(e.target.checked)} />
-                Send to entire organisation
-              </label>
-            )}
-            {!broadcast && (
-              <div>
-                <p className="mb-2 text-sm text-slate-600">Recipients</p>
-                <div className="max-h-40 space-y-1 overflow-y-auto rounded border border-slate-200 p-2">
-                  {recipients.map((r) => (
-                    <label key={r.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={recipientIds.includes(r.id)}
-                        onChange={() => toggleRecipient(r.id)}
-                      />
-                      {r.full_name} ({r.role.replace(/_/g, ' ')})
-                    </label>
-                  ))}
-                  {recipients.length === 0 && <p className="text-sm text-slate-500">No eligible recipients.</p>}
-                </div>
-              </div>
-            )}
+            <RecipientComposer
+              eligible={recipients}
+              departments={departments}
+              tokens={recipientTokens}
+              onChange={setRecipientTokens}
+            />
             <label className="block text-sm">
               <span className="text-slate-600">Attachments (JPEG, PNG, PDF)</span>
               <input
@@ -271,7 +265,7 @@ export function MessagesPage() {
                 onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
               />
             </label>
-            <Button onClick={handleSend} disabled={sending || !subject.trim() || !body.trim()}>
+            <Button onClick={handleSend} disabled={sending || !canSend}>
               {sending ? 'Sending…' : 'Send message'}
             </Button>
           </div>

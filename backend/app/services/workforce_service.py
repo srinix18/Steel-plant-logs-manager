@@ -48,10 +48,12 @@ from app.services.access_scope import (
     CEO_ASSIGNABLE_ROLES,
     WORKFORCE_EMPLOYEE_ROLES,
     apply_workforce_department_scope,
+    assert_manage_shift_assignments,
+    assert_mark_attendance,
     assert_workforce_manage,
-    assert_workforce_ops,
+    assert_write_handover,
     can_manage_workforce,
-    can_mark_workforce_ops,
+    can_view_handover,
     is_ceo_tier,
     is_hr,
     is_hod_tier,
@@ -277,10 +279,11 @@ class WorkforceService:
             .where(User.organisation_id == self._org_id(actor))
         )
         if department_id:
-            assert_workforce_manage(actor, department_id)
+            assert_manage_shift_assignments(actor, department_id)
             query = query.where(ShiftAssignment.department_id == department_id)
         else:
-            query = apply_workforce_department_scope(query, actor, ShiftAssignment.department_id)
+            if not is_hr(actor) and not is_platform_admin(actor):
+                raise HTTPException(status_code=403, detail="Shift assignment management access denied")
         if shift_id:
             query = query.where(ShiftAssignment.shift_id == shift_id)
         result = await session.execute(query.order_by(ShiftAssignment.effective_date.desc()))
@@ -300,7 +303,7 @@ class WorkforceService:
     async def create_shift_assignment(
         self, session: AsyncSession, actor: User, data: ShiftAssignmentCreate
     ) -> ShiftAssignmentResponse:
-        assert_workforce_manage(actor, data.department_id)
+        assert_manage_shift_assignments(actor, data.department_id)
         user = await session.get(User, data.user_id)
         if not user or user.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Employee not found")
@@ -320,7 +323,7 @@ class WorkforceService:
         if not assignment.user or assignment.user.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Shift assignment not found")
         dept_id = data.department_id or assignment.department_id
-        assert_workforce_manage(actor, dept_id)
+        assert_manage_shift_assignments(actor, dept_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(assignment, field, value)
         await session.flush()
@@ -368,7 +371,7 @@ class WorkforceService:
         department_id: UUID,
         shift_id: UUID,
     ) -> list[AttendanceRecordResponse]:
-        assert_workforce_ops(actor, department_id)
+        assert_mark_attendance(actor, department_id)
         result = await session.execute(
             select(AttendanceRecord)
             .options(selectinload(AttendanceRecord.user))
@@ -409,7 +412,7 @@ class WorkforceService:
     async def save_attendance_bulk(
         self, session: AsyncSession, actor: User, data: AttendanceBulkSave
     ) -> list[AttendanceRecordResponse]:
-        assert_workforce_ops(actor, data.department_id)
+        assert_mark_attendance(actor, data.department_id)
         now = datetime.now(timezone.utc)
         out: list[AttendanceRecordResponse] = []
         for entry in data.entries:
@@ -452,7 +455,7 @@ class WorkforceService:
         department_id: UUID,
         shift_id: UUID,
     ) -> list[ContractorAttendanceResponse]:
-        assert_workforce_ops(actor, department_id)
+        assert_mark_attendance(actor, department_id)
         result = await session.execute(
             select(ContractorAttendance)
             .options(selectinload(ContractorAttendance.contractor))
@@ -473,7 +476,7 @@ class WorkforceService:
     async def save_contractor_attendance(
         self, session: AsyncSession, actor: User, data: ContractorAttendanceCreate
     ) -> ContractorAttendanceResponse:
-        assert_workforce_ops(actor, data.department_id)
+        assert_mark_attendance(actor, data.department_id)
         existing = await session.execute(
             select(ContractorAttendance).where(
                 ContractorAttendance.attendance_date == data.attendance_date,
@@ -528,9 +531,7 @@ class WorkforceService:
         if note_date:
             query = query.where(ShiftHandoverNote.note_date == note_date)
         if department_id:
-            if not can_mark_workforce_ops(actor, department_id) and not (
-                is_worker(actor) and actor.department_id == department_id
-            ):
+            if not can_view_handover(actor, department_id):
                 raise HTTPException(status_code=403, detail="Access denied")
             query = query.where(ShiftHandoverNote.department_id == department_id)
         else:
@@ -553,7 +554,7 @@ class WorkforceService:
     async def create_handover_note(
         self, session: AsyncSession, actor: User, data: ShiftHandoverCreate
     ) -> ShiftHandoverResponse:
-        assert_workforce_ops(actor, data.department_id)
+        assert_write_handover(actor, data.department_id)
         note = ShiftHandoverNote(
             note_date=data.note_date,
             department_id=data.department_id,
@@ -577,9 +578,7 @@ class WorkforceService:
         shift = await session.get(Shift, shift_id)
         if not shift:
             return None
-        if not can_mark_workforce_ops(actor, department_id) and not (
-            is_worker(actor) and actor.department_id == department_id
-        ):
+        if not can_view_handover(actor, department_id):
             raise HTTPException(status_code=403, detail="Access denied")
 
         prev_date, prev_code = resolve_previous_shift(shift.code, note_date)
@@ -630,7 +629,21 @@ class WorkforceService:
                 & (ShiftAssignment.effective_date == subq.c.max_date),
             ).where(ShiftAssignment.department_id == department_id)
         )
-        return int(result.scalar() or 0)
+        assigned = int(result.scalar() or 0)
+        if assigned > 0:
+            return assigned
+
+        roster_roles = list(WORKFORCE_EMPLOYEE_ROLES - {UserRole.HR, UserRole.MAINTENANCE, UserRole.CEO})
+        fallback = await session.execute(
+            select(func.count())
+            .select_from(User)
+            .where(
+                User.department_id == department_id,
+                User.is_active.is_(True),
+                User.role.in_(roster_roles),
+            )
+        )
+        return int(fallback.scalar() or 0)
 
     async def _present_for_department(
         self, session: AsyncSession, department_id: UUID, on_date: date

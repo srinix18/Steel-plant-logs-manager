@@ -71,9 +71,9 @@ See [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) for the f
 | HoD (Bright Bar) | Bright Bar Division HoD | `hod.bbd@chandansteel.com` | `hod123` | Bright Bar Division department |
 | Supervisor (Bright Bar) | Bright Bar Shift Incharge | `supervisor.bbd@chandansteel.com` | `bbd123` | BBAR daily register |
 | Worker (Bright Bar) | Bright Bar Production Clerk | `worker.bbd@chandansteel.com` | `bbd123` | BBAR daily entry |
-| HoD (Forge Shop) | Forge Shop HoD | `hod.forge@chandansteel.com` | `hod123` | Forge Shop department (planned) |
-| Supervisor (Forge) | Forge Shop Shift Incharge | `supervisor.forge@chandansteel.com` | `forge123` | GRIND daily register (planned) |
-| Worker (Forge) | Grinding Operator | `worker.forge@chandansteel.com` | `forge123` | GRIND daily entry (planned) |
+| HoD (Forge Shop) | Forge Shop HoD | `hod.forge@chandansteel.com` | `hod123` | Forge Shop department |
+| Supervisor (Forge) | Forge Shop Shift Incharge | `supervisor.forge@chandansteel.com` | `forge123` | GRIND daily register |
+| Worker (Forge) | Grinding Operator | `worker.forge@chandansteel.com` | `forge123` | GRIND daily entry |
 
 ### Rolling Mill delay codes (F/PRD/05)
 
@@ -91,9 +91,9 @@ Process **WDRAW** (dry machine `WD-01`, wet machine `WD-02`). Drawing inlet pick
 
 Process **BBAR** under Bright Bar Division. **Daily** run type (no shift binding). Finished-goods output register: grade, heat, sizes, coil count/weight, auto-calculated total weight, and customer picker (`GET /api/v1/customers`). Register **No** uses the process run number. **Peeling** is planned under BBD; grinding is **not** part of Bright Bar.
 
-### Forge Shop grinding register (F/PRD/08, planned)
+### Forge Shop grinding register (F/PRD/08)
 
-Process **GRIND** under Forge Shop. **Grinding Material Details (Work Centre Wise)** — daily register for work-centre grinding jobs on forged products (product, dimensions, grade, heat, quantities, manpower, contractor). Header: work centre + date. Not a shift workflow. Stakeholders confirmed this sheet belongs to Forge Shop, not Bright Bar Division.
+Process **GRIND** under Forge Shop. **Grinding Material Details (Work Centre Wise)** — daily register for work-centre grinding jobs on forged products. Header: work centre + date. Not a shift workflow.
 
 ### Login API
 
@@ -113,13 +113,13 @@ Content-Type: application/json
 |------|-----------------|------------|
 | **Super Admin** | `/admin` | Full platform administration. Unchanged from before. |
 | **CEO** | `/executive` | Org-wide overview and leadership dashboards (including Workforce Dashboard visibility), broadcast messages. |
-| **HR** | `/workforce/dashboard` | Full Workforce Management control across departments (employee master, contractors, shift assignment, attendance, handover). |
-| **HoD** | `/hod` | All processes in their department — runs, observations, reports. **Workforce** for own department (employees, attendance, handover). |
-| **Supervisor** | `/supervisor` | Single process/log sheet scope. **Workforce → Attendance** and shift handover notes for their department. |
-| **Worker** | `/shift` | Shift dashboard, My Runs, **My Attendance**, own heats only. |
+| **HR** | `/workforce/dashboard` | Full Workforce Management control across departments. Can message anyone in the org (including org-wide broadcast). |
+| **HoD** | `/hod` | Department runs, observations, reports. Workforce employees/contractors for own department. |
+| **Supervisor** | `/supervisor` | Single process scope. **Shift handover** for own department. Shift dashboard. |
+| **Worker** | `/shift` | Shift dashboard, My Runs, My Attendance. |
 | **Maintenance** | `/maintenance` | Category-scoped issue queue (assign, close with audit). |
 
-All roles have **Messages & Alerts** in the sidebar (including maintenance issue notifications).
+All roles have **Messages & Alerts** in the sidebar (including maintenance issue notifications). Any user can message **HR**; HR can message anyone in the organisation.
 
 ## Admin account overrides
 
@@ -139,9 +139,9 @@ CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent
 |---------|-----|----|-----|------------|--------|
 | Workforce dashboard | Plant-wide view | All departments | Department | Department | — |
 | Employee / contractor master | View | Full control | Department | — | — |
-| Shift assignments | View | Full control | Department | — | — |
-| Mark attendance | View | Full control | Department | Department | — |
-| Shift handover notes | View | Full control | Department | Department | — |
+| Shift assignments | View | Full control | — | — | — |
+| Mark attendance | View | Full control | — | — | — |
+| Shift handover notes | View | Full control | View (dept) | Write (own dept) | — |
 | View own attendance | — | — | — | — | Yes |
 
 Demo contractors: **ABC Labour Services**, **XYZ Contractors**. SMS Shift A has a sample previous-shift handover note for the Shift Dashboard banner.

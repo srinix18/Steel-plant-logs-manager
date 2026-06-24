@@ -35,6 +35,7 @@ from app.services.run_defaults_service import seed_default_field_values
 from app.services.workflow_service import WorkflowService
 from app.services.access_scope import (
     apply_run_query_scope,
+    assert_can_create_run,
     assert_run_access,
     is_platform_admin,
     is_supervisor_only,
@@ -165,6 +166,8 @@ class ProcessRunService:
         instance = await session.get(ProcessInstance, instance_id)
         if not instance:
             raise HTTPException(status_code=404, detail="Process instance not found")
+
+        await assert_can_create_run(session, instance, user)
 
         version, workflow = await self._resolve_template_version(session, instance)
 

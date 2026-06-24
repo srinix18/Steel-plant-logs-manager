@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CeoUser, CurrentUser, DbSession, PlatformAdminUser
+from app.services.access_scope import apply_department_list_scope, apply_process_list_scope, assert_can_access_process
 from app.db.models import (
     Asset,
     AssetGroup,
@@ -88,6 +89,7 @@ async def list_departments(session: DbSession, user: CurrentUser, plant_id: UUID
     query = select(Department)
     if plant_id:
         query = query.where(Department.plant_id == plant_id)
+    query = apply_department_list_scope(query, user)
     result = await session.execute(query)
     return [DepartmentResponse.model_validate(d) for d in result.scalars()]
 
@@ -97,6 +99,7 @@ async def list_processes(session: DbSession, user: CurrentUser, department_id: U
     query = select(Process)
     if department_id:
         query = query.where(Process.department_id == department_id)
+    query = apply_process_list_scope(query, user)
     result = await session.execute(query)
     return [ProcessResponse.model_validate(p) for p in result.scalars()]
 
@@ -105,6 +108,10 @@ async def list_processes(session: DbSession, user: CurrentUser, department_id: U
 async def list_process_instances(session: DbSession, user: CurrentUser, process_id: UUID | None = None):
     query = select(ProcessInstance)
     if process_id:
+        process = await session.get(Process, process_id)
+        if not process:
+            raise HTTPException(status_code=404, detail="Process not found")
+        await assert_can_access_process(session, user, process)
         query = query.where(ProcessInstance.process_id == process_id)
     result = await session.execute(query)
     return [ProcessInstanceResponse.model_validate(i) for i in result.scalars()]
