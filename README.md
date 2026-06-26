@@ -12,15 +12,20 @@ Plant staff replace paper log sheets with structured, role-scoped digital forms 
 |--------|---------|
 | **Production logbooks** | IAF, AOD, CCM, rolling mill, wire furnace/drawing, bright bar, forge grinding — each mapped to a published template and workflow |
 | **Shift dashboard** | Supervisors and workers start runs only for their department/process |
-| **Heat workspace** | Live run entry: sections, calculated fields, workflow actions, events |
+| **Heat workspace** | Live run entry: tabbed sections, guided IAF workflow (actions on the correct tab), save per section |
 | **Supervisor monitor** | Active runs, observations, maintenance issue raising (department-scoped) |
 | **Reports** | Read-only run reports with maintenance history |
-| **Maintenance** | Category-based issue queue (quality, safety, equipment, etc.) with assign/close audit |
-| **Workforce (HR)** | Employees, shift assignments, attendance, contractors, handover notes, dashboard |
+| **Maintenance (reactive)** | Category-based issue queue (quality, safety, equipment, etc.) with assign/close audit |
+| **Maintenance (PM)** | PM programs, triggers (calendar / heat count / manual), work orders, dashboard KPIs |
+| **Plant Foundation** | Assets, masters, observations, corrective actions, documents, analytics |
+| **Finance** | Cost masters, template mappings, per-run cost sheets, department/process/asset drill-down |
+| **Workforce (HR)** | Employees, attendance, shift planning, leave, skills, training, payroll, payslips |
+| **Import engine** | Bulk employee import (Excel) from Workforce |
 | **Messages** | In-app mail with `@all`, `@DEPT_CODE`, and name search; HR ↔ org messaging |
 | **Executive / HoD** | Org-wide or department dashboards, KPIs, run visibility |
 | **Admin** | Organisations, plants, departments, log sheet templates, users |
 
+**How to use everything (connections + demo flows):** [docs/PLATFORM_USER_GUIDE.md](docs/PLATFORM_USER_GUIDE.md)  
 **Detailed logins, URLs, and permissions:** [LOGINS.md](LOGINS.md)  
 **Department / process / template matrix:** [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md)
 
@@ -39,8 +44,10 @@ flowchart LR
     Runs[Process Runs]
     WF[Workflows]
     WFm[Workforce]
+    Fin[Finance]
+    PM[Maintenance PM]
     Msg[Messages]
-    Maint[Maintenance]
+    Maint[Maintenance Issues]
   end
   subgraph data [PostgreSQL]
     DB[(moi_platform)]
@@ -98,9 +105,10 @@ Roles are enforced in `backend/app/services/access_scope.py` and mirrored in `fr
 | **CEO** | Executive overview, org-wide visibility, broadcast messages |
 | **HR** | Workforce: employees, shift assignments, attendance, contractors, org messaging |
 | **HoD** | Department overview, employees (dept), view handover; no shift dashboard |
-| **Supervisor** | One process (or dept), shift dashboard, handover notes, maintenance raising |
-| **Worker** | Shift dashboard, own runs, my attendance |
+| **Supervisor** | One process (or dept), shift dashboard, handover notes, maintenance raising, finance view |
+| **Worker** | Shift dashboard, own runs, my attendance, my leave, my payslips |
 | **Maintenance** | Issue queue by category (department-scoped visibility) |
+| **Maintenance manager / CEO** | PM programs, work orders, maintenance dashboard |
 
 Department-scoped rules apply to runs, maintenance issues, workforce data, and process lists.
 
@@ -120,7 +128,7 @@ Seeded production processes include:
 | Bright Bar | BBAR | F51 PR 39/005/01-13 (daily register) |
 | Forge | GRIND | F/PRD/08 (daily grinding register) |
 
-On backend startup, seeds load templates, workflows, demo users, shift assignments, and sample workforce data (idempotent).
+On backend startup, seeds load templates, workflows, demo users, shift assignments, PM sample program, salary structures, and workforce data (idempotent). PM triggers are evaluated on startup; use **Run PM evaluate** in the UI to generate work orders.
 
 ---
 
@@ -197,11 +205,19 @@ Full user list (rolling, wire, BBD, forge, maintenance crews): **[LOGINS.md](LOG
 | `/hod` | HoD | Department dashboard |
 | `/supervisor` | Supervisor+ | Active runs, observations |
 | `/shift` | Supervisor, Worker | Start runs (dept-scoped) |
-| `/heat/:runId` | Run participants | Live log sheet workspace |
+| `/heat/:runId` | Run participants | Live log sheet workspace (IAF: guided tab workflow) |
 | `/reports/:runId` | Readers | Read-only report |
 | `/my-runs` | Supervisor, Worker | Own active/historical runs |
-| `/maintenance` | Maintenance crew | Issue queue |
-| `/workforce/*` | HR, HoD, CEO (varies) | Dashboard, employees, attendance, etc. |
+| `/maintenance` | Maintenance crew | Reactive issue queue |
+| `/maintenance/dashboard` | PM viewers | PM KPIs, **Run PM evaluate** |
+| `/maintenance/programs` | Maintenance manager, CEO | PM program wizard (triggers, tasks, asset) |
+| `/maintenance/work-orders` | PM viewers | Work order queue (Draft → Assign → execute) |
+| `/foundation/*` | HoD, supervisors, CEO | Assets, masters, observations, corrective actions |
+| `/finance/*` | CEO, HoD, supervisor | Cost dashboard, masters, mappings, run cost sheets |
+| `/workforce/*` | HR, HoD, CEO (varies) | Dashboard, employees, attendance, leave, payroll, etc. |
+| `/workforce/salary-structures` | HR | Pay component setup before payroll runs |
+| `/workforce/payroll` | HR | Monthly payroll process |
+| `/workforce/my-payslips` | Workers | View payslips after HR processes payroll |
 | `/messages` | All authenticated | In-app mail and system alerts |
 | `/profile` | All | User profile |
 
@@ -219,8 +235,13 @@ Base URL: `http://localhost:8000/api/v1`
 | Process runs | `POST /process-instances/{id}/runs`, `GET /process-runs/{id}`, transitions, field values |
 | Operations | `/observations`, `/corrective-actions`, `/delay-events`, `/delay-codes` |
 | Rolling / Wire / Bright Bar | `/rolling-mill/*`, `/wire/*`, `/bright-bar/*` (domain helpers) |
-| Maintenance | `/maintenance/issues`, assign, close |
-| Workforce | `/workforce/employees`, `/shift-assignments`, `/attendance`, `/contractors`, `/summary` |
+| Maintenance (issues) | `/maintenance/issues`, assign, close |
+| Maintenance (PM) | `/maintenance/pm/programs`, `/maintenance/pm/evaluate`, `/maintenance/pm/work-orders` |
+| Finance | `/finance/masters/*`, `/finance/mappings`, `/finance/runs/{id}/cost-sheet`, compute |
+| Foundation | `/foundation/assets`, `/foundation/observations`, `/foundation/corrective-actions` |
+| Workforce | `/workforce/employees`, `/shift-assignments`, `/attendance`, `/workforce/payroll/*` |
+| Imports | `/imports/*` (employee bulk upload) |
+| Workforce ops | `/workforce/ops/leave`, `/workforce/ops/payroll`, shift roster, skills, training |
 | Messages | `/messages`, `/notifications` |
 | Analytics | `/dashboard`, KPI definitions |
 | WebSocket | `/ws/plants/{id}/runs`, `/ws/process-runs/{id}` |
@@ -237,9 +258,9 @@ Log_Project/
 │   ├── app/
 │   │   ├── api/v1/          # REST routers (auth, platform, process_runs, workforce, …)
 │   │   ├── db/              # SQLAlchemy models, session, custom types
-│   │   ├── services/        # Business logic (runs, workflow, access_scope, workforce, …)
+│   │   ├── services/        # Business logic (runs, workflow, cost engine, PM, payroll, …)
 │   │   ├── schemas/         # Pydantic request/response models
-│   │   └── utils/           # Seeds (IAF, AOD, CCM, rolling, wire, BBD, forge, workforce)
+│   │   └── utils/           # Seeds + schema patches (IAF, finance, phase4 PM/HR, …)
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
@@ -247,7 +268,9 @@ Log_Project/
 │       ├── components/      # Log sheet cells, layout, UI primitives
 │       ├── api/             # Typed API clients
 │       └── utils/           # roles.ts, formulas, message recipients
-├── docs/                    # Manufacturing hierarchy reference
+├── docs/
+│   ├── PLATFORM_USER_GUIDE.md   # End-to-end usage, module connections, demo scripts
+│   └── MANUFACTURING_HIERARCHY.md
 ├── scripts/                 # start.ps1, setup.ps1, common.ps1
 ├── LOGINS.md                # All demo users, URLs, permission matrix
 ├── start.bat / stop.bat
@@ -263,7 +286,28 @@ Log_Project/
 1. Log in → **Shift Dashboard** (`/shift`)
 2. Select process (only your department’s processes appear)
 3. Pick furnace instance, shift, grade → **Start Heat**
-4. **Heat workspace** opens — fill sections, save, advance workflow
+4. **Heat workspace** opens — fill each tab and **Save**; IAF shows workflow actions on the relevant tab only (Start Heat → Power On → Sample → … → Close)
+
+### Run preventive maintenance (CEO / maintenance manager)
+
+1. **Maintenance → PM Programs** — create or edit a program (triggers, tasks, linked asset)
+2. Ensure status is **Active** (draft programs do not evaluate)
+3. **Run PM evaluate** or **Force evaluate (demo)** on Programs or Dashboard
+4. **Maintenance → Work Orders** — filter **Draft** → **Assign** → execute checklist tasks
+
+### HR payroll (monthly demo)
+
+1. Log in as `hr@chandansteel.com`
+2. **Workforce → Attendance** — mark employees present for the month
+3. **Workforce → Salary Structures** — verify or add pay components per employee
+4. **Workforce → Payroll** → **Create payroll run** → **Process**
+5. Workers see payslips under **My Payslips**
+
+### Finance cost from a completed heat
+
+1. Complete IAF heat (save Charge Mix / Ferro Alloys, tap → approve → close)
+2. **Finance → Cost Dashboard** or run cost sheet for that `run_id`
+3. Raw material lines use material catalog codes; power from `power_total` field
 
 ### HR marks attendance
 
@@ -325,8 +369,10 @@ cd backend && .\venv\Scripts\python scripts\test_db.py
 
 ## Further reading
 
+- [docs/PLATFORM_USER_GUIDE.md](docs/PLATFORM_USER_GUIDE.md) — what connects to what, IAF workflow, PM, finance, HR, end-to-end demo day
 - [LOGINS.md](LOGINS.md) — every demo account, route URLs, workforce permission matrix, coil/delay notes
 - [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) — department/process/template catalogue and run-type rules
+- [ARCHITECTURE.md](ARCHITECTURE.md) — deeper technical architecture
 
 ---
 
