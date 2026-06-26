@@ -17,6 +17,9 @@ import {
   WORKFORCE_ADMIN_ROLES,
   HOD_TIER_ROLES,
   SUPERVISOR_ROLES,
+  FINANCE_VIEW_ROLES,
+  FINANCE_MASTERS_WRITE_ROLES,
+  FINANCE_MAPPING_WRITE_ROLES,
 } from '../../utils/roles';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -65,6 +68,9 @@ export function Sidebar() {
   const showFoundationDocs = true;
   const showFoundationSection =
     showFoundationAssets || showFoundationOps || showFoundationAnalytics || showFoundationDocs;
+  const showFinance = hasRole(user.role, FINANCE_VIEW_ROLES);
+  const showFinanceMasters = hasRole(user.role, FINANCE_MASTERS_WRITE_ROLES);
+  const showFinanceMapping = hasRole(user.role, FINANCE_MAPPING_WRITE_ROLES);
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -224,6 +230,33 @@ export function Sidebar() {
                 Analytics
               </NavLink>
             )}
+          </>
+        )}
+
+        {showFinance && (
+          <>
+            <p className={sectionClass}>Finance</p>
+            <NavLink to="/finance/dashboard" className={linkClass}>
+              Cost Dashboard
+            </NavLink>
+            {showFinanceMasters && (
+              <NavLink to="/finance/masters" className={linkClass}>
+                Cost Masters
+              </NavLink>
+            )}
+            {showFinanceMapping && (
+              <NavLink to="/finance/mappings" className={linkClass}>
+                Cost Mapping Builder
+              </NavLink>
+            )}
+            {showFinanceMasters && (
+              <NavLink to="/finance/calculations" className={linkClass}>
+                Calculations
+              </NavLink>
+            )}
+            <NavLink to="/finance/analytics" className={linkClass}>
+              Cost Analytics
+            </NavLink>
           </>
         )}
 

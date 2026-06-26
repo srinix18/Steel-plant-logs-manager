@@ -78,6 +78,7 @@ class _LegacyTolerantPgEnum(TypeDecorator):
     """PostgreSQL ENUM: write lowercase .value; read legacy UPPER member names too."""
 
     cache_ok = True
+    impl = String(32)
 
     def __init__(self, enum_cls: type[PyEnum], pg_name: str):
         self.enum_cls = enum_cls
@@ -88,8 +89,13 @@ class _LegacyTolerantPgEnum(TypeDecorator):
                 if label not in seen:
                     seen.add(label)
                     labels.append(label)
-        self.impl = PGENUM(*labels, name=pg_name, create_type=False)
+        self._pg_enum = PGENUM(*labels, name=pg_name, create_type=False)
         super().__init__()
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(self._pg_enum)
+        return dialect.type_descriptor(String(32))
 
     def process_bind_param(self, value, dialect):
         if value is None:

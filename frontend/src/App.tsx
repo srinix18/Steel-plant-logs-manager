@@ -50,7 +50,17 @@ import {
   HOD_ROLES,
   SUPERVISOR_ONLY_ROLES,
   MAINTENANCE_ROLES,
+  FINANCE_VIEW_ROLES,
 } from './utils/roles';
+import { FinanceDashboardPage } from './pages/finance/FinanceDashboardPage';
+import { FinanceDepartmentPage } from './pages/finance/FinanceDepartmentPage';
+import { FinanceProcessPage } from './pages/finance/FinanceProcessPage';
+import { FinanceAssetPage } from './pages/finance/FinanceAssetPage';
+import { RunCostSheetPage } from './pages/finance/RunCostSheetPage';
+import { CostMastersPage } from './pages/finance/CostMastersPage';
+import { CostMappingBuilderPage } from './pages/finance/CostMappingBuilderPage';
+import { CostCalculationsPage } from './pages/finance/CostCalculationsPage';
+import { CostAnalyticsPage } from './pages/finance/CostAnalyticsPage';
 
 function RoleRedirect() {
   const { user } = useAuth();
@@ -147,6 +157,19 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={[...CEO_TIER_ROLES, ...PLATFORM_ADMIN_ROLES]} />}>
             <Route path="foundation/analytics" element={<AnalyticsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={FINANCE_VIEW_ROLES} />}>
+            <Route path="finance" element={<Navigate to="/finance/dashboard" replace />} />
+            <Route path="finance/dashboard" element={<FinanceDashboardPage />} />
+            <Route path="finance/dashboard/departments/:id" element={<FinanceDepartmentPage />} />
+            <Route path="finance/dashboard/processes/:id" element={<FinanceProcessPage />} />
+            <Route path="finance/dashboard/assets/:id" element={<FinanceAssetPage />} />
+            <Route path="finance/runs/:runId/cost-sheet" element={<RunCostSheetPage />} />
+            <Route path="finance/masters" element={<CostMastersPage />} />
+            <Route path="finance/mappings" element={<CostMappingBuilderPage />} />
+            <Route path="finance/calculations" element={<CostCalculationsPage />} />
+            <Route path="finance/analytics" element={<CostAnalyticsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

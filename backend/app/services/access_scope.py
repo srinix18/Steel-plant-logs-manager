@@ -561,3 +561,54 @@ def validate_user_scope(
                 status_code=400,
                 detail="Maintenance requires organisation_id, plant_id, department_id, and maintenance_division",
             )
+
+
+FINANCE_VIEW_ROLES = CEO_TIER_ROLES | HOD_ROLES | SUPERVISOR_ONLY_ROLES
+FINANCE_MASTERS_WRITE_ROLES = CEO_TIER_ROLES | {UserRole.PLANT_ADMIN}
+FINANCE_MAPPING_WRITE_ROLES = CEO_TIER_ROLES | {UserRole.PLANT_ADMIN, UserRole.HOD}
+
+
+def can_view_finance(user: User) -> bool:
+    return user.role in FINANCE_VIEW_ROLES
+
+
+def can_write_finance_masters(user: User) -> bool:
+    return user.role in FINANCE_MASTERS_WRITE_ROLES
+
+
+def can_write_finance_mappings(user: User) -> bool:
+    return user.role in FINANCE_MAPPING_WRITE_ROLES
+
+
+def assert_finance_access(user: User) -> None:
+    if not can_view_finance(user):
+        raise HTTPException(status_code=403, detail="Finance access not permitted")
+
+
+def assert_finance_masters_write(user: User) -> None:
+    if not can_write_finance_masters(user):
+        raise HTTPException(status_code=403, detail="Not permitted to manage cost masters")
+
+
+def assert_finance_mapping_write(user: User) -> None:
+    if not can_write_finance_mappings(user):
+        raise HTTPException(status_code=403, detail="Not permitted to manage cost mappings")
+
+
+def apply_finance_run_scope(query: Select, user: User) -> Select:
+    """Scope cost/run queries for finance dashboards."""
+    if is_platform_admin(user):
+        return query
+    if is_ceo_tier(user) and user.organisation_id:
+        return query.where(Plant.organisation_id == user.organisation_id)
+    if user.role == UserRole.PLANT_ADMIN and user.plant_id:
+        return query.where(Department.plant_id == user.plant_id)
+    if user.role == UserRole.HOD and user.department_id:
+        return query.where(Department.id == user.department_id)
+    if is_supervisor_only(user):
+        if user.department_id:
+            query = query.where(Department.id == user.department_id)
+        elif user.plant_id:
+            query = query.where(Department.plant_id == user.plant_id)
+        return query
+    raise HTTPException(status_code=403, detail="Finance access not permitted")

@@ -20,6 +20,7 @@ from app.utils.seed_org_roles import seed_org_role_users
 from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
 from app.utils.seed_asset_catalog import seed_asset_catalog
 from app.utils.seed_workforce import seed_workforce_demo
+from app.utils.seed_finance import seed_finance
 from app.services.masters_service import MastersService
 from sqlalchemy import select
 from app.db.models import Organisation
@@ -46,6 +47,7 @@ async def lifespan(_: FastAPI):
         await seed_org_role_users(session)
         await seed_workforce_demo(session)
         await seed_asset_catalog(session)
+        await seed_finance(session)
         org = (await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))).scalar_one_or_none()
         if org:
             await MastersService().seed_default_products(session, org.id)

@@ -3,6 +3,22 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+_SAVEPOINT_COUNTER = 0
+
+
+async def _safe_execute(conn: AsyncConnection, sql: str) -> None:
+    """Run one patch; on failure roll back to savepoint so the outer txn stays usable."""
+    global _SAVEPOINT_COUNTER
+    _SAVEPOINT_COUNTER += 1
+    sp = f"schema_patch_{_SAVEPOINT_COUNTER}"
+    await conn.execute(text(f"SAVEPOINT {sp}"))
+    try:
+        await conn.execute(text(sql))
+    except Exception:
+        await conn.execute(text(f"ROLLBACK TO SAVEPOINT {sp}"))
+    finally:
+        await conn.execute(text(f"RELEASE SAVEPOINT {sp}"))
+
 _USER_COLUMN_PATCHES = (
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_uid VARCHAR(32)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(32)",
@@ -363,95 +379,174 @@ _FOUNDATION_PATCHES = (
 
 _CORRECTIVEACTIONSTATUS_VALUES = ("assigned", "completed")
 
+_FINANCE_PATCHES = (
+    """
+    CREATE TABLE IF NOT EXISTS raw_material_cost_rates (
+        id UUID PRIMARY KEY,
+        organisation_id UUID NOT NULL REFERENCES organisations(id),
+        material_id UUID NOT NULL REFERENCES material_catalog(id),
+        unit VARCHAR(32) DEFAULT 'kg',
+        rate DOUBLE PRECISION NOT NULL,
+        effective_from DATE NOT NULL,
+        effective_to DATE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS power_cost_rates (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        cost_per_unit DOUBLE PRECISION NOT NULL,
+        effective_from DATE NOT NULL,
+        effective_to DATE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS fuel_cost_rates (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        fuel_name VARCHAR(100) NOT NULL,
+        unit VARCHAR(32) DEFAULT 'litre',
+        rate DOUBLE PRECISION NOT NULL,
+        effective_from DATE NOT NULL,
+        effective_to DATE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS labour_cost_rates (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        department_id UUID REFERENCES departments(id),
+        role_label VARCHAR(100) NOT NULL,
+        cost_per_hour DOUBLE PRECISION NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS maintenance_cost_rates (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        category VARCHAR(32) NOT NULL,
+        default_cost DOUBLE PRECISION NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cost_mapping_rules (
+        id UUID PRIMARY KEY,
+        template_version_id UUID NOT NULL REFERENCES template_versions(id),
+        source_type VARCHAR(32) NOT NULL,
+        source_key VARCHAR(100) NOT NULL,
+        child_key VARCHAR(100),
+        material_field_key VARCHAR(100),
+        cost_category VARCHAR(32) NOT NULL,
+        item_label_override VARCHAR(200),
+        unit_override VARCHAR(32),
+        labour_role_label VARCHAR(100),
+        is_active BOOLEAN DEFAULT TRUE,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cost_calculations (
+        id UUID PRIMARY KEY,
+        process_run_id UUID NOT NULL REFERENCES process_runs(id),
+        calculated_at TIMESTAMPTZ DEFAULT NOW(),
+        total_cost DOUBLE PRECISION DEFAULT 0,
+        version INTEGER NOT NULL,
+        status VARCHAR(32) NOT NULL,
+        warnings JSONB DEFAULT '[]',
+        context JSONB DEFAULT '{}',
+        UNIQUE (process_run_id, version)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cost_line_items (
+        id UUID PRIMARY KEY,
+        cost_calculation_id UUID NOT NULL REFERENCES cost_calculations(id),
+        cost_category VARCHAR(32) NOT NULL,
+        item_name VARCHAR(200) NOT NULL,
+        quantity DOUBLE PRECISION DEFAULT 0,
+        unit VARCHAR(32) DEFAULT '',
+        rate DOUBLE PRECISION DEFAULT 0,
+        amount DOUBLE PRECISION DEFAULT 0,
+        source_mapping_id UUID REFERENCES cost_mapping_rules(id),
+        source_ref JSONB DEFAULT '{}'
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_cost_calc_run ON cost_calculations (process_run_id)",
+    "CREATE INDEX IF NOT EXISTS ix_cost_mapping_version ON cost_mapping_rules (template_version_id)",
+)
+
 
 async def apply_schema_patches(conn: AsyncConnection) -> None:
     for value in _USERROLE_VALUES:
-        await conn.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{value}'"))
+        await _safe_execute(conn, f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{value}'")
 
     for value in _PROCESSRUNTYPE_VALUES:
-        try:
-            await conn.execute(text(f"ALTER TYPE processruntype ADD VALUE IF NOT EXISTS '{value}'"))
-        except Exception:
-            pass
+        await _safe_execute(conn, f"ALTER TYPE processruntype ADD VALUE IF NOT EXISTS '{value}'")
 
     for value in _PROCESSRUNOUTCOME_VALUES:
-        try:
-            await conn.execute(text(f"ALTER TYPE processrunoutcome ADD VALUE IF NOT EXISTS '{value}'"))
-        except Exception:
-            pass
+        await _safe_execute(conn, f"ALTER TYPE processrunoutcome ADD VALUE IF NOT EXISTS '{value}'")
 
     for legacy, normalized in _PROCESSRUNTYPE_LEGACY_TO_VALUE:
-        try:
-            await conn.execute(
-                text(
-                    f"UPDATE process_runs SET run_type = '{normalized}' "
-                    f"WHERE run_type::text = '{legacy}'"
-                )
-            )
-        except Exception:
-            pass
+        await _safe_execute(
+            conn,
+            f"UPDATE process_runs SET run_type = '{normalized}' "
+            f"WHERE run_type::text = '{legacy}'",
+        )
 
     for legacy, normalized in _PROCESSRUNOUTCOME_LEGACY_TO_VALUE:
-        try:
-            await conn.execute(
-                text(
-                    f"UPDATE process_runs SET outcome = '{normalized}' "
-                    f"WHERE outcome IS NOT NULL AND outcome::text = '{legacy}'"
-                )
-            )
-        except Exception:
-            pass
+        await _safe_execute(
+            conn,
+            f"UPDATE process_runs SET outcome = '{normalized}' "
+            f"WHERE outcome IS NOT NULL AND outcome::text = '{legacy}'",
+        )
 
     for stmt in _USER_COLUMN_PATCHES:
-        await conn.execute(text(stmt))
+        await _safe_execute(conn, stmt)
 
     for stmt in _MESSAGE_TABLE_PATCHES:
-        await conn.execute(text(stmt))
+        await _safe_execute(conn, stmt)
 
     for stmt in _MAINTENANCE_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for stmt in _DELAY_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for stmt in _COIL_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for stmt in _COIL_COLUMN_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for stmt in _CUSTOMER_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for stmt in _WORKFORCE_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
 
     for value in _CORRECTIVEACTIONSTATUS_VALUES:
-        try:
-            await conn.execute(text(f"ALTER TYPE correctiveactionstatus ADD VALUE IF NOT EXISTS '{value}'"))
-        except Exception:
-            pass
+        await _safe_execute(
+            conn, f"ALTER TYPE correctiveactionstatus ADD VALUE IF NOT EXISTS '{value}'"
+        )
 
     for stmt in _FOUNDATION_PATCHES:
-        try:
-            await conn.execute(text(stmt))
-        except Exception:
-            pass
+        await _safe_execute(conn, stmt)
+
+    for stmt in _FINANCE_PATCHES:
+        await _safe_execute(conn, stmt)

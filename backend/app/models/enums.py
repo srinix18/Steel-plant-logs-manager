@@ -212,3 +212,25 @@ class RemarkAuthorRole(str, enum.Enum):
     MELTER = "melter"
     SUPERVISOR = "supervisor"
     SYSTEM = "system"
+
+
+class CostCategory(str, enum.Enum):
+    RAW_MATERIAL = "raw_material"
+    POWER = "power"
+    FUEL = "fuel"
+    LABOUR = "labour"
+    MAINTENANCE = "maintenance"
+    CONSUMABLES = "consumables"
+    OTHER = "other"
+
+
+class CostMappingSourceType(str, enum.Enum):
+    SCALAR_FIELD = "scalar_field"
+    SECTION_ROW = "section_row"
+    SECTION_AGGREGATE = "section_aggregate"
+
+
+class CostCalculationStatus(str, enum.Enum):
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    FAILED = "failed"

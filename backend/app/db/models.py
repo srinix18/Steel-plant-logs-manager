@@ -30,6 +30,9 @@ from app.models.enums import (
     AssetStatus,
     AttendanceStatus,
     CoilStatus,
+    CostCalculationStatus,
+    CostCategory,
+    CostMappingSourceType,
     EmploymentStatus,
     CorrectiveActionPriority,
     CorrectiveActionStatus,
@@ -973,3 +976,113 @@ class ShiftHandoverNote(Base, TimestampMixin):
     department: Mapped["Department"] = relationship()
     shift: Mapped["Shift"] = relationship()
     author: Mapped["User"] = relationship()
+
+
+class RawMaterialCostRate(Base, TimestampMixin):
+    __tablename__ = "raw_material_cost_rates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    material_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("material_catalog.id"), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), default="kg")
+    rate: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    material: Mapped["MaterialCatalog"] = relationship()
+
+
+class PowerCostRate(Base, TimestampMixin):
+    __tablename__ = "power_cost_rates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    cost_per_unit: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+
+
+class FuelCostRate(Base, TimestampMixin):
+    __tablename__ = "fuel_cost_rates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    fuel_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), default="litre")
+    rate: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class LabourCostRate(Base, TimestampMixin):
+    __tablename__ = "labour_cost_rates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    role_label: Mapped[str] = mapped_column(String(100), nullable=False)
+    cost_per_hour: Mapped[float] = mapped_column(Float, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class MaintenanceCostRate(Base, TimestampMixin):
+    __tablename__ = "maintenance_cost_rates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    default_cost: Mapped[float] = mapped_column(Float, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class CostMappingRule(Base, TimestampMixin):
+    __tablename__ = "cost_mapping_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    template_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("template_versions.id"), nullable=False)
+    source_type: Mapped[CostMappingSourceType] = mapped_column(String(32), nullable=False)
+    source_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    child_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    material_field_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    cost_category: Mapped[CostCategory] = mapped_column(String(32), nullable=False)
+    item_label_override: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    unit_override: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    labour_role_label: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class CostCalculation(Base):
+    __tablename__ = "cost_calculations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    process_run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("process_runs.id"), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    total_cost: Mapped[float] = mapped_column(Float, default=0)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[CostCalculationStatus] = mapped_column(String(32), nullable=False)
+    warnings: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    context: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+    line_items: Mapped[list["CostLineItem"]] = relationship(back_populates="calculation", cascade="all, delete-orphan")
+
+    __table_args__ = (UniqueConstraint("process_run_id", "version", name="uq_cost_calc_run_version"),)
+
+
+class CostLineItem(Base):
+    __tablename__ = "cost_line_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    cost_calculation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cost_calculations.id"), nullable=False)
+    cost_category: Mapped[CostCategory] = mapped_column(String(32), nullable=False)
+    item_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    unit: Mapped[str] = mapped_column(String(32), default="")
+    rate: Mapped[float] = mapped_column(Float, default=0)
+    amount: Mapped[float] = mapped_column(Float, default=0)
+    source_mapping_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("cost_mapping_rules.id"), nullable=True)
+    source_ref: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+    calculation: Mapped["CostCalculation"] = relationship(back_populates="line_items")

@@ -99,6 +99,12 @@ async def transition_run(run_id: UUID, data: TransitionRequest, session: DbSessi
     await workflow_service.execute_transition(session, run, user, data)
     if data.to_state in ("completed", "closed", "approved"):
         await run_service.compute_analytics_facts(session, run_id)
+        try:
+            from app.services.cost_engine_service import CostEngineService
+
+            await CostEngineService().compute_for_run(session, run_id, user=None)
+        except Exception:
+            pass
     return await run_service.get_run(session, run_id, user)
 
 
