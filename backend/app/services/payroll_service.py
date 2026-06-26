@@ -227,29 +227,27 @@ class PayrollService:
     async def _payable_days(
         self, session: AsyncSession, user: User, start: date, end: date
     ) -> float:
-        if not user.department_id:
-            return float((end - start).days + 1)
-
+        """Count payable days from attendance — unmarked days are unpaid."""
         result = await session.execute(
-            select(AttendanceRecord.status).where(
+            select(AttendanceRecord).where(
                 AttendanceRecord.user_id == user.id,
-                AttendanceRecord.department_id == user.department_id,
                 AttendanceRecord.attendance_date >= start,
                 AttendanceRecord.attendance_date <= end,
             )
         )
-        statuses = list(result.scalars())
-        if not statuses:
-            return float((end - start).days + 1)
+        records = list(result.scalars())
+        if not records:
+            return 0.0
 
         total = 0.0
-        for s in statuses:
-            if s == AttendanceStatus.PRESENT.value:
+        for rec in records:
+            if rec.status == AttendanceStatus.PRESENT.value:
                 total += 1.0
-            elif s == AttendanceStatus.HALF_DAY.value:
+            elif rec.status == AttendanceStatus.HALF_DAY.value:
                 total += 0.5
-            elif s == AttendanceStatus.LEAVE.value:
+            elif rec.status == AttendanceStatus.LEAVE.value:
                 total += 1.0
+            # absent / other statuses contribute 0
         return total
 
     async def list_line_items(
@@ -282,27 +280,48 @@ class PayrollService:
 
         data = line.payslip_data or {}
         html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Payslip</title>
+<html><head><meta charset="utf-8"><title>Payslip — {data.get('employee_name', user.full_name)}</title>
 <style>
-body {{ font-family: Arial, sans-serif; margin: 2rem; }}
-h1 {{ color: #1a365d; }}
-table {{ border-collapse: collapse; width: 100%; margin-top: 1rem; }}
-th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
-th {{ background: #edf2f7; }}
+  body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 2rem; background: #f8fafc; color: #0f172a; }}
+  .sheet {{ max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }}
+  .header {{ background: #1e40af; color: #fff; padding: 1.25rem 1.5rem; }}
+  .header h1 {{ margin: 0; font-size: 1.25rem; }}
+  .header p {{ margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.875rem; }}
+  .meta {{ display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; padding: 1rem 1.5rem; background: #f1f5f9; font-size: 0.875rem; }}
+  table {{ width: 100%; border-collapse: collapse; }}
+  th, td {{ padding: 0.65rem 1.5rem; text-align: left; border-bottom: 1px solid #e2e8f0; }}
+  th {{ background: #f8fafc; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: #64748b; }}
+  .amount {{ text-align: right; font-variant-numeric: tabular-nums; }}
+  .net {{ background: #ecfdf5; font-weight: 700; font-size: 1.1rem; }}
+  .footer {{ padding: 1rem 1.5rem; font-size: 0.75rem; color: #64748b; }}
 </style></head><body>
-<h1>Payslip — {data.get('month', '')}/{data.get('year', '')}</h1>
-<p><strong>{data.get('employee_name', user.full_name)}</strong>
- ({data.get('employee_uid', user.employee_uid or 'N/A')})</p>
-<p>Payable days: {data.get('payable_days', line.payable_days)}</p>
-<table>
-<tr><th>Earnings</th><th>Amount</th></tr>
-<tr><td>Basic</td><td>{data.get('basic', 0):.2f}</td></tr>
-<tr><td>HRA</td><td>{data.get('hra', 0):.2f}</td></tr>
-<tr><td>Allowances</td><td>{data.get('allowances', 0):.2f}</td></tr>
-<tr><th>Gross (earned)</th><th>{line.gross_salary:.2f}</th></tr>
-<tr><th>Deductions</th><th>{line.deductions:.2f}</th></tr>
-<tr><th>Net Salary</th><th>{line.net_salary:.2f}</th></tr>
-</table>
+<div class="sheet">
+  <div class="header">
+    <h1>Chandan Steels — Payslip</h1>
+    <p>{data.get('month', '')}/{data.get('year', '')}</p>
+  </div>
+  <div class="meta">
+    <div><strong>Employee</strong><br>{data.get('employee_name', user.full_name)}</div>
+    <div><strong>ID</strong><br>{data.get('employee_uid', user.employee_uid or 'N/A')}</div>
+    <div><strong>Payable days</strong><br>{data.get('payable_days', line.payable_days)}</div>
+    <div><strong>Net pay</strong><br>₹{line.net_salary:,.2f}</div>
+  </div>
+  <table>
+    <thead><tr><th>Component</th><th class="amount">Amount (₹)</th></tr></thead>
+    <tbody>
+      <tr><td>Basic</td><td class="amount">{data.get('basic', 0):,.2f}</td></tr>
+      <tr><td>HRA</td><td class="amount">{data.get('hra', 0):,.2f}</td></tr>
+      <tr><td>Allowances</td><td class="amount">{data.get('allowances', 0):,.2f}</td></tr>
+      <tr><td><strong>Gross (earned)</strong></td><td class="amount"><strong>{line.gross_salary:,.2f}</strong></td></tr>
+      <tr><td>PF</td><td class="amount">{data.get('pf', 0):,.2f}</td></tr>
+      <tr><td>ESI</td><td class="amount">{data.get('esi', 0):,.2f}</td></tr>
+      <tr><td>Other deductions</td><td class="amount">{data.get('other_deductions', 0):,.2f}</td></tr>
+      <tr><td><strong>Total deductions (earned)</strong></td><td class="amount"><strong>{line.deductions:,.2f}</strong></td></tr>
+      <tr class="net"><td>Net salary</td><td class="amount">₹{line.net_salary:,.2f}</td></tr>
+    </tbody>
+  </table>
+  <div class="footer">Computer-generated payslip — MOI Platform Workforce</div>
+</div>
 </body></html>"""
         return PayslipResponse(line_item_id=line.id, html=html)
 

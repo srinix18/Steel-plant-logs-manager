@@ -204,9 +204,24 @@ export async function fetchMaintenancePrograms(plantId?: string) {
   return data;
 }
 
-export async function fetchMaintenanceProgram(programId: string) {
-  const { data } = await apiClient.get<MaintenanceProgram>(`/maintenance/pm/programs/${programId}`);
+export interface MaintenanceProgramDetail {
+  program: MaintenanceProgram;
+  triggers: MaintenanceTrigger[];
+  task_templates: MaintenanceTaskTemplate[];
+  notification_rules: MaintenanceNotificationRule[];
+}
+
+export async function fetchMaintenanceProgramDetail(programId: string) {
+  const { data } = await apiClient.get<MaintenanceProgramDetail>(
+    `/maintenance/pm/programs/${programId}`
+  );
   return data;
+}
+
+/** @deprecated use fetchMaintenanceProgramDetail — GET returns nested detail payload */
+export async function fetchMaintenanceProgram(programId: string) {
+  const detail = await fetchMaintenanceProgramDetail(programId);
+  return detail.program;
 }
 
 export async function createMaintenanceProgram(payload: {
@@ -453,10 +468,20 @@ export async function fetchMaintenanceAnalytics(params?: {
   return data;
 }
 
-export async function evaluatePmTriggers(plantId?: string) {
+export async function evaluatePmTriggers(options?: { plantId?: string; force?: boolean }) {
   const { data } = await apiClient.post<PmEvaluateResult>('/maintenance/pm/evaluate', null, {
-    params: plantId ? { plant_id: plantId } : undefined,
+    params: {
+      ...(options?.plantId ? { plant_id: options.plantId } : {}),
+      ...(options?.force ? { force: true } : {}),
+    },
   });
+  return data;
+}
+
+export async function generateWorkOrderFromProgram(programId: string) {
+  const { data } = await apiClient.post<MaintenanceWorkOrder>(
+    `/maintenance/pm/programs/${programId}/generate-work-order`
+  );
   return data;
 }
 

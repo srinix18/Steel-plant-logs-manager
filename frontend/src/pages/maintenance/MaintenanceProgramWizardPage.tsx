@@ -6,10 +6,7 @@ import {
   createProgramNotificationRule,
   createProgramTaskTemplate,
   createProgramTrigger,
-  fetchMaintenanceProgram,
-  fetchProgramNotificationRules,
-  fetchProgramTaskTemplates,
-  fetchProgramTriggers,
+  fetchMaintenanceProgramDetail,
   TRIGGER_TYPE_LABELS,
   updateMaintenanceProgram,
   type MaintenanceNotificationRule,
@@ -18,6 +15,7 @@ import {
   type MaintenanceTriggerType,
 } from '../../api/maintenancePm';
 import { fetchDepartments, fetchPlants } from '../../api/platform';
+import { fetchFoundationAssets } from '../../api/foundation';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -56,11 +54,12 @@ function thresholdLabel(type: MaintenanceTriggerType): string {
 }
 
 function formatTriggerSummary(t: MaintenanceTrigger): string {
-  const label = TRIGGER_TYPE_LABELS[t.trigger_type] ?? t.trigger_type;
-  if (t.trigger_type === 'time' && t.interval_days) {
+  const type = t.trigger_type as MaintenanceTriggerType;
+  const label = TRIGGER_TYPE_LABELS[type] ?? t.trigger_type;
+  if (type === 'time' && t.interval_days) {
     return `${label} — every ${t.interval_days} days`;
   }
-  if (METER_TRIGGER_TYPES.has(t.trigger_type) && t.threshold_value != null) {
+  if (METER_TRIGGER_TYPES.has(type) && t.threshold_value != null) {
     return `${label} — every ${t.threshold_value}`;
   }
   return label;
@@ -73,8 +72,10 @@ export function MaintenanceProgramWizardPage() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(Boolean(programId && programId !== 'new'));
   const [id, setId] = useState(programId && programId !== 'new' ? programId : '');
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
+  const [assets, setAssets] = useState<Awaited<ReturnType<typeof fetchFoundationAssets>>>([]);
   const [plantId, setPlantId] = useState('');
 
   const [program, setProgram] = useState({
@@ -83,6 +84,7 @@ export function MaintenanceProgramWizardPage() {
     category: 'equipment',
     priority: 'medium',
     department_id: '',
+    asset_id: '',
     responsible_team: '',
     estimated_duration_min: '',
     status: 'draft' as 'draft' | 'active' | 'inactive',
@@ -102,18 +104,22 @@ export function MaintenanceProgramWizardPage() {
   const [newNotification, setNewNotification] = useState({ offset_days: '7', recipient_role: 'maintenance' });
 
   useEffect(() => {
-    fetchPlants().then((p) => {
-      if (p[0]) {
-        setPlantId(p[0].id);
-        fetchDepartments(p[0].id).then(setDepartments);
-      }
-    });
-  }, []);
+    if (plantId) {
+      fetchDepartments(plantId).then(setDepartments).catch(() => {});
+      fetchFoundationAssets({ plant_id: plantId }).then(setAssets).catch(() => {});
+    }
+  }, [plantId]);
 
   useEffect(() => {
-    if (!isEdit || !programId) return;
-    fetchMaintenanceProgram(programId)
-      .then((p) => {
+    if (!isEdit || !programId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    Promise.all([fetchMaintenanceProgramDetail(programId)])
+      .then(([detail]) => {
+        const p = detail.program;
         setId(p.id);
         setPlantId(p.plant_id);
         setProgram({
@@ -122,25 +128,66 @@ export function MaintenanceProgramWizardPage() {
           category: p.category,
           priority: p.priority,
           department_id: p.department_id ?? '',
+          asset_id: p.asset_id ?? '',
           responsible_team: p.responsible_team ?? '',
           estimated_duration_min: p.estimated_duration_min?.toString() ?? '',
           status: p.status as 'draft' | 'active' | 'inactive',
           auto_generate_work_orders: p.auto_generate_work_orders,
         });
+        setTriggers(detail.triggers);
+        setTasks(detail.task_templates);
+        setNotifications(detail.notification_rules);
       })
-      .catch((e) => setError(getErrorMessage(e)));
-    Promise.all([
-      fetchProgramTriggers(programId!),
-      fetchProgramTaskTemplates(programId!),
-      fetchProgramNotificationRules(programId!),
-    ])
-      .then(([t, tk, n]) => {
-        setTriggers(t);
-        setTasks(tk);
-        setNotifications(n);
-      })
-      .catch(() => {});
+      .catch((e) => setError(getErrorMessage(e)))
+      .finally(() => setLoading(false));
   }, [isEdit, programId]);
+
+  useEffect(() => {
+    if (isEdit) return;
+    fetchPlants().then((p) => {
+      if (p[0] && !plantId) setPlantId(p[0].id);
+    });
+  }, [isEdit, plantId]);
+
+  const addTrigger = async (pid: string) => {
+    const t = await createProgramTrigger(pid, {
+      trigger_type: newTrigger.trigger_type,
+      interval_days:
+        newTrigger.trigger_type === 'time' && newTrigger.interval_days
+          ? Number(newTrigger.interval_days)
+          : undefined,
+      threshold_value:
+        METER_TRIGGER_TYPES.has(newTrigger.trigger_type) && newTrigger.threshold_value
+          ? Number(newTrigger.threshold_value)
+          : undefined,
+    });
+    setTriggers((prev) => [...prev, t]);
+    setNewTrigger({ trigger_type: 'time', interval_days: '30', threshold_value: '' });
+  };
+
+  const addTask = async (pid: string) => {
+    const checklist = newTask.checklist
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((label) => ({ label, type: 'checkbox' }));
+    const t = await createProgramTaskTemplate(pid, {
+      name: newTask.name.trim(),
+      description: newTask.description || undefined,
+      checklist,
+      sort_order: tasks.length,
+    });
+    setTasks((prev) => [...prev, t]);
+    setNewTask({ name: '', description: '', checklist: '' });
+  };
+
+  const addNotification = async (pid: string) => {
+    const n = await createProgramNotificationRule(pid, {
+      offset_days: Number(newNotification.offset_days) || 0,
+      recipient_role: newNotification.recipient_role,
+    });
+    setNotifications((prev) => [...prev, n]);
+  };
 
   const ensureProgram = async (): Promise<string> => {
     if (id) {
@@ -150,6 +197,7 @@ export function MaintenanceProgramWizardPage() {
         category: program.category,
         priority: program.priority,
         department_id: program.department_id || undefined,
+        asset_id: program.asset_id || undefined,
         responsible_team: program.responsible_team || undefined,
         estimated_duration_min: program.estimated_duration_min
           ? Number(program.estimated_duration_min)
@@ -166,6 +214,7 @@ export function MaintenanceProgramWizardPage() {
       category: program.category,
       priority: program.priority,
       department_id: program.department_id || undefined,
+      asset_id: program.asset_id || undefined,
       responsible_team: program.responsible_team || undefined,
       estimated_duration_min: program.estimated_duration_min
         ? Number(program.estimated_duration_min)
@@ -182,44 +231,23 @@ export function MaintenanceProgramWizardPage() {
     setError('');
     try {
       const pid = await ensureProgram();
-      if (step === 1 && newTrigger.trigger_type) {
-        const t = await createProgramTrigger(pid, {
-          trigger_type: newTrigger.trigger_type,
-          interval_days: newTrigger.interval_days ? Number(newTrigger.interval_days) : undefined,
-          threshold_value: newTrigger.threshold_value ? Number(newTrigger.threshold_value) : undefined,
-        });
-        setTriggers((prev) => [...prev, t]);
-        setNewTrigger({ trigger_type: 'time', interval_days: '30', threshold_value: '' });
-      }
-      if (step === 2 && newTask.name.trim()) {
-        const checklist = newTask.checklist
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((label) => ({ label, type: 'checkbox' }));
-        const t = await createProgramTaskTemplate(pid, {
-          name: newTask.name.trim(),
-          description: newTask.description || undefined,
-          checklist,
-          sort_order: tasks.length,
-        });
-        setTasks((prev) => [...prev, t]);
-        setNewTask({ name: '', description: '', checklist: '' });
-      }
-      if (step === 3) {
-        const n = await createProgramNotificationRule(pid, {
-          offset_days: Number(newNotification.offset_days) || 0,
-          recipient_role: newNotification.recipient_role,
-        });
-        setNotifications((prev) => [...prev, n]);
-      }
       if (step === 4) {
         await updateMaintenanceProgram(pid, {
           auto_generate_work_orders: program.auto_generate_work_orders,
         });
       }
       if (step === STEPS.length - 1) {
-        await updateMaintenanceProgram(pid, { status: 'active' });
+        if (!isEdit && triggers.length === 0) {
+          setError('Add at least one trigger before finishing.');
+          return;
+        }
+        if (!isEdit && tasks.length === 0) {
+          setError('Add at least one task template before finishing.');
+          return;
+        }
+        if (!isEdit) {
+          await updateMaintenanceProgram(pid, { status: 'active' });
+        }
         navigate('/maintenance/programs');
         return;
       }
@@ -230,6 +258,52 @@ export function MaintenanceProgramWizardPage() {
       setSaving(false);
     }
   };
+
+  const handleAddTrigger = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const pid = await ensureProgram();
+      await addTrigger(pid);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddTask = async () => {
+    if (!newTask.name.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      const pid = await ensureProgram();
+      await addTask(pid);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddNotification = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const pid = await ensureProgram();
+      await addNotification(pid);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-500">Loading PM program…</div>
+    );
+  }
 
   return (
     <div>
@@ -297,6 +371,35 @@ export function MaintenanceProgramWizardPage() {
                 ))}
               </select>
             </label>
+            <label className="block text-sm">
+              <span className="text-slate-600">Asset (required for heat/runtime triggers)</span>
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                value={program.asset_id}
+                onChange={(e) => setProgram({ ...program, asset_id: e.target.value })}
+              >
+                <option value="">Select asset</option>
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.asset_no})</option>
+                ))}
+              </select>
+            </label>
+            {isEdit && (
+              <label className="block text-sm">
+                <span className="text-slate-600">Status</span>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                  value={program.status}
+                  onChange={(e) =>
+                    setProgram({ ...program, status: e.target.value as 'draft' | 'active' | 'inactive' })
+                  }
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+            )}
             <Input
               label="Responsible team"
               value={program.responsible_team}
@@ -368,9 +471,12 @@ export function MaintenanceProgramWizardPage() {
             </div>
             {METER_TRIGGER_TYPES.has(newTrigger.trigger_type) && (
               <p className="text-xs text-slate-500">
-                Uses the asset&apos;s life counter ({newTrigger.trigger_type.replace(/_/g, ' ')}). Link this program to an asset on the program record after saving.
+                Uses the asset life counter on the selected asset. Set asset on the Program step.
               </p>
             )}
+            <Button type="button" variant="secondary" size="sm" onClick={handleAddTrigger} disabled={saving}>
+              + Add trigger
+            </Button>
           </div>
         )}
 
@@ -392,6 +498,9 @@ export function MaintenanceProgramWizardPage() {
                 onChange={(e) => setNewTask({ ...newTask, checklist: e.target.value })}
               />
             </label>
+            <Button type="button" variant="secondary" size="sm" onClick={handleAddTask} disabled={saving || !newTask.name.trim()}>
+              + Add task
+            </Button>
           </div>
         )}
 
@@ -417,6 +526,9 @@ export function MaintenanceProgramWizardPage() {
                 onChange={(e) => setNewNotification({ ...newNotification, recipient_role: e.target.value })}
               />
             </div>
+            <Button type="button" variant="secondary" size="sm" onClick={handleAddNotification} disabled={saving}>
+              + Add notification rule
+            </Button>
           </div>
         )}
 
@@ -444,7 +556,9 @@ export function MaintenanceProgramWizardPage() {
             <div><dt className="inline font-medium">Tasks: </dt><dd className="inline">{tasks.length}</dd></div>
             <div><dt className="inline font-medium">Notifications: </dt><dd className="inline">{notifications.length}</dd></div>
             <div><dt className="inline font-medium">Auto WO: </dt><dd className="inline">{program.auto_generate_work_orders ? 'Yes' : 'No'}</dd></div>
-            <div><dt className="inline font-medium">On finish: </dt><dd className="inline">Program will be set to Active</dd></div>
+            {!isEdit && (
+              <div><dt className="inline font-medium">On finish: </dt><dd className="inline">Program will be set to Active</dd></div>
+            )}
           </dl>
         )}
 
@@ -453,7 +567,7 @@ export function MaintenanceProgramWizardPage() {
             Back
           </Button>
           <Button onClick={saveStep} disabled={saving || (step === 0 && !program.name.trim())}>
-            {saving ? 'Saving…' : step === STEPS.length - 1 ? 'Finish' : 'Save & continue'}
+            {saving ? 'Saving…' : step === STEPS.length - 1 ? (isEdit ? 'Save changes' : 'Finish') : 'Save & continue'}
           </Button>
         </div>
       </Card>

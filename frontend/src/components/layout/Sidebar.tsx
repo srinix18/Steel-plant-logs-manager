@@ -254,6 +254,9 @@ export function Sidebar() {
                 <NavLink to="/workforce/payroll" className={linkClass}>
                   Payroll
                 </NavLink>
+                <NavLink to="/workforce/salary-structures" className={linkClass}>
+                  Salary Structures
+                </NavLink>
               </>
             )}
           </>

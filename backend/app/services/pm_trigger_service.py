@@ -26,13 +26,26 @@ _METER_KEYS = {
     MaintenanceTriggerType.TONNAGE.value: "tonnage",
 }
 
+# Legacy seed data used "heats" for furnace assets
+_METER_ALIASES: dict[str, tuple[str, ...]] = {
+    "heat_count": ("heat_count", "heats"),
+}
+
+
+def _read_meter(counters: dict, meter_key: str) -> float:
+    keys = _METER_ALIASES.get(meter_key, (meter_key,))
+    for key in keys:
+        if key in counters and counters[key] is not None:
+            return float(counters[key])
+    return 0.0
+
 
 class PmTriggerService:
     def __init__(self) -> None:
         self._wo_service = PmWorkOrderService()
 
     async def evaluate_all(
-        self, session: AsyncSession, actor: User | None = None
+        self, session: AsyncSession, actor: User | None = None, *, force: bool = False
     ) -> PmEvaluateResponse:
         result = await session.execute(
             select(MaintenanceProgram)
@@ -59,7 +72,7 @@ class PmTriggerService:
                 if not trigger.is_active:
                     continue
                 triggers_evaluated += 1
-                fired = await self._evaluate_trigger(session, trigger, asset, now)
+                fired = await self._evaluate_trigger(session, trigger, asset, now, force=force)
                 if not fired:
                     continue
 
@@ -106,10 +119,16 @@ class PmTriggerService:
         trigger: MaintenanceProgramTrigger,
         asset: Asset | None,
         now: datetime,
+        force: bool = False,
     ) -> bool:
         ttype = trigger.trigger_type
 
+        if force and ttype == MaintenanceTriggerType.MANUAL.value:
+            return True
+
         if ttype == MaintenanceTriggerType.TIME.value:
+            if force and trigger.interval_days:
+                return True
             if trigger.next_due_at and now >= trigger.next_due_at:
                 return True
             if trigger.interval_days and trigger.last_fired_at:
@@ -131,16 +150,24 @@ class PmTriggerService:
             return False
 
         counters = asset.life_counters or {}
-        current = float(counters.get(meter_key, 0))
-        baseline = float((trigger.last_fired_at and counters.get(f"{meter_key}_baseline", 0)) or 0)
+        current = _read_meter(counters, meter_key)
+        baseline_key = f"{meter_key}_baseline"
+        baseline = float(counters.get(baseline_key, 0)) if trigger.last_fired_at else 0.0
         if trigger.last_fired_at is None:
-            counters[f"{meter_key}_baseline"] = current
+            counters[baseline_key] = current
             asset.life_counters = counters
+            if force and trigger.threshold_value and current >= trigger.threshold_value:
+                return True
             return False
 
         delta = current - baseline
+        if force and trigger.threshold_value and delta >= trigger.threshold_value:
+            counters[baseline_key] = current
+            asset.life_counters = counters
+            return True
+
         if delta >= trigger.threshold_value:
-            counters[f"{meter_key}_baseline"] = current
+            counters[baseline_key] = current
             asset.life_counters = counters
             return True
         return False

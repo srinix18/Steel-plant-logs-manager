@@ -399,7 +399,11 @@ async def pm_analytics(
 
 
 @router.post("/maintenance/pm/evaluate", response_model=PmEvaluateResponse)
-async def evaluate_pm_triggers(session: DbSession, user: CurrentUser):
-    result = await trigger_service.evaluate_all(session, user)
+async def evaluate_pm_triggers(
+    session: DbSession,
+    user: CurrentUser,
+    force: bool = False,
+):
+    result = await trigger_service.evaluate_all(session, user, force=force)
     await session.commit()
     return result

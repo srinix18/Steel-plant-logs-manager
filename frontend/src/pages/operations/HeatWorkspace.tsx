@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   fetchProcessRun,
@@ -25,11 +25,25 @@ import type {
   ProcessRunDetail,
   SteelGrade,
   TemplateSection,
+  WorkflowTransition,
 } from '../../types';
 import { mergeCalculatedIntoFields, getCalculatedFieldSpecs } from '../../utils/formulaEngine';
+import {
+  isIafHeatTemplate,
+  stateTabKey,
+  tabHasPendingAction,
+  transitionHint,
+  transitionsForTab,
+} from '../../utils/heatWorkflowUi';
+import { HeatWorkflowStepper } from '../../components/operations/HeatWorkflowStepper';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+
+function sectionIndexForKey(sections: TemplateSection[], key: string): number {
+  const idx = sections.findIndex((s) => s.key === key);
+  return idx >= 0 ? idx : 0;
+}
 
 export function HeatWorkspace() {
   const { runId } = useParams<{ runId: string }>();
@@ -48,6 +62,11 @@ export function HeatWorkspace() {
   const [plantId, setPlantId] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+
+  const sectionKeys = useMemo(() => sections.map((s) => s.key), [sections]);
+  const useGuidedWorkflow = isIafHeatTemplate(sectionKeys);
+  const availableTransitions = run?.workflow?.available_transitions ?? [];
 
   const load = async () => {
     if (!runId) return;
@@ -108,6 +127,11 @@ export function HeatWorkspace() {
 
       const ev = await fetchRunEvents(runId);
       setEvents(ev);
+
+      if (isIafHeatTemplate(sorted.map((s) => s.key))) {
+        const tabKey = stateTabKey(data.current_state);
+        if (tabKey) setActiveTab(sectionIndexForKey(sorted, tabKey));
+      }
     } catch (e) {
       setError(getErrorMessage(e));
     }
@@ -180,13 +204,21 @@ export function HeatWorkspace() {
     }
   };
 
-  const handleTransition = async (toState: string) => {
+  const handleTransition = async (transition: WorkflowTransition) => {
     if (!runId) return;
+    setTransitioning(true);
+    setError('');
     try {
-      await transitionProcessRun(runId, toState);
+      await transitionProcessRun(runId, transition.to_state);
       await load();
+      if (useGuidedWorkflow) {
+        const tabKey = stateTabKey(transition.to_state);
+        if (tabKey) setActiveTab(sectionIndexForKey(sections, tabKey));
+      }
     } catch (e) {
       setError(getErrorMessage(e));
+    } finally {
+      setTransitioning(false);
     }
   };
 
@@ -195,6 +227,10 @@ export function HeatWorkspace() {
   }
 
   const section = sections[activeTab];
+  const tabTransitions = useGuidedWorkflow && section
+    ? transitionsForTab(availableTransitions, section.key)
+    : availableTransitions;
+
   const renderCtx = {
     gradeElements,
     alloyMaterials,
@@ -211,30 +247,71 @@ export function HeatWorkspace() {
     onFieldNow: (key: string) => handleFieldChange(key, new Date().toISOString()),
   };
 
+  const renderWorkflowActions = (transitions: WorkflowTransition[]) => {
+    if (transitions.length === 0) return null;
+
+    return (
+      <div className="mt-6 rounded-lg border border-brand-200 bg-brand-50/60 p-4">
+        <h3 className="text-sm font-semibold text-brand-900">Next step on this tab</h3>
+        {transitions.length === 1 && transitionHint(transitions[0]) && (
+          <p className="mt-1 text-sm text-brand-800/80">{transitionHint(transitions[0])}</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {transitions.map((t) => {
+            const isAbort = t.to_state === 'aborted';
+            return (
+              <Button
+                key={`${t.from_state}-${t.to_state}`}
+                variant={isAbort ? 'danger' : 'primary'}
+                disabled={saving || transitioning}
+                onClick={() => handleTransition(t)}
+              >
+                {transitioning ? 'Working…' : t.label}
+              </Button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Save this section before advancing the heat.</p>
+      </div>
+    );
+  };
+
   return (
-    <div className="mx-auto max-w-6xl pb-24">
+    <div className="mx-auto max-w-6xl pb-8">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{run.run_number}</h1>
-          <p className="text-sm text-slate-500">Log sheet — revision locked at creation</p>
+          <p className="text-sm text-slate-500">
+            {useGuidedWorkflow
+              ? 'Follow the tabs in order — workflow actions appear on the relevant section only.'
+              : 'Log sheet — revision locked at creation'}
+          </p>
         </div>
         <Badge color="blue">{run.current_state.replace(/_/g, ' ')}</Badge>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
+      {useGuidedWorkflow && <HeatWorkflowStepper currentState={run.current_state} />}
+
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
-        {sections.map((s, idx) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => setActiveTab(idx)}
-            className={`whitespace-nowrap px-4 py-3 text-sm font-medium ${
-              activeTab === idx ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-500'
-            }`}
-          >
-            {s.title}
-          </button>
-        ))}
+        {sections.map((s, idx) => {
+          const hasAction = useGuidedWorkflow && tabHasPendingAction(availableTransitions, s.key);
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setActiveTab(idx)}
+              className={`relative whitespace-nowrap px-4 py-3 text-sm font-medium ${
+                activeTab === idx ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-500'
+              }`}
+            >
+              {s.title}
+              {hasAction && (
+                <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-brand-500 align-middle" title="Action available" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {section && (
@@ -250,10 +327,28 @@ export function HeatWorkspace() {
             onSaveSection={saveSection}
             onSaveFields={saveFields}
           />
+          {renderWorkflowActions(tabTransitions)}
         </Card>
       )}
 
-      <Card>
+      {!useGuidedWorkflow && availableTransitions.length > 0 && (
+        <Card className="mt-4">
+          <h3 className="mb-2 font-semibold">Workflow</h3>
+          <div className="flex flex-wrap gap-2">
+            {availableTransitions.map((t) => (
+              <Button
+                key={t.to_state}
+                disabled={transitioning}
+                onClick={() => handleTransition(t)}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card className="mt-4">
         <h3 className="mb-1 font-semibold">Run activity log</h3>
         <p className="mb-2 text-xs text-slate-500">
           Workflow transitions and system events for this run (not your form field values).
@@ -270,23 +365,6 @@ export function HeatWorkspace() {
           </ul>
         )}
       </Card>
-
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4 md:left-64">
-        <div className="mx-auto max-w-6xl">
-          <p className="mb-2 text-xs text-slate-500">
-            Heat status: <span className="font-medium text-slate-700">{run.current_state.replace(/_/g, ' ')}</span>
-            {' · '}
-            Fill each tab and use <span className="font-medium">Save</span> — workflow buttons only move the heat through its lifecycle (they do not save your form).
-          </p>
-          <div className="flex gap-2 overflow-x-auto">
-          {run.workflow?.available_transitions.map((t) => (
-            <Button key={t.to_state} onClick={() => handleTransition(t.to_state)} className="whitespace-nowrap">
-              {t.label}
-            </Button>
-          ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -352,6 +352,40 @@ export async function fetchSalaryStructures(userId?: string) {
   return data;
 }
 
+export async function createSalaryStructure(payload: {
+  user_id: string;
+  basic: number;
+  hra: number;
+  allowances: number;
+  pf: number;
+  esi: number;
+  other_deductions: number;
+  effective_from: string;
+  effective_to?: string;
+}) {
+  const { data } = await apiClient.post<SalaryStructure>('/workforce/payroll/salary-structures', payload);
+  return data;
+}
+
+export async function updateSalaryStructure(
+  structId: string,
+  payload: Partial<{
+    basic: number;
+    hra: number;
+    allowances: number;
+    pf: number;
+    esi: number;
+    other_deductions: number;
+    effective_to: string;
+  }>
+) {
+  const { data } = await apiClient.patch<SalaryStructure>(
+    `/workforce/payroll/salary-structures/${structId}`,
+    payload
+  );
+  return data;
+}
+
 // Dashboard summary
 export async function fetchWorkforceOpsSummary() {
   const { data } = await apiClient.get<WorkforceOpsSummary>('/workforce/ops/summary');

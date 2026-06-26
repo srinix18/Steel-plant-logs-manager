@@ -25,6 +25,11 @@ async def _seed_demo_salary_structures(session: AsyncSession, org_id) -> None:
         ("melter@chandansteel.com", 25000, 8000, 2000, 1800, 500, 200),
         ("iaf.supervisor@chandansteel.com", 35000, 12000, 3000, 2500, 750, 300),
         ("worker.rolling@chandansteel.com", 22000, 7000, 1500, 1600, 400, 150),
+        ("hod@chandansteel.com", 55000, 18000, 5000, 4000, 1200, 500),
+        ("hr@chandansteel.com", 48000, 15000, 4000, 3500, 1000, 400),
+        ("worker.bbd@chandansteel.com", 24000, 7500, 1800, 1700, 450, 175),
+        ("supervisor.bbd@chandansteel.com", 32000, 10000, 2500, 2200, 650, 250),
+        ("worker.forge@chandansteel.com", 23000, 7200, 1600, 1650, 420, 160),
     ]
     effective = date(2024, 1, 1)
     for email, basic, hra, allowances, pf, esi, other in demos:

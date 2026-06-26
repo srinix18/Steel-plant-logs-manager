@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getErrorMessage } from '../../api/client';
 import { fetchPlants } from '../../api/platform';
 import {
@@ -77,21 +78,69 @@ export function PayrollPage() {
     }
   };
 
+  const summary = useMemo(() => {
+    if (lineItems.length === 0) return null;
+    return {
+      headcount: lineItems.length,
+      gross: lineItems.reduce((s, i) => s + i.gross_salary, 0),
+      deductions: lineItems.reduce((s, i) => s + i.deductions, 0),
+      net: lineItems.reduce((s, i) => s + i.net_salary, 0),
+    };
+  }, [lineItems]);
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Payroll</h1>
-          <p className="mt-1 text-sm text-slate-500">Monthly payroll runs and line items.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Monthly payroll — pro-rated by attendance (present, half-day, approved leave).
+          </p>
         </div>
-        <Button onClick={createRun}>Create payroll run</Button>
+        <div className="flex gap-2">
+          <Link to="/workforce/salary-structures">
+            <Button variant="secondary">Salary structures</Button>
+          </Link>
+          <Button onClick={createRun}>Create payroll run</Button>
+        </div>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {salaryCount === 0 && (
         <div className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          No salary structures found. Add salary structures for employees before processing payroll —
-          otherwise no payslips will be generated.
+          No salary structures found.{' '}
+          <Link to="/workforce/salary-structures" className="font-medium text-brand-600 underline">
+            Add salary structures
+          </Link>{' '}
+          before processing payroll.
+        </div>
+      )}
+
+      <Card className="mb-4 border-slate-200 bg-slate-50">
+        <p className="text-sm text-slate-700">
+          <strong>Demo flow:</strong> 1) Mark attendance for the month → 2) Ensure salary structures exist →
+          3) Create payroll run → 4) Process → 5) Employees view payslips under My Payslips.
+        </p>
+      </Card>
+
+      {summary && (
+        <div className="mb-4 grid gap-4 sm:grid-cols-4">
+          <Card>
+            <p className="text-xs uppercase text-slate-500">Employees paid</p>
+            <p className="text-2xl font-bold">{summary.headcount}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase text-slate-500">Total gross</p>
+            <p className="text-2xl font-bold">{formatCurrency(summary.gross)}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase text-slate-500">Total deductions</p>
+            <p className="text-2xl font-bold">{formatCurrency(summary.deductions)}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase text-slate-500">Total net</p>
+            <p className="text-2xl font-bold text-green-700">{formatCurrency(summary.net)}</p>
+          </Card>
         </div>
       )}
 
@@ -133,7 +182,7 @@ export function PayrollPage() {
               {lineItems.length === 0 && (
                 <p className="mb-3 text-sm text-amber-700">
                   No line items yet. Process the run after employees have salary structures and
-                  attendance records for the month.
+                  attendance marked for the month.
                 </p>
               )}
               <Table
@@ -156,3 +205,4 @@ export function PayrollPage() {
     </div>
   );
 }
+

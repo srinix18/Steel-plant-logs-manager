@@ -25,6 +25,23 @@ workflow_service = WorkflowService()
 remark_service = RunRemarkService()
 
 
+async def _increment_heat_counter_on_asset(session, run) -> None:
+    """Bump furnace heat counters when a heat run completes (PM heat_count triggers)."""
+    if run.run_type != "heat" or not run.primary_asset_id:
+        return
+    from app.db.models import Asset
+
+    asset = await session.get(Asset, run.primary_asset_id)
+    if not asset:
+        return
+    counters = dict(asset.life_counters or {})
+    next_count = int(counters.get("heat_count", counters.get("heats", 0))) + 1
+    counters["heat_count"] = next_count
+    counters["heats"] = next_count
+    asset.life_counters = counters
+    await session.flush()
+
+
 @router.post("/process-instances/{instance_id}/runs", response_model=ProcessRunDetailResponse, status_code=201)
 async def create_run(instance_id: UUID, data: ProcessRunCreate, session: DbSession, user: CurrentUser):
     return await run_service.create_run(session, instance_id, user, data)
@@ -98,6 +115,7 @@ async def transition_run(run_id: UUID, data: TransitionRequest, session: DbSessi
         raise HTTPException(status_code=404, detail="Process run not found")
     await workflow_service.execute_transition(session, run, user, data)
     if data.to_state in ("completed", "closed", "approved"):
+        await _increment_heat_counter_on_asset(session, run)
         await run_service.compute_analytics_facts(session, run_id)
         try:
             from app.services.cost_engine_service import CostEngineService

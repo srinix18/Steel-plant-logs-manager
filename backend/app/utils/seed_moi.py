@@ -84,7 +84,7 @@ async def seed_all(session: AsyncSession) -> None:
             asset_no=f"IAF-{i:02d}",
             name=f"IAF #{i}",
             plc_tag_prefix=f"IAF{i}.",
-            life_counters={"heats": 0},
+            life_counters={"heats": 0, "heat_count": 0},
         )
         session.add(asset)
         iaf_assets.append(asset)

@@ -38,6 +38,7 @@ import { MyLeavePage } from './pages/workforce/MyLeavePage';
 import { SkillMatrixPage } from './pages/workforce/SkillMatrixPage';
 import { TrainingPage } from './pages/workforce/TrainingPage';
 import { PayrollPage } from './pages/workforce/PayrollPage';
+import { SalaryStructuresPage } from './pages/workforce/SalaryStructuresPage';
 import { MyPayslipsPage } from './pages/workforce/MyPayslipsPage';
 import { AssetsPage } from './pages/foundation/AssetsPage';
 import { MastersPage } from './pages/foundation/MastersPage';
@@ -164,6 +165,7 @@ function AppRoutes() {
             <Route path="workforce/skills" element={<SkillMatrixPage />} />
             <Route path="workforce/training" element={<TrainingPage />} />
             <Route path="workforce/payroll" element={<PayrollPage />} />
+            <Route path="workforce/salary-structures" element={<SalaryStructuresPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={HANDOVER_WRITE_ROLES} />}>
