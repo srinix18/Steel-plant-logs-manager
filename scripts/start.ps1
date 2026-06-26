@@ -18,6 +18,12 @@ if (-not $SkipSetup) {
 Ensure-EnvFiles
 Ensure-PostgresRunning
 
+if (Test-Path $VenvPython) {
+    Write-Step "Syncing backend dependencies"
+    & $VenvPython -m pip install -r (Join-Path $BackendDir "requirements.txt") -q
+    Write-Ok "Backend dependencies up to date"
+}
+
 Write-Step "Preparing ports"
 Stop-BackendForRestart -Port $BackendPort
 $startFrontend = Prepare-ServiceStart -Port $FrontendPort -Label "frontend" -HealthCheck { Test-FrontendHealthy -Port $FrontendPort }

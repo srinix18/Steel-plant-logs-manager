@@ -11,6 +11,7 @@ class UserRole(str, enum.Enum):
     SUPERVISOR = "supervisor"
     WORKER = "worker"
     MAINTENANCE = "maintenance"
+    MAINTENANCE_MANAGER = "maintenance_manager"
     # Legacy aliases for migration
     ADMIN = "admin"
     DEPARTMENT = "department"
@@ -234,3 +235,86 @@ class CostCalculationStatus(str, enum.Enum):
     COMPLETE = "complete"
     PARTIAL = "partial"
     FAILED = "failed"
+
+
+class ImportJobStatus(str, enum.Enum):
+    UPLOADED = "uploaded"
+    PREVIEWED = "previewed"
+    VALIDATED = "validated"
+    IMPORTING = "importing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ImportRowStatus(str, enum.Enum):
+    PENDING = "pending"
+    VALID = "valid"
+    INVALID = "invalid"
+    IMPORTED = "imported"
+    UPDATED = "updated"
+    SKIPPED = "skipped"
+
+
+class MaintenanceProgramStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class MaintenanceTriggerType(str, enum.Enum):
+    TIME = "time"
+    RUNTIME_HOURS = "runtime_hours"
+    HEAT_COUNT = "heat_count"
+    PRODUCTION_COUNT = "production_count"
+    TONNAGE = "tonnage"
+    MANUAL = "manual"
+    CONDITION = "condition"
+
+
+class MaintenanceWorkOrderStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ASSIGNED = "assigned"
+    ACCEPTED = "accepted"
+    IN_PROGRESS = "in_progress"
+    WAITING_SHUTDOWN = "waiting_shutdown"
+    WAITING_PARTS = "waiting_parts"
+    COMPLETED = "completed"
+    VERIFIED = "verified"
+    CLOSED = "closed"
+
+
+class MaintenanceTaskExecutionStatus(str, enum.Enum):
+    PENDING = "pending"
+    PASS = "pass"
+    FAIL = "fail"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class LeaveRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class EmploymentType(str, enum.Enum):
+    PERMANENT = "permanent"
+    CONTRACT = "contract"
+    TEMPORARY = "temporary"
+
+
+class PayrollRunStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class RosterPeriodType(str, enum.Enum):
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class DowntimeType(str, enum.Enum):
+    PLANNED = "planned"
+    UNPLANNED = "unplanned"
+    BREAKDOWN = "breakdown"

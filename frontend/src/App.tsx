@@ -20,6 +20,11 @@ import { RunReportPage } from './pages/reports/RunReportPage';
 import { MyRunsPage } from './pages/operations/MyRunsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { MaintenanceQueuePage } from './pages/maintenance/MaintenanceQueuePage';
+import { MaintenanceDashboardPage } from './pages/maintenance/MaintenanceDashboardPage';
+import { MaintenanceProgramsPage } from './pages/maintenance/MaintenanceProgramsPage';
+import { MaintenanceProgramWizardPage } from './pages/maintenance/MaintenanceProgramWizardPage';
+import { WorkOrdersPage } from './pages/maintenance/WorkOrdersPage';
+import { WorkOrderExecutionPage } from './pages/maintenance/WorkOrderExecutionPage';
 import { WorkforceDashboardPage } from './pages/workforce/WorkforceDashboardPage';
 import { WorkforceEmployeesPage } from './pages/workforce/WorkforceEmployeesPage';
 import { WorkforceContractorsPage } from './pages/workforce/WorkforceContractorsPage';
@@ -27,6 +32,13 @@ import { ShiftAssignmentsPage } from './pages/workforce/ShiftAssignmentsPage';
 import { AttendanceEntryPage } from './pages/workforce/AttendanceEntryPage';
 import { ShiftHandoverPage } from './pages/workforce/ShiftHandoverPage';
 import { MyAttendancePage } from './pages/workforce/MyAttendancePage';
+import { ShiftPlanningPage } from './pages/workforce/ShiftPlanningPage';
+import { LeaveRequestsPage } from './pages/workforce/LeaveRequestsPage';
+import { MyLeavePage } from './pages/workforce/MyLeavePage';
+import { SkillMatrixPage } from './pages/workforce/SkillMatrixPage';
+import { TrainingPage } from './pages/workforce/TrainingPage';
+import { PayrollPage } from './pages/workforce/PayrollPage';
+import { MyPayslipsPage } from './pages/workforce/MyPayslipsPage';
 import { AssetsPage } from './pages/foundation/AssetsPage';
 import { MastersPage } from './pages/foundation/MastersPage';
 import { ObservationsPage } from './pages/foundation/ObservationsPage';
@@ -50,6 +62,8 @@ import {
   HOD_ROLES,
   SUPERVISOR_ONLY_ROLES,
   MAINTENANCE_ROLES,
+  MAINTENANCE_MANAGER_ROLES,
+  MAINTENANCE_PM_VIEW_ROLES,
   FINANCE_VIEW_ROLES,
 } from './utils/roles';
 import { FinanceDashboardPage } from './pages/finance/FinanceDashboardPage';
@@ -107,6 +121,18 @@ function AppRoutes() {
 
           <Route path="messages" element={<MessagesPage />} />
 
+          <Route element={<ProtectedRoute allowedRoles={MAINTENANCE_PM_VIEW_ROLES} />}>
+            <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />
+            <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
+            <Route path="maintenance/work-orders/:workOrderId" element={<WorkOrderExecutionPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={MAINTENANCE_MANAGER_ROLES} />}>
+            <Route path="maintenance/programs" element={<MaintenanceProgramsPage />} />
+            <Route path="maintenance/programs/new" element={<MaintenanceProgramWizardPage />} />
+            <Route path="maintenance/programs/:programId/edit" element={<MaintenanceProgramWizardPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={MAINTENANCE_ROLES} />}>
             <Route path="maintenance" element={<MaintenanceQueuePage />} />
           </Route>
@@ -133,6 +159,11 @@ function AppRoutes() {
             <Route path="workforce/shift-assignments" element={<ShiftAssignmentsPage />} />
             <Route path="workforce/contractors" element={<WorkforceContractorsPage />} />
             <Route path="workforce/attendance" element={<AttendanceEntryPage />} />
+            <Route path="workforce/shift-planning" element={<ShiftPlanningPage />} />
+            <Route path="workforce/leave" element={<LeaveRequestsPage />} />
+            <Route path="workforce/skills" element={<SkillMatrixPage />} />
+            <Route path="workforce/training" element={<TrainingPage />} />
+            <Route path="workforce/payroll" element={<PayrollPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={HANDOVER_WRITE_ROLES} />}>
@@ -141,6 +172,8 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={WORKER_ROLES} />}>
             <Route path="workforce/my-attendance" element={<MyAttendancePage />} />
+            <Route path="workforce/my-leave" element={<MyLeavePage />} />
+            <Route path="workforce/my-payslips" element={<MyPayslipsPage />} />
           </Route>
 
           <Route path="foundation/documents" element={<DocumentsPage />} />

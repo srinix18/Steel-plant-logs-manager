@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getErrorMessage } from '../../api/client';
 import { fetchWorkforceSummary } from '../../api/workforce';
+import { fetchWorkforceOpsSummary, formatCurrency } from '../../api/workforceOps';
 import type { WorkforceDailySummary } from '../../types';
 import { Badge } from '../../components/ui/Badge';
 
@@ -11,11 +12,18 @@ function todayIso() {
 export function WorkforceDashboardPage() {
   const [date, setDate] = useState(todayIso());
   const [summary, setSummary] = useState<WorkforceDailySummary | null>(null);
+  const [opsSummary, setOpsSummary] = useState<Awaited<ReturnType<typeof fetchWorkforceOpsSummary>> | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchWorkforceSummary(date)
-      .then(setSummary)
+    Promise.all([
+      fetchWorkforceSummary(date),
+      fetchWorkforceOpsSummary().catch(() => null),
+    ])
+      .then(([s, ops]) => {
+        setSummary(s);
+        setOpsSummary(ops);
+      })
       .catch((e) => setError(getErrorMessage(e)));
   }, [date]);
 
@@ -38,6 +46,34 @@ export function WorkforceDashboardPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      {opsSummary && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase text-slate-500">Pending leave</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">{opsSummary.pending_leave_requests}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase text-slate-500">Certs expiring soon</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">{opsSummary.certifications_expiring_soon}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase text-slate-500">Latest payroll</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">
+              {opsSummary.latest_payroll_month && opsSummary.latest_payroll_year
+                ? `${opsSummary.latest_payroll_month}/${opsSummary.latest_payroll_year}`
+                : '—'}
+            </p>
+            <p className="text-xs text-slate-500">{opsSummary.latest_payroll_status ?? 'No runs'}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase text-slate-500">Payroll net (latest)</p>
+            <p className="mt-1 text-2xl font-bold text-brand-700">
+              {opsSummary.total_payroll_net != null ? formatCurrency(opsSummary.total_payroll_net) : '—'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {summary && (
         <>

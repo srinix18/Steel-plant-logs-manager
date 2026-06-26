@@ -254,9 +254,12 @@ export function HeatWorkspace() {
       )}
 
       <Card>
-        <h3 className="mb-2 font-semibold">Recent Events</h3>
+        <h3 className="mb-1 font-semibold">Run activity log</h3>
+        <p className="mb-2 text-xs text-slate-500">
+          Workflow transitions and system events for this run (not your form field values).
+        </p>
         {events.length === 0 ? (
-          <p className="text-sm text-slate-500">No events yet.</p>
+          <p className="text-sm text-slate-500">No events yet — they appear when you advance workflow steps.</p>
         ) : (
           <ul className="space-y-2">
             {events.slice(-5).map((e) => (
@@ -269,12 +272,19 @@ export function HeatWorkspace() {
       </Card>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4 md:left-64">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto">
+        <div className="mx-auto max-w-6xl">
+          <p className="mb-2 text-xs text-slate-500">
+            Heat status: <span className="font-medium text-slate-700">{run.current_state.replace(/_/g, ' ')}</span>
+            {' · '}
+            Fill each tab and use <span className="font-medium">Save</span> — workflow buttons only move the heat through its lifecycle (they do not save your form).
+          </p>
+          <div className="flex gap-2 overflow-x-auto">
           {run.workflow?.available_transitions.map((t) => (
             <Button key={t.to_state} onClick={() => handleTransition(t.to_state)} className="whitespace-nowrap">
               {t.label}
             </Button>
           ))}
+          </div>
         </div>
       </div>
     </div>

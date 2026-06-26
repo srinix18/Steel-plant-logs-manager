@@ -52,7 +52,8 @@ export function CostCalculationsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Cost Calculations</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Bulk recalculate costs after updating masters or mappings
+          Bulk recalculate costs after updating masters or mappings. If raw material shows ₹0, ensure
+          process runs have saved charge mix rows with materials before closing the run.
         </p>
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

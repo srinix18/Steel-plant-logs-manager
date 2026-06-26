@@ -19,6 +19,18 @@ const FINANCE_VIEW_ROLES: UserRole[] = [...CEO_TIER_ROLES, ...HOD_ROLES, ...SUPE
 const FINANCE_MASTERS_WRITE_ROLES: UserRole[] = [...CEO_TIER_ROLES, 'plant_admin'];
 const FINANCE_MAPPING_WRITE_ROLES: UserRole[] = [...CEO_TIER_ROLES, 'plant_admin', 'hod'];
 
+const MAINTENANCE_MANAGER_ROLES: UserRole[] = [
+  ...CEO_TIER_ROLES,
+  'plant_admin',
+  'maintenance_manager',
+];
+const MAINTENANCE_PM_VIEW_ROLES: UserRole[] = [
+  ...MAINTENANCE_MANAGER_ROLES,
+  ...HOD_ROLES,
+  'maintenance',
+];
+const IMPORT_ADMIN_ROLES: UserRole[] = [...PLATFORM_ADMIN_ROLES, ...HR_ROLES, 'plant_admin'];
+
 /** @deprecated use PLATFORM_ADMIN_ROLES */
 const ADMIN_ROLES: UserRole[] = PLATFORM_ADMIN_ROLES;
 
@@ -52,6 +64,26 @@ export function isMaintenance(role: UserRole): boolean {
   return hasRole(role, MAINTENANCE_ROLES);
 }
 
+export function isMaintenanceManager(role: UserRole): boolean {
+  return hasRole(role, MAINTENANCE_MANAGER_ROLES) || role === 'maintenance_manager';
+}
+
+export function canViewPmDashboard(role: UserRole): boolean {
+  return hasRole(role, MAINTENANCE_PM_VIEW_ROLES);
+}
+
+export function canManagePmPrograms(role: UserRole): boolean {
+  return isMaintenanceManager(role);
+}
+
+export function canExecuteWorkOrders(role: UserRole): boolean {
+  return canManagePmPrograms(role) || hasRole(role, MAINTENANCE_ROLES);
+}
+
+export function canRunImports(role: UserRole): boolean {
+  return hasRole(role, IMPORT_ADMIN_ROLES) || hasRole(role, HR_ROLES);
+}
+
 export function isHr(role: UserRole): boolean {
   return hasRole(role, HR_ROLES);
 }
@@ -72,6 +104,9 @@ export {
   SHIFT_FLOOR_ROLES,
   WORKER_ROLES,
   MAINTENANCE_ROLES,
+  MAINTENANCE_MANAGER_ROLES,
+  MAINTENANCE_PM_VIEW_ROLES,
+  IMPORT_ADMIN_ROLES,
   FINANCE_VIEW_ROLES,
   FINANCE_MASTERS_WRITE_ROLES,
   FINANCE_MAPPING_WRITE_ROLES,

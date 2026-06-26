@@ -57,7 +57,7 @@ from app.models.enums import (
 
 def _userrole_db_values(enum_cls):
     """Map UserRole to PostgreSQL labels (legacy UPPER names + new lowercase values)."""
-    use_value = {UserRole.CEO, UserRole.HR, UserRole.HOD, UserRole.MAINTENANCE}
+    use_value = {UserRole.CEO, UserRole.HR, UserRole.HOD, UserRole.MAINTENANCE, UserRole.MAINTENANCE_MANAGER}
     return [m.value if m in use_value else m.name for m in enum_cls]
 
 class Organisation(Base, TimestampMixin):
@@ -200,6 +200,8 @@ class User(Base, TimestampMixin):
     employment_status: Mapped[EmploymentStatus] = mapped_column(
         String(32), default=EmploymentStatus.ACTIVE.value, nullable=False
     )
+    employment_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    manager_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
 class Shift(Base, TimestampMixin):
@@ -611,6 +613,9 @@ class MaintenanceIssue(Base, TimestampMixin):
     closed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    maintenance_work_order_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("maintenance_work_orders.id"), nullable=True
+    )
 
     raiser: Mapped["User"] = relationship(foreign_keys=[raised_by])
     assignee: Mapped[Optional["User"]] = relationship(foreign_keys=[assigned_to])
@@ -1086,3 +1091,340 @@ class CostLineItem(Base):
     source_ref: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     calculation: Mapped["CostCalculation"] = relationship(back_populates="line_items")
+
+
+# --- Phase 4: Import Engine ---
+
+
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    module_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded")
+    summary: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    rows: Mapped[list["ImportJobRow"]] = relationship(back_populates="job", cascade="all, delete-orphan")
+
+
+class ImportJobRow(Base):
+    __tablename__ = "import_job_rows"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("import_jobs.id"), nullable=False)
+    row_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    raw_data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    errors: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+    job: Mapped["ImportJob"] = relationship(back_populates="rows")
+
+
+# --- Phase 4: Enterprise Maintenance PM ---
+
+
+class MaintenanceProgram(Base, TimestampMixin):
+    __tablename__ = "maintenance_programs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    asset_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("asset_groups.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    priority: Mapped[str] = mapped_column(String(32), default="medium")
+    responsible_team: Mapped[Optional[str]] = mapped_column(String(200))
+    estimated_duration_min: Mapped[Optional[int]] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    auto_generate_work_orders: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    triggers: Mapped[list["MaintenanceProgramTrigger"]] = relationship(back_populates="program", cascade="all, delete-orphan")
+    task_templates: Mapped[list["MaintenanceTaskTemplate"]] = relationship(back_populates="program", cascade="all, delete-orphan")
+    notification_rules: Mapped[list["MaintenanceNotificationRule"]] = relationship(back_populates="program", cascade="all, delete-orphan")
+
+
+class MaintenanceProgramTrigger(Base, TimestampMixin):
+    __tablename__ = "maintenance_program_triggers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    program_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_programs.id"), nullable=False)
+    trigger_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    threshold_value: Mapped[Optional[float]] = mapped_column(Float)
+    interval_days: Mapped[Optional[int]] = mapped_column(Integer)
+    last_fired_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    next_due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    program: Mapped["MaintenanceProgram"] = relationship(back_populates="triggers")
+
+
+class MaintenanceTaskTemplate(Base, TimestampMixin):
+    __tablename__ = "maintenance_task_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    program_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_programs.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    estimated_duration_min: Mapped[Optional[int]] = mapped_column(Integer)
+    is_required: Mapped[bool] = mapped_column(Boolean, default=True)
+    checklist: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    photo_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    remarks_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    program: Mapped["MaintenanceProgram"] = relationship(back_populates="task_templates")
+
+
+class MaintenanceNotificationRule(Base, TimestampMixin):
+    __tablename__ = "maintenance_notification_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    program_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_programs.id"), nullable=False)
+    offset_days: Mapped[int] = mapped_column(Integer, default=0)
+    recipient_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    channel: Mapped[str] = mapped_column(String(32), default="in_app")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    program: Mapped["MaintenanceProgram"] = relationship(back_populates="notification_rules")
+
+
+class MaintenanceWorkOrder(Base, TimestampMixin):
+    __tablename__ = "maintenance_work_orders"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    program_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("maintenance_programs.id"), nullable=True)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    source_issue_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("maintenance_issues.id"), nullable=True)
+    wo_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    assigned_team: Mapped[Optional[str]] = mapped_column(String(200))
+    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    scheduled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    estimated_duration_min: Mapped[Optional[int]] = mapped_column(Integer)
+
+    tasks: Mapped[list["MaintenanceWorkOrderTask"]] = relationship(back_populates="work_order", cascade="all, delete-orphan")
+    parts: Mapped[list["MaintenanceWorkOrderPart"]] = relationship(back_populates="work_order", cascade="all, delete-orphan")
+    transitions: Mapped[list["MaintenanceWorkOrderTransition"]] = relationship(back_populates="work_order", cascade="all, delete-orphan")
+    downtime_records: Mapped[list["MaintenanceDowntimeRecord"]] = relationship(back_populates="work_order", cascade="all, delete-orphan")
+
+
+class MaintenanceWorkOrderTransition(Base):
+    __tablename__ = "maintenance_work_order_transitions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    work_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_work_orders.id"), nullable=False)
+    from_state: Mapped[Optional[str]] = mapped_column(String(32))
+    to_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    work_order: Mapped["MaintenanceWorkOrder"] = relationship(back_populates="transitions")
+
+
+class MaintenanceWorkOrderTask(Base, TimestampMixin):
+    __tablename__ = "maintenance_work_order_tasks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    work_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_work_orders.id"), nullable=False)
+    template_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("maintenance_task_templates.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    checklist_responses: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    photos: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    remarks: Mapped[Optional[str]] = mapped_column(Text)
+    time_spent_min: Mapped[Optional[int]] = mapped_column(Integer)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    work_order: Mapped["MaintenanceWorkOrder"] = relationship(back_populates="tasks")
+
+
+class MaintenanceWorkOrderPart(Base, TimestampMixin):
+    __tablename__ = "maintenance_work_order_parts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    work_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_work_orders.id"), nullable=False)
+    part_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    material_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("material_catalog.id"), nullable=True)
+    quantity: Mapped[float] = mapped_column(Float, default=1)
+    unit_cost: Mapped[float] = mapped_column(Float, default=0)
+    total_cost: Mapped[float] = mapped_column(Float, default=0)
+
+    work_order: Mapped["MaintenanceWorkOrder"] = relationship(back_populates="parts")
+
+
+class MaintenanceDowntimeRecord(Base, TimestampMixin):
+    __tablename__ = "maintenance_downtime_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    work_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_work_orders.id"), nullable=False)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    duration_min: Mapped[Optional[float]] = mapped_column(Float)
+    reason: Mapped[Optional[str]] = mapped_column(Text)
+    downtime_type: Mapped[str] = mapped_column(String(32), default="planned")
+
+    work_order: Mapped["MaintenanceWorkOrder"] = relationship(back_populates="downtime_records")
+
+
+class AssetMeterReading(Base, TimestampMixin):
+    __tablename__ = "asset_meter_readings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    meter_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    recorded_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+# --- Phase 4: Workforce Operations ---
+
+
+class LeaveType(Base, TimestampMixin):
+    __tablename__ = "leave_types"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint("organisation_id", "code", name="uq_leave_type_org_code"),)
+
+
+class LeaveRequest(Base, TimestampMixin):
+    __tablename__ = "leave_requests"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    leave_type_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("leave_types.id"), nullable=False)
+    from_date: Mapped[date] = mapped_column(Date, nullable=False)
+    to_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    remarks: Mapped[Optional[str]] = mapped_column(Text)
+    approver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class ShiftRoster(Base, TimestampMixin):
+    __tablename__ = "shift_rosters"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    period_type: Mapped[str] = mapped_column(String(32), default="weekly")
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+
+class ShiftRosterEntry(Base, TimestampMixin):
+    __tablename__ = "shift_roster_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    roster_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shift_rosters.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    shift_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("shifts.id"), nullable=False)
+    roster_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    __table_args__ = (UniqueConstraint("roster_id", "user_id", "roster_date", name="uq_roster_entry"),)
+
+
+class Skill(Base, TimestampMixin):
+    __tablename__ = "skills"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organisations.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+
+    __table_args__ = (UniqueConstraint("organisation_id", "code", name="uq_skill_org_code"),)
+
+
+class EmployeeSkill(Base, TimestampMixin):
+    __tablename__ = "employee_skills"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    skill_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("skills.id"), nullable=False)
+    proficiency_level: Mapped[str] = mapped_column(String(32), default="basic")
+
+    __table_args__ = (UniqueConstraint("user_id", "skill_id", name="uq_employee_skill"),)
+
+
+class TrainingRecord(Base, TimestampMixin):
+    __tablename__ = "training_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    certification: Mapped[Optional[str]] = mapped_column(String(200))
+    issue_date: Mapped[Optional[date]] = mapped_column(Date)
+    expiry_date: Mapped[Optional[date]] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    document_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("department_documents.id"), nullable=True)
+
+
+class SalaryStructure(Base, TimestampMixin):
+    __tablename__ = "salary_structures"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    basic: Mapped[float] = mapped_column(Float, default=0)
+    hra: Mapped[float] = mapped_column(Float, default=0)
+    allowances: Mapped[float] = mapped_column(Float, default=0)
+    pf: Mapped[float] = mapped_column(Float, default=0)
+    esi: Mapped[float] = mapped_column(Float, default=0)
+    other_deductions: Mapped[float] = mapped_column(Float, default=0)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date)
+
+
+class PayrollRun(Base, TimestampMixin):
+    __tablename__ = "payroll_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    month: Mapped[int] = mapped_column(Integer, nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    processed_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("plant_id", "month", "year", name="uq_payroll_run_period"),)
+
+
+class PayrollLineItem(Base, TimestampMixin):
+    __tablename__ = "payroll_line_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    payroll_run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payroll_runs.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    payable_days: Mapped[float] = mapped_column(Float, default=0)
+    gross_salary: Mapped[float] = mapped_column(Float, default=0)
+    deductions: Mapped[float] = mapped_column(Float, default=0)
+    net_salary: Mapped[float] = mapped_column(Float, default=0)
+    payslip_data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+    __table_args__ = (UniqueConstraint("payroll_run_id", "user_id", name="uq_payroll_line_user"),)

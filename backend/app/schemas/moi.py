@@ -12,6 +12,7 @@ from app.models.enums import (
     DelayCodeCategory,
     DelayEventStatus,
     EmploymentStatus,
+    EmploymentType,
     EventSeverity,
     EventSource,
     MaintenanceIssueStatus,
@@ -707,11 +708,15 @@ class CustomerResponse(BaseModel):
 class WorkforceEmployeeCreate(OrgUserCreate):
     employment_status: EmploymentStatus = EmploymentStatus.ACTIVE
     date_of_joining: Optional[date] = None
+    employment_type: Optional[EmploymentType] = None
+    manager_id: Optional[UUID] = None
 
 
 class WorkforceEmployeeUpdate(OrgUserUpdate):
     employment_status: Optional[EmploymentStatus] = None
     date_of_joining: Optional[date] = None
+    employment_type: Optional[EmploymentType] = None
+    manager_id: Optional[UUID] = None
 
 
 class ContractorCreate(BaseModel):

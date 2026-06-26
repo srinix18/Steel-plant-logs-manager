@@ -221,3 +221,128 @@ class AssetService:
         if not resp:
             raise HTTPException(status_code=404, detail="Responsibility not found")
         await session.delete(resp)
+
+    async def get_maintenance_history(
+        self, session: AsyncSession, asset_id: UUID
+    ) -> dict[str, Any]:
+        from app.db.models import (
+            MaintenanceDowntimeRecord,
+            MaintenanceIssue,
+            MaintenanceProgram,
+            MaintenanceProgramTrigger,
+            MaintenanceWorkOrder,
+            MaintenanceWorkOrderPart,
+        )
+
+        asset = await session.get(Asset, asset_id)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+
+        entries: list[dict[str, Any]] = []
+        total_cost = 0.0
+        last_pm_at: str | None = None
+        next_pm_due_at: str | None = None
+
+        wo_result = await session.execute(
+            select(MaintenanceWorkOrder)
+            .where(MaintenanceWorkOrder.asset_id == asset_id)
+            .order_by(MaintenanceWorkOrder.created_at.desc())
+        )
+        work_orders = list(wo_result.scalars())
+
+        for wo in work_orders:
+            occurred = wo.completed_at or wo.started_at or wo.created_at
+            entries.append(
+                {
+                    "id": str(wo.id),
+                    "entry_type": "work_order",
+                    "title": f"{wo.wo_number}: {wo.title}",
+                    "status": wo.status,
+                    "occurred_at": occurred.isoformat() if occurred else "",
+                    "details": {"wo_number": wo.wo_number, "program_id": str(wo.program_id) if wo.program_id else None},
+                }
+            )
+            if wo.program_id and wo.status in ("completed", "verified", "closed"):
+                completed = wo.completed_at or wo.closed_at
+                if completed and (not last_pm_at or completed.isoformat() > last_pm_at):
+                    last_pm_at = completed.isoformat()
+
+        parts_result = await session.execute(
+            select(MaintenanceWorkOrderPart, MaintenanceWorkOrder)
+            .join(MaintenanceWorkOrder, MaintenanceWorkOrderPart.work_order_id == MaintenanceWorkOrder.id)
+            .where(MaintenanceWorkOrder.asset_id == asset_id)
+        )
+        for part, _wo in parts_result.all():
+            total_cost += float(part.total_cost or 0)
+
+        issue_result = await session.execute(
+            select(MaintenanceIssue)
+            .where(MaintenanceIssue.asset_id == asset_id)
+            .order_by(MaintenanceIssue.raised_at.desc())
+        )
+        for issue in issue_result.scalars():
+            entries.append(
+                {
+                    "id": str(issue.id),
+                    "entry_type": "issue",
+                    "title": issue.title,
+                    "status": issue.status.value if hasattr(issue.status, "value") else str(issue.status),
+                    "occurred_at": issue.raised_at.isoformat() if issue.raised_at else "",
+                    "details": {"maintenance_work_order_id": str(issue.maintenance_work_order_id) if issue.maintenance_work_order_id else None},
+                }
+            )
+
+        dt_result = await session.execute(
+            select(MaintenanceDowntimeRecord)
+            .where(MaintenanceDowntimeRecord.asset_id == asset_id)
+            .order_by(MaintenanceDowntimeRecord.started_at.desc())
+        )
+        for dt in dt_result.scalars():
+            entries.append(
+                {
+                    "id": str(dt.id),
+                    "entry_type": "downtime",
+                    "title": dt.reason or "Downtime",
+                    "status": dt.downtime_type,
+                    "occurred_at": dt.started_at.isoformat(),
+                    "details": {"duration_min": dt.duration_min, "work_order_id": str(dt.work_order_id)},
+                }
+            )
+
+        prog_result = await session.execute(
+            select(MaintenanceProgram, MaintenanceProgramTrigger)
+            .join(MaintenanceProgramTrigger, MaintenanceProgramTrigger.program_id == MaintenanceProgram.id)
+            .where(
+                MaintenanceProgram.asset_id == asset_id,
+                MaintenanceProgram.is_active.is_(True),
+                MaintenanceProgramTrigger.is_active.is_(True),
+                MaintenanceProgramTrigger.next_due_at.isnot(None),
+            )
+            .order_by(MaintenanceProgramTrigger.next_due_at.asc())
+            .limit(1)
+        )
+        row = prog_result.first()
+        if row:
+            _prog, trigger = row
+            if trigger.next_due_at:
+                next_pm_due_at = trigger.next_due_at.isoformat()
+                entries.append(
+                    {
+                        "id": str(trigger.id),
+                        "entry_type": "pm_due",
+                        "title": f"PM due: {_prog.name}",
+                        "status": "upcoming",
+                        "occurred_at": trigger.next_due_at.isoformat(),
+                        "details": {"program_id": str(_prog.id)},
+                    }
+                )
+
+        entries.sort(key=lambda e: e.get("occurred_at") or "", reverse=True)
+
+        return {
+            "asset_id": str(asset_id),
+            "last_pm_at": last_pm_at,
+            "next_pm_due_at": next_pm_due_at,
+            "total_maintenance_cost": total_cost,
+            "entries": entries,
+        }

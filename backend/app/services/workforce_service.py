@@ -142,6 +142,14 @@ class WorkforceService:
             user.employment_status = data.employment_status.value
             if data.date_of_joining:
                 user.date_of_joining = data.date_of_joining
+            if data.employment_type is not None:
+                user.employment_type = (
+                    data.employment_type.value
+                    if hasattr(data.employment_type, "value")
+                    else data.employment_type
+                )
+            if data.manager_id is not None:
+                user.manager_id = data.manager_id
             await session.flush()
             return UserProfile.model_validate(user)
         return profile
@@ -163,6 +171,14 @@ class WorkforceService:
                 user.employment_status = data.employment_status.value
             if data.date_of_joining is not None:
                 user.date_of_joining = data.date_of_joining
+            if data.employment_type is not None:
+                user.employment_type = (
+                    data.employment_type.value
+                    if hasattr(data.employment_type, "value")
+                    else data.employment_type
+                )
+            if data.manager_id is not None:
+                user.manager_id = data.manager_id
             await session.flush()
             return UserProfile.model_validate(user)
         return profile

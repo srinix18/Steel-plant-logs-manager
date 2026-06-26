@@ -10,6 +10,7 @@ export type UserRole =
   | 'supervisor'
   | 'worker'
   | 'maintenance'
+  | 'maintenance_manager'
   | 'admin'
   | 'department'
   | 'member';
@@ -30,9 +31,12 @@ export interface User {
   designation?: string | null;
   date_of_joining?: string | null;
   employment_status?: EmploymentStatus | null;
+  employment_type?: EmploymentType | null;
+  manager_id?: string | null;
 }
 
 export type EmploymentStatus = 'active' | 'on_leave' | 'resigned' | 'terminated';
+export type EmploymentType = 'permanent' | 'contract' | 'temporary';
 export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day';
 
 export interface Contractor {
@@ -145,6 +149,8 @@ export interface WorkforceEmployeePayload {
   maintenance_division?: string | null;
   employment_status?: EmploymentStatus;
   date_of_joining?: string | null;
+  employment_type?: EmploymentType;
+  manager_id?: string | null;
 }
 
 export interface WorkforceEmployeeUpdatePayload {
@@ -160,6 +166,8 @@ export interface WorkforceEmployeeUpdatePayload {
   maintenance_division?: string | null;
   employment_status?: EmploymentStatus;
   date_of_joining?: string | null;
+  employment_type?: EmploymentType;
+  manager_id?: string | null;
 }
 
 export interface WorkforceMeResponse {

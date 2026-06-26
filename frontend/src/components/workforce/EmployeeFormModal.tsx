@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { fetchDepartments, fetchPlants, fetchProcesses } from '../../api/platform';
+import { fetchDepartments, fetchPlants, fetchProcesses, fetchPlantUsers } from '../../api/platform';
 import type { IssueCategory } from '../../api/maintenance';
 import { fetchMaintenanceCategories } from '../../api/maintenance';
 import type {
   EmploymentStatus,
+  EmploymentType,
   Process,
   User,
   UserRole,
@@ -14,6 +15,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
 const ASSIGNABLE_ROLES: UserRole[] = ['hr', 'hod', 'supervisor', 'worker', 'maintenance'];
+const EMPLOYMENT_TYPES: EmploymentType[] = ['permanent', 'contract', 'temporary'];
+
 const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['active', 'on_leave', 'resigned', 'terminated'];
 
 const DEFAULT_CATEGORIES: { value: IssueCategory; label: string }[] = [
@@ -38,6 +41,7 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
   const [plants, setPlants] = useState<Awaited<ReturnType<typeof fetchPlants>>>([]);
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [managers, setManagers] = useState<User[]>([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [saving, setSaving] = useState(false);
 
@@ -53,6 +57,8 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
     phone: '',
     maintenance_division: 'equipment',
     employment_status: 'active',
+    employment_type: 'permanent',
+    manager_id: '',
     date_of_joining: '',
   });
 
@@ -61,6 +67,11 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
     fetchPlants().then(setPlants);
     fetchMaintenanceCategories().then(setCategories).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const plantId = plants.find((p) => p.organisation_id === orgId)?.id ?? plants[0]?.id;
+    if (plantId) fetchPlantUsers(plantId).then(setManagers).catch(() => []);
+  }, [orgId, plants]);
 
   useEffect(() => {
     const plantId = plants.find((p) => p.organisation_id === orgId)?.id ?? plants[0]?.id ?? '';
@@ -77,6 +88,8 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
         phone: editing.phone ?? '',
         maintenance_division: (editing.maintenance_division as IssueCategory) ?? 'equipment',
         employment_status: editing.employment_status ?? 'active',
+        employment_type: editing.employment_type ?? 'permanent',
+        manager_id: editing.manager_id ?? '',
         date_of_joining: editing.date_of_joining ?? '',
       });
       if (editing.department_id) {
@@ -117,6 +130,8 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
             phone: form.phone || null,
             password: form.password || undefined,
             employment_status: form.employment_status,
+            employment_type: form.employment_type,
+            manager_id: form.manager_id || null,
             date_of_joining: form.date_of_joining || null,
           },
           true
@@ -129,6 +144,8 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
             process_id: form.role === 'supervisor' ? form.process_id || null : null,
             maintenance_division: form.role === 'maintenance' ? form.maintenance_division || null : null,
             plant_id: form.plant_id || null,
+            employment_type: form.employment_type,
+            manager_id: form.manager_id || null,
             date_of_joining: form.date_of_joining || null,
           },
           false
@@ -247,6 +264,39 @@ export function EmployeeFormModal({ editing, orgId, initialDepartmentId, onCance
             value={form.date_of_joining ?? ''}
             onChange={(e) => setForm({ ...form, date_of_joining: e.target.value })}
           />
+          <label className="block text-sm">
+            <span className="text-slate-600">Employment type</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={form.employment_type ?? 'permanent'}
+              onChange={(e) =>
+                setForm({ ...form, employment_type: e.target.value as EmploymentType })
+              }
+            >
+              {EMPLOYMENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-600">Reporting manager</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={form.manager_id ?? ''}
+              onChange={(e) => setForm({ ...form, manager_id: e.target.value })}
+            >
+              <option value="">None</option>
+              {managers
+                .filter((m) => m.id !== editing?.id)
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                  </option>
+                ))}
+            </select>
+          </label>
           <label className="block text-sm">
             <span className="text-slate-600">Employment status</span>
             <select

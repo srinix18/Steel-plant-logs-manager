@@ -21,6 +21,8 @@ from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, p
 from app.utils.seed_asset_catalog import seed_asset_catalog
 from app.utils.seed_workforce import seed_workforce_demo
 from app.utils.seed_finance import seed_finance
+from app.utils.seed_phase4 import seed_phase4
+from app.services.import_engine.bootstrap import bootstrap_import_handlers
 from app.services.masters_service import MastersService
 from sqlalchemy import select
 from app.db.models import Organisation
@@ -28,6 +30,7 @@ from app.db.models import Organisation
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    bootstrap_import_handlers()
     await init_db()
     async with async_session_factory() as session:
         await seed_all(session)
@@ -48,10 +51,21 @@ async def lifespan(_: FastAPI):
         await seed_workforce_demo(session)
         await seed_asset_catalog(session)
         await seed_finance(session)
+        await seed_phase4(session)
         org = (await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))).scalar_one_or_none()
         if org:
             await MastersService().seed_default_products(session, org.id)
         await session.commit()
+
+    try:
+        from app.services.pm_trigger_service import PmTriggerService
+
+        async with async_session_factory() as session:
+            await PmTriggerService().evaluate_all(session, actor=None)
+            await session.commit()
+    except Exception:
+        pass
+
     yield
 
 

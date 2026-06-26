@@ -454,7 +454,7 @@ def assert_workforce_ops(actor: User, department_id: UUID) -> None:
 
 
 def apply_workforce_department_scope(query: Select, user: User, department_col) -> Select:
-    if is_platform_admin(user) or is_hr(user):
+    if is_platform_admin(user) or is_hr(user) or is_ceo_tier(user):
         return query
     if user.department_id:
         return query.where(department_col == user.department_id)
@@ -612,3 +612,43 @@ def apply_finance_run_scope(query: Select, user: User) -> Select:
             query = query.where(Department.plant_id == user.plant_id)
         return query
     raise HTTPException(status_code=403, detail="Finance access not permitted")
+
+
+MAINTENANCE_MANAGER_ROLES = CEO_TIER_ROLES | {UserRole.PLANT_ADMIN, UserRole.MAINTENANCE_MANAGER}
+MAINTENANCE_PM_VIEW_ROLES = MAINTENANCE_MANAGER_ROLES | HOD_ROLES | {UserRole.MAINTENANCE}
+IMPORT_ADMIN_ROLES = PLATFORM_ADMIN_ROLES | HR_ROLES | {UserRole.PLANT_ADMIN}
+
+
+def is_maintenance_manager(user: User) -> bool:
+    return user.role in MAINTENANCE_MANAGER_ROLES or user.role == UserRole.MAINTENANCE_MANAGER
+
+
+def can_manage_pm_programs(user: User) -> bool:
+    return is_platform_admin(user) or user.role in MAINTENANCE_MANAGER_ROLES
+
+
+def can_execute_work_orders(user: User) -> bool:
+    return can_manage_pm_programs(user) or user.role == UserRole.MAINTENANCE
+
+
+def can_view_pm_dashboard(user: User) -> bool:
+    return can_manage_pm_programs(user) or user.role in HOD_ROLES or user.role == UserRole.MAINTENANCE
+
+
+def assert_pm_program_manage(user: User) -> None:
+    if not can_manage_pm_programs(user):
+        raise HTTPException(status_code=403, detail="Not permitted to manage PM programs")
+
+
+def assert_work_order_access(user: User) -> None:
+    if not (can_execute_work_orders(user) or user.role in HOD_ROLES or is_ceo_tier(user)):
+        raise HTTPException(status_code=403, detail="Work order access not permitted")
+
+
+def can_run_imports(user: User) -> bool:
+    return user.role in IMPORT_ADMIN_ROLES or user.role == UserRole.HR
+
+
+def assert_import_access(user: User) -> None:
+    if not can_run_imports(user):
+        raise HTTPException(status_code=403, detail="Import access not permitted")

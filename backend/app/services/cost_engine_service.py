@@ -229,10 +229,7 @@ class CostEngineService:
                     if rule.material_field_key:
                         mat_val = row.get(rule.material_field_key)
                         if mat_val:
-                            try:
-                                material_id = UUID(str(mat_val))
-                            except (ValueError, TypeError):
-                                pass
+                            material_id = await self._resolve_material_id(session, mat_val)
                     item = await self._price_quantity(
                         session, category, rule, qty, plant_id, run, run_dt, warnings,
                         source_ref={"section_key": rule.source_key, "row_index": idx},
@@ -317,6 +314,24 @@ class CostEngineService:
             "source_mapping_id": rule.id,
             "source_ref": source_ref,
         }
+
+    async def _resolve_material_id(
+        self, session: AsyncSession, mat_val: Any
+    ) -> Optional[UUID]:
+        """Material refs in log sheets may be stored as catalog UUID or material code."""
+        if mat_val is None:
+            return None
+        try:
+            return UUID(str(mat_val))
+        except (ValueError, TypeError):
+            pass
+        code = str(mat_val).strip()
+        if not code:
+            return None
+        result = await session.execute(
+            select(MaterialCatalog.id).where(MaterialCatalog.code == code).limit(1)
+        )
+        return result.scalar_one_or_none()
 
     async def _lookup_material_rate(
         self, session: AsyncSession, material_id: UUID, run_dt: date
@@ -523,3 +538,46 @@ class CostEngineService:
             except Exception:
                 failed += 1
         return {"computed": computed, "failed": failed, "skipped": skipped}
+
+    async def compute_for_work_order(
+        self, session: AsyncSession, work_order_id: UUID, user: User | None = None
+    ) -> dict[str, Any]:
+        from app.db.models import MaintenanceWorkOrder, MaintenanceWorkOrderPart
+
+        if user:
+            assert_finance_access(user)
+
+        wo = await session.get(MaintenanceWorkOrder, work_order_id)
+        if not wo:
+            raise HTTPException(status_code=404, detail="Work order not found")
+
+        result = await session.execute(
+            select(MaintenanceWorkOrderPart).where(
+                MaintenanceWorkOrderPart.work_order_id == work_order_id
+            )
+        )
+        parts = list(result.scalars())
+
+        line_items: list[dict[str, Any]] = []
+        total = 0.0
+        for part in parts:
+            amount = float(part.total_cost or (part.quantity * part.unit_cost))
+            total += amount
+            line_items.append(
+                {
+                    "part_id": str(part.id),
+                    "part_name": part.part_name,
+                    "quantity": part.quantity,
+                    "unit_cost": part.unit_cost,
+                    "amount": amount,
+                    "cost_category": CostCategory.MAINTENANCE.value,
+                }
+            )
+
+        return {
+            "work_order_id": str(work_order_id),
+            "wo_number": wo.wo_number,
+            "total_parts_cost": round(total, 2),
+            "line_items": line_items,
+            "status": CostCalculationStatus.COMPLETE.value if line_items else CostCalculationStatus.PARTIAL.value,
+        }

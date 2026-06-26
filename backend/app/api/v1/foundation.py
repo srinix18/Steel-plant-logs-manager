@@ -218,6 +218,12 @@ async def list_asset_events(asset_id: UUID, session: DbSession, user: CurrentUse
     return await asset_service.list_events(session, asset_id)
 
 
+@router.get("/foundation/assets/{asset_id}/maintenance-history")
+async def get_asset_maintenance_history(asset_id: UUID, session: DbSession, user: CurrentUser):
+    assert_can_view_foundation(user)
+    return await asset_service.get_maintenance_history(session, asset_id)
+
+
 @router.post("/foundation/assets/{asset_id}/events", response_model=AssetEventResponse, status_code=201)
 async def create_asset_event(asset_id: UUID, data: AssetEventCreate, session: DbSession, user: CurrentUser):
     assert_can_view_foundation(user)

@@ -93,6 +93,17 @@ export function RunCostSheetPage() {
         )}
       </div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {(calc.status === 'partial' || calc.status === 'failed') && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <p className="font-medium">
+            Cost calculation {calc.status === 'partial' ? 'partially completed' : 'failed'}.
+          </p>
+          <p className="mt-1">
+            Raw material costs require saved charge mix / ferro alloy rows with material and quantity.
+            Check warnings below.
+          </p>
+        </div>
+      )}
       {calc.warnings.length > 0 && (
         <div className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           {calc.warnings.map((w, i) => (

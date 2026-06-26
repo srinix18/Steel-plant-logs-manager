@@ -120,6 +120,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                     continue
                 process_id = proc.id
 
+            dept_id = None if spec["role"] == UserRole.CEO else dept.id
+
             session.add(
                 User(
                     email=spec["email"],
@@ -128,7 +130,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                     role=spec["role"],
                     organisation_id=org.id,
                     plant_id=plant.id,
-                    department_id=dept.id,
+                    department_id=dept_id,
                     process_id=process_id,
                     designation=spec["designation"],
                     employee_uid=spec["employee_uid"],
@@ -385,5 +387,13 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                     is_active=True,
                 )
             )
+
+    # Patch existing CEO — org-wide role should not be scoped to SMS department
+    ceo_result = await session.execute(
+        select(User).where(User.email == "ceo@chandansteel.com")
+    )
+    ceo_user = ceo_result.scalar_one_or_none()
+    if ceo_user:
+        ceo_user.department_id = None
 
     await session.flush()

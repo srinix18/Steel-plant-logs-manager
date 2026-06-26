@@ -11,6 +11,8 @@ import {
   SUPERVISOR_ONLY_ROLES,
   WORKER_ROLES,
   MAINTENANCE_ROLES,
+  MAINTENANCE_MANAGER_ROLES,
+  MAINTENANCE_PM_VIEW_ROLES,
   WORKFORCE_HR_ROLES,
   HANDOVER_WRITE_ROLES,
   SHIFT_FLOOR_ROLES,
@@ -53,6 +55,8 @@ export function Sidebar() {
   const isSupervisorOnly = hasRole(user.role, SUPERVISOR_ONLY_ROLES);
   const isWorker = hasRole(user.role, WORKER_ROLES);
   const isMaintenance = hasRole(user.role, MAINTENANCE_ROLES);
+  const showMaintenancePm = hasRole(user.role, MAINTENANCE_PM_VIEW_ROLES);
+  const showMaintenancePrograms = hasRole(user.role, MAINTENANCE_MANAGER_ROLES);
   const isHr = hasRole(user.role, HR_ROLES);
   const showWorkforceEmployeeAdmin = hasRole(user.role, WORKFORCE_ADMIN_ROLES);
   const showWorkforceDashboard = isHr || isHod || isSupervisorOnly || isCeo;
@@ -148,53 +152,126 @@ export function Sidebar() {
           </>
         )}
 
-        {isMaintenance && (
+        {(showMaintenancePm || isMaintenance) && (
           <>
             <p className={sectionClass}>Maintenance</p>
+            {showMaintenancePm && (
+              <NavLink to="/maintenance/dashboard" className={linkClass}>
+                Dashboard
+              </NavLink>
+            )}
+            {showMaintenancePrograms && (
+              <NavLink to="/maintenance/programs" className={linkClass}>
+                PM Programs
+              </NavLink>
+            )}
+            {showMaintenancePm && (
+              <NavLink to="/maintenance/work-orders" className={linkClass}>
+                Work Orders
+              </NavLink>
+            )}
             <NavLink to="/maintenance" className={linkClass}>
-              Issue queue
+              Issue Queue
             </NavLink>
+          </>
+        )}
+
+        {showShift && (
+          <>
+            <p className={sectionClass}>Shop floor</p>
+            <NavLink to="/shift" className={linkClass}>
+              Shift Dashboard
+            </NavLink>
+            {(isWorker || isSupervisorOnly) && (
+              <NavLink to="/my-runs" className={linkClass}>
+                My Runs
+              </NavLink>
+            )}
           </>
         )}
 
         {showWorkforceDashboard && (
           <>
-            <p className={sectionClass}>Workforce Management</p>
+            <p className={sectionClass}>Workforce Operations</p>
+            <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+              Overview
+            </p>
             <NavLink to="/workforce/dashboard" className={linkClass}>
               Workforce Dashboard
             </NavLink>
             {showWorkforceEmployeeAdmin && (
-              <NavLink to="/workforce/employees" className={linkClass}>
-                Employees
-              </NavLink>
+              <>
+                <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                  People
+                </p>
+                <NavLink to="/workforce/employees" className={linkClass}>
+                  Employees
+                </NavLink>
+                {showShiftAssignments && (
+                  <NavLink to="/workforce/contractors" className={linkClass}>
+                    Contractors
+                  </NavLink>
+                )}
+              </>
             )}
             {showShiftAssignments && (
               <>
+                <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                  Scheduling
+                </p>
                 <NavLink to="/workforce/shift-assignments" className={linkClass}>
                   Shift Assignments
                 </NavLink>
-                <NavLink to="/workforce/contractors" className={linkClass}>
-                  Contractors
+                <NavLink to="/workforce/shift-planning" className={linkClass}>
+                  Shift Planning
                 </NavLink>
+                {showAttendance && (
+                  <NavLink to="/workforce/attendance" className={linkClass}>
+                    Attendance
+                  </NavLink>
+                )}
+                {showHandover && (
+                  <NavLink to="/workforce/handover" className={linkClass}>
+                    Shift Handover Notes
+                  </NavLink>
+                )}
               </>
             )}
-            {showAttendance && (
-              <NavLink to="/workforce/attendance" className={linkClass}>
-                Attendance
-              </NavLink>
-            )}
-            {showHandover && (
-              <NavLink to="/workforce/handover" className={linkClass}>
-                Shift Handover Notes
-              </NavLink>
+            {showShiftAssignments && (
+              <>
+                <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                  HR Ops
+                </p>
+                <NavLink to="/workforce/leave" className={linkClass}>
+                  Leave Requests
+                </NavLink>
+                <NavLink to="/workforce/skills" className={linkClass}>
+                  Skill Matrix
+                </NavLink>
+                <NavLink to="/workforce/training" className={linkClass}>
+                  Training
+                </NavLink>
+                <NavLink to="/workforce/payroll" className={linkClass}>
+                  Payroll
+                </NavLink>
+              </>
             )}
           </>
         )}
 
         {isWorker && (
-          <NavLink to="/workforce/my-attendance" className={linkClass}>
-            My Attendance
-          </NavLink>
+          <>
+            <p className={sectionClass}>Self-service</p>
+            <NavLink to="/workforce/my-attendance" className={linkClass}>
+              My Attendance
+            </NavLink>
+            <NavLink to="/workforce/my-leave" className={linkClass}>
+              My Leave
+            </NavLink>
+            <NavLink to="/workforce/my-payslips" className={linkClass}>
+              My Payslips
+            </NavLink>
+          </>
         )}
 
         {showFoundationSection && (
@@ -257,20 +334,6 @@ export function Sidebar() {
             <NavLink to="/finance/analytics" className={linkClass}>
               Cost Analytics
             </NavLink>
-          </>
-        )}
-
-        {showShift && (
-          <>
-            {!isSupervisorOnly && !isWorker && <p className={sectionClass}>Shop floor</p>}
-            <NavLink to="/shift" className={linkClass}>
-              Shift Dashboard
-            </NavLink>
-            {(isWorker || isSupervisorOnly) && (
-              <NavLink to="/my-runs" className={linkClass}>
-                My Runs
-              </NavLink>
-            )}
           </>
         )}
       </nav>

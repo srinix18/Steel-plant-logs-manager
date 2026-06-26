@@ -6,12 +6,14 @@ import {
   fetchWorkforceEmployees,
   updateWorkforceEmployee,
 } from '../../api/workforce';
+import { ImportWizard } from '../../components/import/ImportWizard';
 import { EmployeeFormModal } from '../../components/workforce/EmployeeFormModal';
 import { useAuth } from '../../contexts/AuthContext';
 import type { User, WorkforceEmployeePayload, WorkforceEmployeeUpdatePayload } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
+import { canRunImports } from '../../utils/roles';
 
 export function WorkforceEmployeesPage() {
   const { user } = useAuth();
@@ -20,7 +22,9 @@ export function WorkforceEmployeesPage() {
   const [departments, setDepartments] = useState<Awaited<ReturnType<typeof fetchDepartments>>>([]);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const showBulkImport = user ? canRunImports(user.role) : false;
 
   const load = async () => {
     const [emps, depts] = await Promise.all([fetchWorkforceEmployees(), fetchDepartments()]);
@@ -61,14 +65,21 @@ export function WorkforceEmployeesPage() {
           <h1 className="text-2xl font-bold text-slate-900">Employees</h1>
           <p className="mt-1 text-sm text-slate-500">Permanent employee master — linked to log sheet user pickers.</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setShowModal(true);
-          }}
-        >
-          Add employee
-        </Button>
+        <div className="flex gap-2">
+          {showBulkImport && (
+            <Button variant="secondary" onClick={() => setShowImport(true)}>
+              Bulk import
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setShowModal(true);
+            }}
+          >
+            Add employee
+          </Button>
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -115,6 +126,15 @@ export function WorkforceEmployeesPage() {
             setEditing(null);
           }}
           onSave={handleSave}
+        />
+      )}
+
+      {showImport && (
+        <ImportWizard
+          moduleKey="employees"
+          title="Bulk import employees"
+          onClose={() => setShowImport(false)}
+          onComplete={() => load().catch((e) => setError(getErrorMessage(e)))}
         />
       )}
     </div>
