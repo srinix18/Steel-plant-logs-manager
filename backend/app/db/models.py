@@ -708,6 +708,8 @@ class UserNotification(Base):
     entity_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     notification_type: Mapped[str] = mapped_column(String(50), default="message")
+    title: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -1428,3 +1430,192 @@ class PayrollLineItem(Base, TimestampMixin):
     payslip_data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     __table_args__ = (UniqueConstraint("payroll_run_id", "user_id", name="uq_payroll_line_user"),)
+
+
+class PulseSnapshot(Base):
+    __tablename__ = "pulse_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    plant_status: Mapped[str] = mapped_column(String(32), default="normal")
+    overall_oee: Mapped[Optional[float]] = mapped_column(Float)
+    today_production: Mapped[Optional[float]] = mapped_column(Float)
+    today_cost: Mapped[Optional[float]] = mapped_column(Float)
+    power_consumption_kwh: Mapped[Optional[float]] = mapped_column(Float)
+    downtime_minutes: Mapped[Optional[float]] = mapped_column(Float)
+    active_alerts: Mapped[int] = mapped_column(Integer, default=0)
+    pending_maintenance: Mapped[int] = mapped_column(Integer, default=0)
+    current_shift_code: Mapped[Optional[str]] = mapped_column(String(10))
+    attendance_pct: Mapped[Optional[float]] = mapped_column(Float)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class DepartmentPulse(Base):
+    __tablename__ = "department_pulses"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="normal")
+    current_shift_code: Mapped[Optional[str]] = mapped_column(String(10))
+    current_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
+    current_run_label: Mapped[Optional[str]] = mapped_column(String(200))
+    production: Mapped[Optional[float]] = mapped_column(Float)
+    oee: Mapped[Optional[float]] = mapped_column(Float)
+    downtime_minutes: Mapped[Optional[float]] = mapped_column(Float)
+    power_kwh: Mapped[Optional[float]] = mapped_column(Float)
+    open_issues: Mapped[int] = mapped_column(Integer, default=0)
+    maintenance_alerts: Mapped[int] = mapped_column(Integer, default=0)
+    health_score: Mapped[Optional[float]] = mapped_column(Float)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class AssetPulse(Base):
+    __tablename__ = "asset_pulses"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="normal")
+    health_score: Mapped[Optional[float]] = mapped_column(Float)
+    current_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True)
+    current_operator: Mapped[Optional[str]] = mapped_column(String(200))
+    oee: Mapped[Optional[float]] = mapped_column(Float)
+    power_kwh: Mapped[Optional[float]] = mapped_column(Float)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class OEESnapshot(Base):
+    __tablename__ = "oee_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    scope_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    period: Mapped[str] = mapped_column(String(16), nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    availability: Mapped[float] = mapped_column(Float, default=0)
+    performance: Mapped[float] = mapped_column(Float, default=0)
+    quality: Mapped[float] = mapped_column(Float, default=0)
+    oee: Mapped[float] = mapped_column(Float, default=0)
+    is_estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AssetHealthRecord(Base):
+    __tablename__ = "asset_health"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    score: Mapped[float] = mapped_column(Float, default=100)
+    category: Mapped[str] = mapped_column(String(32), default="healthy")
+    factors: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class QRAsset(Base):
+    __tablename__ = "qr_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), unique=True, nullable=False)
+    qr_payload: Mapped[str] = mapped_column(String(500), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AssetLiveParameter(Base):
+    __tablename__ = "asset_live_parameters"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("assets.id"), nullable=False)
+    param_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    label: Mapped[Optional[str]] = mapped_column(String(200))
+    value: Mapped[Optional[float]] = mapped_column(Float)
+    value_text: Mapped[Optional[str]] = mapped_column(String(200))
+    unit: Mapped[Optional[str]] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(32), default="manual")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("asset_id", "param_key", name="uq_asset_live_param"),)
+
+
+class EnergyReading(Base):
+    __tablename__ = "energy_readings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    reading_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    kwh: Mapped[float] = mapped_column(Float, default=0)
+    peak_kw: Mapped[Optional[float]] = mapped_column(Float)
+    cost: Mapped[Optional[float]] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(32), default="manual")
+    metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
+
+
+class InventorySnapshot(Base):
+    __tablename__ = "inventory_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    material_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    material_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    unit: Mapped[str] = mapped_column(String(32), default="MT")
+    quality_grade: Mapped[Optional[str]] = mapped_column(String(64))
+    location: Mapped[Optional[str]] = mapped_column(String(200))
+    avg_daily_consumption: Mapped[Optional[float]] = mapped_column(Float)
+    days_remaining: Mapped[Optional[float]] = mapped_column(Float)
+    current_value: Mapped[Optional[float]] = mapped_column(Float)
+    supplier: Mapped[Optional[str]] = mapped_column(String(200))
+    low_stock_threshold: Mapped[Optional[float]] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(32), default="normal")
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("plant_id", "material_code", name="uq_inv_snapshot_material"),)
+
+
+class SafetyInspection(Base):
+    __tablename__ = "safety_inspections"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    inspector_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    inspection_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    findings: Mapped[Optional[str]] = mapped_column(Text)
+    inspected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    next_due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SafetyIncident(Base):
+    __tablename__ = "safety_incidents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    reported_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), default="medium")
+    status: Mapped[str] = mapped_column(String(32), default="open")
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SopDocument(Base):
+    __tablename__ = "sop_documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("departments.id"), nullable=True)
+    asset_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    category: Mapped[str] = mapped_column(String(64), default="sop")
+    file_url: Mapped[Optional[str]] = mapped_column(String(500))
+    version: Mapped[str] = mapped_column(String(32), default="1.0")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

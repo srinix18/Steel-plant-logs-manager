@@ -11,7 +11,9 @@ import {
 } from 'recharts';
 import { getErrorMessage } from '../../api/client';
 import { evaluatePmTriggers, fetchMaintenanceAnalytics } from '../../api/maintenancePm';
+import { fetchMaintenanceIntelligence } from '../../api/pulse';
 import { fetchPlants } from '../../api/platform';
+import { PulseMetricCard } from '../../components/pulse/PulseMetricCard';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
@@ -21,10 +23,17 @@ export function MaintenanceDashboardPage() {
   const [plantId, setPlantId] = useState('');
   const [evaluating, setEvaluating] = useState(false);
   const [analytics, setAnalytics] = useState<Awaited<ReturnType<typeof fetchMaintenanceAnalytics>> | null>(null);
+  const [intel, setIntel] = useState<Awaited<ReturnType<typeof fetchMaintenanceIntelligence>> | null>(null);
 
   const loadAnalytics = () => {
     if (!plantId) return Promise.resolve();
-    return fetchMaintenanceAnalytics({ plant_id: plantId }).then(setAnalytics);
+    return Promise.all([
+      fetchMaintenanceAnalytics({ plant_id: plantId }),
+      fetchMaintenanceIntelligence(plantId),
+    ]).then(([a, i]) => {
+      setAnalytics(a);
+      setIntel(i);
+    });
   };
 
   useEffect(() => {
@@ -86,6 +95,22 @@ export function MaintenanceDashboardPage() {
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
       {message && (
         <p className="mb-4 rounded border border-brand-200 bg-brand-50 p-3 text-sm text-brand-900">{message}</p>
+      )}
+
+      {intel && (
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+          <PulseMetricCard label="Assets Running" value={intel.assets_running} />
+          <PulseMetricCard label="Under PM" value={intel.under_pm} />
+          <PulseMetricCard label="Breakdown" value={intel.breakdown} accent="text-red-600" />
+          <PulseMetricCard label="Waiting Parts" value={intel.waiting_parts} />
+          <PulseMetricCard label="Waiting Shutdown" value={intel.waiting_shutdown} />
+          <PulseMetricCard label="Completed Today" value={intel.completed_today} />
+          <PulseMetricCard label="Upcoming PM" value={intel.upcoming_pm} />
+          <PulseMetricCard label="PM Compliance" value={intel.pm_compliance_pct != null ? `${intel.pm_compliance_pct}%` : '—'} />
+          <PulseMetricCard label="MTBF" value={intel.mtbf_hours?.toFixed(0) ?? '—'} unit="h" />
+          <PulseMetricCard label="MTTR" value={intel.mttr_hours?.toFixed(1) ?? '—'} unit="h" />
+          <PulseMetricCard label="Downtime" value={intel.downtime_hours?.toFixed(1) ?? '—'} unit="h" />
+        </div>
       )}
 
       {analytics && (

@@ -124,6 +124,22 @@ export function Sidebar() {
 
         {isCeo && !isPlatformAdmin && (
           <>
+            <p className={sectionClass}>Pulse</p>
+            <NavLink to="/pulse/plant" className={linkClass}>
+              Plant Pulse
+            </NavLink>
+            <NavLink to="/pulse/department" className={linkClass}>
+              Department Pulse
+            </NavLink>
+            <NavLink to="/energy" className={linkClass}>
+              Energy
+            </NavLink>
+            <NavLink to="/inventory-pulse" className={linkClass}>
+              Inventory Pulse
+            </NavLink>
+            <NavLink to="/safety/dashboard" className={linkClass}>
+              Safety
+            </NavLink>
             <p className={sectionClass}>Executive</p>
             <NavLink to="/executive" end className={linkClass}>
               Overview
@@ -136,6 +152,13 @@ export function Sidebar() {
 
         {isHod && (
           <>
+            <p className={sectionClass}>Pulse</p>
+            <NavLink to="/pulse/department" className={linkClass}>
+              Department Pulse
+            </NavLink>
+            <NavLink to="/safety/scan" className={linkClass}>
+              Scan QR
+            </NavLink>
             <p className={sectionClass}>Department</p>
             <NavLink to="/hod" className={linkClass}>
               Overview
@@ -173,6 +196,9 @@ export function Sidebar() {
             <NavLink to="/maintenance" className={linkClass}>
               Issue Queue
             </NavLink>
+            <NavLink to="/safety/scan" className={linkClass}>
+              Scan QR
+            </NavLink>
           </>
         )}
 
@@ -187,6 +213,9 @@ export function Sidebar() {
                 My Runs
               </NavLink>
             )}
+            <NavLink to="/safety/scan" className={linkClass}>
+              Scan QR
+            </NavLink>
           </>
         )}
 

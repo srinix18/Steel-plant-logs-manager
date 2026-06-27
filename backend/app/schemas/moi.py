@@ -600,10 +600,6 @@ class DashboardMetrics(BaseModel):
     open_corrective_actions: int = 0
 
 
-class MessageResponse(BaseModel):
-    message: str
-
-
 # Rolling Mill — delay codes and events
 class DelayCodeResponse(BaseModel):
     id: UUID

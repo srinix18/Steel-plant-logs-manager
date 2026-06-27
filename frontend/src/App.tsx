@@ -76,14 +76,27 @@ import { CostMastersPage } from './pages/finance/CostMastersPage';
 import { CostMappingBuilderPage } from './pages/finance/CostMappingBuilderPage';
 import { CostCalculationsPage } from './pages/finance/CostCalculationsPage';
 import { CostAnalyticsPage } from './pages/finance/CostAnalyticsPage';
+import { PlantPulsePage } from './pages/pulse/PlantPulsePage';
+import { DepartmentPulsePage } from './pages/pulse/DepartmentPulsePage';
+import { AssetPulsePage } from './pages/pulse/AssetPulsePage';
+import { AssetWorkspacePage } from './pages/pulse/AssetWorkspacePage';
+import { EnergyDashboardPage } from './pages/energy/EnergyDashboardPage';
+import {
+  SafetyDashboardPage,
+  SafetyIncidentsPage,
+  SafetyInspectionsPage,
+  SafetySopsPage,
+} from './pages/safety/SafetyDashboardPage';
+import { SafetyScanPage } from './pages/safety/SafetyScanPage';
+import { InventoryPulsePage } from './pages/inventory/InventoryPulsePage';
 
 function RoleRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin' || user.role === 'admin') return <Navigate to="/admin" replace />;
-  if (hasRole(user.role, CEO_ROLES)) return <Navigate to="/executive" replace />;
+  if (hasRole(user.role, CEO_ROLES)) return <Navigate to="/pulse/plant" replace />;
   if (hasRole(user.role, HR_ROLES)) return <Navigate to="/workforce/dashboard" replace />;
-  if (hasRole(user.role, HOD_ROLES)) return <Navigate to="/hod" replace />;
+  if (hasRole(user.role, HOD_ROLES)) return <Navigate to="/pulse/department" replace />;
   if (hasRole(user.role, MAINTENANCE_ROLES)) return <Navigate to="/maintenance" replace />;
   if (hasRole(user.role, SUPERVISOR_ONLY_ROLES)) return <Navigate to="/supervisor" replace />;
   if (hasRole(user.role, WORKER_ROLES)) return <Navigate to="/shift" replace />;
@@ -110,10 +123,26 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allowedRoles={CEO_TIER_ROLES} />}>
             <Route path="executive" element={<ExecutiveOverviewPage />} />
             <Route path="executive/employees" element={<EmployeesPage />} />
+            <Route path="pulse/plant" element={<PlantPulsePage />} />
+            <Route path="energy" element={<EnergyDashboardPage />} />
+            <Route path="inventory-pulse" element={<InventoryPulsePage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={HOD_TIER_ROLES} />}>
             <Route path="hod" element={<HodDashboardPage />} />
+            <Route path="pulse/department" element={<DepartmentPulsePage />} />
+          </Route>
+
+          <Route path="assets/:id/workspace" element={<AssetWorkspacePage />} />
+          <Route path="assets/:id/pulse" element={<AssetPulsePage />} />
+
+          <Route element={<ProtectedRoute allowedRoles={[...SUPERVISOR_ROLES, ...MAINTENANCE_ROLES, ...WORKER_ROLES]} />}>
+            <Route path="safety" element={<Navigate to="/safety/dashboard" replace />} />
+            <Route path="safety/scan" element={<SafetyScanPage />} />
+            <Route path="safety/dashboard" element={<SafetyDashboardPage />} />
+            <Route path="safety/inspections" element={<SafetyInspectionsPage />} />
+            <Route path="safety/sops" element={<SafetySopsPage />} />
+            <Route path="safety/incidents" element={<SafetyIncidentsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={SUPERVISOR_ROLES} />}>

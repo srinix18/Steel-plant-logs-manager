@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import analytics, auth, bright_bar, finance, foundation, imports, maintenance, maintenance_pm, messages, operations, platform, process_runs, rolling_mill, templates_moi, websocket, wire, workforce, workforce_ops
+from app.api.v1 import analytics, auth, bright_bar, energy, finance, foundation, imports, inventory_pulse, maintenance, maintenance_pm, messages, operations, platform, process_runs, pulse, rolling_mill, safety, templates_moi, websocket, wire, workforce, workforce_ops
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
@@ -20,4 +20,8 @@ api_router.include_router(finance.router, tags=["Finance"])
 api_router.include_router(operations.router, tags=["Operations"])
 api_router.include_router(analytics.router, tags=["Analytics"])
 api_router.include_router(foundation.router, tags=["Foundation"])
+api_router.include_router(pulse.router, tags=["Pulse"])
+api_router.include_router(energy.router, tags=["Energy"])
+api_router.include_router(safety.router, tags=["Safety"])
+api_router.include_router(inventory_pulse.router, tags=["Inventory Pulse"])
 api_router.include_router(websocket.router, tags=["WebSocket"])

@@ -1,3 +1,5 @@
+import asyncio
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -22,6 +24,7 @@ from app.utils.seed_asset_catalog import seed_asset_catalog
 from app.utils.seed_workforce import seed_workforce_demo
 from app.utils.seed_finance import seed_finance
 from app.utils.seed_phase4 import seed_phase4
+from app.utils.seed_phase5 import seed_phase5
 from app.services.import_engine.bootstrap import bootstrap_import_handlers
 from app.services.masters_service import MastersService
 from sqlalchemy import select
@@ -52,6 +55,7 @@ async def lifespan(_: FastAPI):
         await seed_asset_catalog(session)
         await seed_finance(session)
         await seed_phase4(session)
+        await seed_phase5(session)
         org = (await session.execute(select(Organisation).where(Organisation.code == "CHANDAN"))).scalar_one_or_none()
         if org:
             await MastersService().seed_default_products(session, org.id)
@@ -66,7 +70,23 @@ async def lifespan(_: FastAPI):
     except Exception:
         pass
 
+    async def _pulse_refresh_loop() -> None:
+        from app.services.pulse_aggregator_service import PulseAggregatorService
+
+        while True:
+            await asyncio.sleep(300)
+            try:
+                async with async_session_factory() as session:
+                    await PulseAggregatorService().refresh_all(session)
+                    await session.commit()
+            except Exception:
+                pass
+
+    refresh_task = asyncio.create_task(_pulse_refresh_loop())
+
     yield
+
+    refresh_task.cancel()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)

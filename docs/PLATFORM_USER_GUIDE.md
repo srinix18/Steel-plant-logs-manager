@@ -425,3 +425,22 @@ Full table: [LOGINS.md](../LOGINS.md).
 - Cost compute: triggered on run terminal states + manual endpoint from Finance UI
 
 For architecture detail see [ARCHITECTURE.md](../ARCHITECTURE.md).
+
+---
+
+## 12. Plant Pulse (Phase 5)
+
+Operational dashboards consume existing runs, assets, maintenance, finance, and workforce data without replacing CRUD workflows.
+
+| Screen | Who | Route |
+|--------|-----|-------|
+| **Plant Pulse** | CEO | `/pulse/plant` |
+| **Department Pulse** | HoD / CEO | `/pulse/department` |
+| **Asset Workspace** | All (QR scan) | `/assets/{id}/workspace` |
+| **Energy** | Leadership | `/energy` |
+| **Safety** | Supervisors, maintenance | `/safety/dashboard` |
+| **Inventory Pulse** | CEO | `/inventory-pulse` |
+
+**Demo flow:** CEO login → Plant Pulse shows OEE, production, department cards, live feed, and alerts. Scan QR (`/safety/scan`) or open any asset workspace for live parameters, health, maintenance, and OEE.
+
+See [PHASE5_PULSE.md](PHASE5_PULSE.md) for API endpoints and refresh behaviour.

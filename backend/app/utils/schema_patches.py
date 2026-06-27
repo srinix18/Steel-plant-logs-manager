@@ -811,6 +811,190 @@ _PHASE4_PATCHES = (
     "CREATE INDEX IF NOT EXISTS ix_mp_plant ON maintenance_programs (plant_id)",
 )
 
+_PHASE5_PATCHES = (
+    """
+    CREATE TABLE IF NOT EXISTS pulse_snapshots (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        snapshot_at TIMESTAMPTZ NOT NULL,
+        plant_status VARCHAR(32) DEFAULT 'normal',
+        overall_oee DOUBLE PRECISION,
+        today_production DOUBLE PRECISION,
+        today_cost DOUBLE PRECISION,
+        power_consumption_kwh DOUBLE PRECISION,
+        downtime_minutes DOUBLE PRECISION,
+        active_alerts INTEGER DEFAULT 0,
+        pending_maintenance INTEGER DEFAULT 0,
+        current_shift_code VARCHAR(10),
+        attendance_pct DOUBLE PRECISION,
+        metrics JSONB DEFAULT '{}'
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS department_pulses (
+        id UUID PRIMARY KEY,
+        department_id UUID NOT NULL REFERENCES departments(id),
+        snapshot_at TIMESTAMPTZ NOT NULL,
+        status VARCHAR(32) DEFAULT 'normal',
+        current_shift_code VARCHAR(10),
+        current_run_id UUID REFERENCES process_runs(id),
+        current_run_label VARCHAR(200),
+        production DOUBLE PRECISION,
+        oee DOUBLE PRECISION,
+        downtime_minutes DOUBLE PRECISION,
+        power_kwh DOUBLE PRECISION,
+        open_issues INTEGER DEFAULT 0,
+        maintenance_alerts INTEGER DEFAULT 0,
+        health_score DOUBLE PRECISION,
+        metrics JSONB DEFAULT '{}'
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS asset_pulses (
+        id UUID PRIMARY KEY,
+        asset_id UUID NOT NULL REFERENCES assets(id),
+        snapshot_at TIMESTAMPTZ NOT NULL,
+        status VARCHAR(32) DEFAULT 'normal',
+        health_score DOUBLE PRECISION,
+        current_run_id UUID REFERENCES process_runs(id),
+        current_operator VARCHAR(200),
+        oee DOUBLE PRECISION,
+        power_kwh DOUBLE PRECISION,
+        metrics JSONB DEFAULT '{}'
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS oee_snapshots (
+        id UUID PRIMARY KEY,
+        scope_type VARCHAR(32) NOT NULL,
+        scope_id UUID NOT NULL,
+        period VARCHAR(16) NOT NULL,
+        period_start TIMESTAMPTZ NOT NULL,
+        period_end TIMESTAMPTZ NOT NULL,
+        availability DOUBLE PRECISION DEFAULT 0,
+        performance DOUBLE PRECISION DEFAULT 0,
+        quality DOUBLE PRECISION DEFAULT 0,
+        oee DOUBLE PRECISION DEFAULT 0,
+        is_estimated BOOLEAN DEFAULT FALSE,
+        computed_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS asset_health (
+        id UUID PRIMARY KEY,
+        asset_id UUID NOT NULL REFERENCES assets(id),
+        score DOUBLE PRECISION DEFAULT 100,
+        category VARCHAR(32) DEFAULT 'healthy',
+        factors JSONB DEFAULT '{}',
+        computed_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS qr_assets (
+        id UUID PRIMARY KEY,
+        asset_id UUID NOT NULL UNIQUE REFERENCES assets(id),
+        qr_payload VARCHAR(500) NOT NULL,
+        generated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS asset_live_parameters (
+        id UUID PRIMARY KEY,
+        asset_id UUID NOT NULL REFERENCES assets(id),
+        param_key VARCHAR(100) NOT NULL,
+        label VARCHAR(200),
+        value DOUBLE PRECISION,
+        value_text VARCHAR(200),
+        unit VARCHAR(32),
+        source VARCHAR(32) DEFAULT 'manual',
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (asset_id, param_key)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS energy_readings (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        department_id UUID REFERENCES departments(id),
+        asset_id UUID REFERENCES assets(id),
+        reading_at TIMESTAMPTZ NOT NULL,
+        kwh DOUBLE PRECISION DEFAULT 0,
+        peak_kw DOUBLE PRECISION,
+        cost DOUBLE PRECISION,
+        source VARCHAR(32) DEFAULT 'manual',
+        metadata JSONB DEFAULT '{}'
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS inventory_snapshots (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        material_code VARCHAR(64) NOT NULL,
+        material_name VARCHAR(200) NOT NULL,
+        quantity DOUBLE PRECISION DEFAULT 0,
+        unit VARCHAR(32) DEFAULT 'MT',
+        quality_grade VARCHAR(64),
+        location VARCHAR(200),
+        avg_daily_consumption DOUBLE PRECISION,
+        days_remaining DOUBLE PRECISION,
+        current_value DOUBLE PRECISION,
+        supplier VARCHAR(200),
+        low_stock_threshold DOUBLE PRECISION,
+        status VARCHAR(32) DEFAULT 'normal',
+        snapshot_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (plant_id, material_code)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS safety_inspections (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        asset_id UUID REFERENCES assets(id),
+        inspector_id UUID NOT NULL REFERENCES users(id),
+        inspection_type VARCHAR(64) NOT NULL,
+        status VARCHAR(32) DEFAULT 'completed',
+        findings TEXT,
+        inspected_at TIMESTAMPTZ NOT NULL,
+        next_due_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS safety_incidents (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        asset_id UUID REFERENCES assets(id),
+        reported_by UUID NOT NULL REFERENCES users(id),
+        title VARCHAR(300) NOT NULL,
+        description TEXT NOT NULL,
+        severity VARCHAR(32) DEFAULT 'medium',
+        status VARCHAR(32) DEFAULT 'open',
+        occurred_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS sop_documents (
+        id UUID PRIMARY KEY,
+        plant_id UUID NOT NULL REFERENCES plants(id),
+        department_id UUID REFERENCES departments(id),
+        asset_id UUID REFERENCES assets(id),
+        title VARCHAR(300) NOT NULL,
+        category VARCHAR(64) DEFAULT 'sop',
+        file_url VARCHAR(500),
+        version VARCHAR(32) DEFAULT '1.0',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """,
+    "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS title VARCHAR(300)",
+    "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS body TEXT",
+    "CREATE INDEX IF NOT EXISTS ix_pulse_snapshots_plant ON pulse_snapshots (plant_id, snapshot_at DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_dept_pulses_dept ON department_pulses (department_id, snapshot_at DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_oee_snapshots_scope ON oee_snapshots (scope_type, scope_id, period)",
+    "CREATE INDEX IF NOT EXISTS ix_energy_readings_plant ON energy_readings (plant_id, reading_at DESC)",
+)
+
 
 async def apply_schema_patches(conn: AsyncConnection) -> None:
     for value in _USERROLE_VALUES:
@@ -872,4 +1056,7 @@ async def apply_schema_patches(conn: AsyncConnection) -> None:
         await _safe_execute(conn, stmt)
 
     for stmt in _PHASE4_PATCHES:
+        await _safe_execute(conn, stmt)
+
+    for stmt in _PHASE5_PATCHES:
         await _safe_execute(conn, stmt)
