@@ -52,13 +52,13 @@ export function AssetWorkspacePage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium ${
+            className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium min-h-[48px] ${
               tab === t ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-500 hover:text-slate-800'
             }`}
           >

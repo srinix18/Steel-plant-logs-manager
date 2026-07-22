@@ -56,11 +56,17 @@ export function MyRunsPage() {
                 render: (r) => (
                   <div className="flex gap-3 text-sm">
                     {EDITABLE_STATES.has(r.current_state) && (
-                      <Link to={`/heat/${r.id}`} className="text-brand-600 hover:underline">
+                      <Link
+                        to={`/heat/${r.id}`}
+                        className="inline-flex min-h-[44px] items-center text-brand-600 hover:underline"
+                      >
                         Edit
                       </Link>
                     )}
-                    <Link to={`/reports/${r.id}`} className="text-slate-600 hover:text-brand-600">
+                    <Link
+                      to={`/reports/${r.id}`}
+                      className="inline-flex min-h-[44px] items-center text-slate-600 hover:text-brand-600"
+                    >
                       Report
                     </Link>
                   </div>

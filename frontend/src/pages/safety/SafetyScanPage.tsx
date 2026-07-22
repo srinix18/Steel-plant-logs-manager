@@ -100,7 +100,7 @@ export function SafetyScanPage() {
         <label className="block text-sm font-medium text-slate-700">Search asset</label>
         <div className="relative mt-1" ref={wrapRef}>
           <input
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-200 px-3 py-3 text-base"
             placeholder="e.g. IAF, IAF-01, or UUID"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -112,9 +112,10 @@ export function SafetyScanPage() {
               }
             }}
             autoComplete="off"
+            enterKeyHint="search"
           />
           {searching && (
-            <p className="absolute right-3 top-2.5 text-xs text-slate-400">Searching…</p>
+            <p className="absolute right-3 top-3.5 text-xs text-slate-400">Searching…</p>
           )}
           {open && matches.length > 0 && (
             <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
@@ -122,7 +123,7 @@ export function SafetyScanPage() {
                 <li key={m.id}>
                   <button
                     type="button"
-                    className="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-brand-50"
+                    className="flex min-h-[48px] w-full flex-col justify-center px-3 py-3 text-left text-sm hover:bg-brand-50"
                     onClick={() => openWorkspace(m.id)}
                   >
                     <span className="font-medium text-slate-900">
@@ -142,7 +143,7 @@ export function SafetyScanPage() {
         </div>
 
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        <Button className="mt-4 w-full" disabled={loading || !query.trim()} onClick={onSubmit}>
+        <Button className="mt-4 w-full" size="lg" disabled={loading || !query.trim()} onClick={onSubmit}>
           {loading ? 'Opening…' : 'Open Asset Workspace'}
         </Button>
       </Card>

@@ -31,7 +31,11 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 const sectionClass = 'px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400';
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
@@ -44,6 +48,7 @@ export function Sidebar() {
 
   const handleLogout = () => {
     logout();
+    onNavigate?.();
     navigate('/login');
   };
 
@@ -77,14 +82,14 @@ export function Sidebar() {
   const showFinanceMapping = hasRole(user.role, FINANCE_MAPPING_WRITE_ROLES);
 
   return (
-    <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="flex h-full w-64 max-w-full flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-6 py-5">
         <h1 className="text-lg font-bold text-brand-700">MOI Platform</h1>
         <p className="mt-1 truncate text-xs text-slate-500">{user.full_name}</p>
         <p className="text-xs capitalize text-slate-400">{user.role.replace(/_/g, ' ')}</p>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4" onClick={() => onNavigate?.()}>
         <NavLink to="/profile" className={linkClass}>
           My Profile
         </NavLink>

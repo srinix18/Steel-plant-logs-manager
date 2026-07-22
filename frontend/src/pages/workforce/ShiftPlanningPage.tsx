@@ -8,6 +8,7 @@ import {
   publishShiftRoster,
   updateShiftRoster,
 } from '../../api/workforceOps';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -166,6 +167,7 @@ export function ShiftPlanningPage() {
     : dates;
 
   return (
+    <DesktopOnlyGate featureLabel="Shift Planning">
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -279,5 +281,6 @@ export function ShiftPlanningPage() {
         />
       </Card>
     </div>
+    </DesktopOnlyGate>
   );
 }

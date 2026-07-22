@@ -88,7 +88,7 @@ function renderField(
           value={value}
           onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
           disabled={readOnly}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
         >
           <option value="">Select...</option>
           {options.map((opt) => (
@@ -113,7 +113,7 @@ function renderField(
           value={value}
           onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
           disabled={readOnly}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
         >
           <option value="">Select grade…</option>
           {grades.map((g) => (
@@ -149,7 +149,7 @@ function renderField(
           value={defaultValue}
           onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
           disabled={readOnly}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
         >
           <option value="">Select…</option>
           {users.map((u) => (
@@ -172,7 +172,7 @@ function renderField(
           onChange={(e) => ctx.onFieldChange(f.name, e.target.value)}
           disabled={readOnly}
           rows={3}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
         />
       </label>
     );

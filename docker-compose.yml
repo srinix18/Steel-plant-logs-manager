@@ -26,7 +26,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/moi_platform
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-change-in-production}
-      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8081,http://localhost:19006,http://127.0.0.1:8081,http://localhost
       SEED_ADMIN_EMAIL: admin@logbook.app
       SEED_ADMIN_PASSWORD: admin123
     depends_on:

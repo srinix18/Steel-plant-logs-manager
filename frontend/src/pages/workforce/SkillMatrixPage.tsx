@@ -7,6 +7,7 @@ import {
   fetchAllEmployeeSkills,
   fetchSkills,
 } from '../../api/workforceOps';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -65,6 +66,7 @@ export function SkillMatrixPage() {
   };
 
   return (
+    <DesktopOnlyGate featureLabel="Skill Matrix">
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Skill Matrix</h1>
@@ -119,5 +121,6 @@ export function SkillMatrixPage() {
         {employees.length === 0 && <p className="p-4 text-slate-500">No employees found.</p>}
       </Card>
     </div>
+    </DesktopOnlyGate>
   );
 }

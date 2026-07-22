@@ -22,8 +22,9 @@ Development seed credentials for the Chandan Steel SMS demo environment. **Do no
 | My attendance (worker) | http://localhost:5173/workforce/my-attendance |
 | Backend API | http://localhost:8000 |
 | API docs (Swagger) | http://localhost:8000/docs |
+| Mobile (Expo) | See [`docs/MOBILE_P1_00_PREREQUISITES.md`](docs/MOBILE_P1_00_PREREQUISITES.md) — use `http://<LAN-IP>:8000` on a physical phone |
 
-Start the app with `start.bat` (or `scripts/start.ps1`).
+Start the app with `start.bat` (or `scripts/start.ps1`). For mobile device testing, run the API with `--host 0.0.0.0` and set `EXPO_PUBLIC_API_URL` to your LAN IP (print with `scripts/print-lan-ip.ps1`).
 
 ## Organisation structure (Chandan Steel)
 

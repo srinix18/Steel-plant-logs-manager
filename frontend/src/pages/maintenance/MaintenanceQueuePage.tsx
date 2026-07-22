@@ -85,9 +85,15 @@ export function MaintenanceQueuePage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {STATUS_TABS.map((t) => (
-          <Button key={t.key} variant={tab === t.key ? 'primary' : 'secondary'} onClick={() => setTab(t.key)}>
+          <Button
+            key={t.key}
+            size="lg"
+            className="shrink-0"
+            variant={tab === t.key ? 'primary' : 'secondary'}
+            onClick={() => setTab(t.key)}
+          >
             {t.label}
           </Button>
         ))}

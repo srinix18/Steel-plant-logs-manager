@@ -15,6 +15,7 @@ import {
 import { fetchMasterMaterials } from '../../api/foundation';
 import { fetchPlants } from '../../api/platform';
 import { useAuth } from '../../contexts/AuthContext';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -127,6 +128,7 @@ export function CostMastersPage() {
   ];
 
   return (
+    <DesktopOnlyGate featureLabel="Cost Masters">
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Cost Masters</h1>
@@ -278,5 +280,6 @@ export function CostMastersPage() {
         )}
       </Card>
     </div>
+    </DesktopOnlyGate>
   );
 }

@@ -16,6 +16,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Table } from '../../components/ui/Table';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import { Badge } from '../../components/ui/Badge';
 
 const fieldTypes: FieldType[] = ['text', 'number', 'email', 'date', 'boolean', 'dropdown', 'textarea'];
@@ -120,6 +121,7 @@ export function TemplateManagement() {
   };
 
   return (
+    <DesktopOnlyGate featureLabel="Template Management">
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Template Management</h1>
@@ -216,5 +218,6 @@ export function TemplateManagement() {
         </form>
       </Modal>
     </div>
+    </DesktopOnlyGate>
   );
 }

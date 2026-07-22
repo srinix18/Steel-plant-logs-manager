@@ -36,9 +36,11 @@ import {
   transitionsForTab,
 } from '../../utils/heatWorkflowUi';
 import { HeatWorkflowStepper } from '../../components/operations/HeatWorkflowStepper';
+import { MobileRunWizard } from '../../components/run-wizard/MobileRunWizard';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useIsPhoneLayout } from '../../hooks/useMediaQuery';
 
 function sectionIndexForKey(sections: TemplateSection[], key: string): number {
   const idx = sections.findIndex((s) => s.key === key);
@@ -48,6 +50,7 @@ function sectionIndexForKey(sections: TemplateSection[], key: string): number {
 export function HeatWorkspace() {
   const { runId } = useParams<{ runId: string }>();
   const { user } = useAuth();
+  const isPhone = useIsPhoneLayout();
   const [run, setRun] = useState<ProcessRunDetail | null>(null);
   const [sections, setSections] = useState<TemplateSection[]>([]);
   const [activeTab, setActiveTab] = useState(0);
@@ -246,6 +249,32 @@ export function HeatWorkspace() {
     onFieldChange: handleFieldChange,
     onFieldNow: (key: string) => handleFieldChange(key, new Date().toISOString()),
   };
+
+  if (isPhone) {
+    return (
+      <MobileRunWizard
+        runNumber={run.run_number}
+        currentState={run.current_state}
+        sections={sections}
+        sectionData={sectionDataMap}
+        onSectionDataChange={handleSectionDataChange}
+        ctx={renderCtx}
+        availableTransitions={availableTransitions}
+        saving={saving}
+        transitioning={transitioning}
+        error={error}
+        onSaveFields={async (keys) => {
+          await saveFields(keys);
+        }}
+        onSaveSection={async (section) => {
+          await saveSection(section);
+        }}
+        onTransition={async (t) => {
+          await handleTransition(t);
+        }}
+      />
+    );
+  }
 
   const renderWorkflowActions = (transitions: WorkflowTransition[]) => {
     if (transitions.length === 0) return null;

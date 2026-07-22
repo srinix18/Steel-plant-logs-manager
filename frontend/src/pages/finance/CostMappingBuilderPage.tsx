@@ -14,6 +14,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { hasRole, FINANCE_MAPPING_WRITE_ROLES } from '../../utils/roles';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import type { TemplateSummary } from '../../types';
 
 export function CostMappingBuilderPage() {
@@ -94,6 +95,7 @@ export function CostMappingBuilderPage() {
     (Number(form.preview_qty) || 0) * (Number(form.preview_rate) || 0);
 
   return (
+    <DesktopOnlyGate featureLabel="Cost Mapping Builder">
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Cost Mapping Builder</h1>
@@ -231,5 +233,6 @@ export function CostMappingBuilderPage() {
         </Card>
       )}
     </div>
+    </DesktopOnlyGate>
   );
 }

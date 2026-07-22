@@ -185,41 +185,44 @@ export function AttendanceEntryPage() {
             <h2 className="mb-3 font-semibold text-slate-900">
               {dept?.name} — Shift {shift?.code}
             </h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-slate-500">
-                  <th className="pb-2">Employee</th>
-                  <th className="pb-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.user_id} className="border-b border-slate-100">
-                    <td className="py-2">{r.user_name}</td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap gap-2">
-                        {STATUSES.map((s) => (
-                          <label key={s} className="inline-flex items-center gap-1 capitalize">
-                            <input
-                              type="radio"
-                              name={`status-${r.user_id}`}
-                              checked={r.status === s}
-                              onChange={() => setStatus(r.user_id, s)}
-                            />
-                            {s.replace(/_/g, ' ')}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="space-y-3">
+              {records.map((r) => (
+                <li
+                  key={r.user_id}
+                  className="rounded-xl border border-slate-200 bg-slate-50/80 p-4"
+                >
+                  <p className="font-medium text-slate-900">{r.user_name}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    {STATUSES.map((s) => (
+                      <label
+                        key={s}
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm capitalize ${
+                          r.status === s
+                            ? 'border-brand-500 bg-brand-50 text-brand-800'
+                            : 'border-slate-200 bg-white text-slate-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          className="sr-only"
+                          name={`status-${r.user_id}`}
+                          checked={r.status === s}
+                          onChange={() => setStatus(r.user_id, s)}
+                        />
+                        {s.replace(/_/g, ' ')}
+                      </label>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
             {records.length === 0 && (
               <p className="text-sm text-slate-500">No employees assigned to this shift.</p>
             )}
             <div className="mt-4">
-              <Button onClick={saveEmployeeAttendance}>Save employee attendance</Button>
+              <Button size="lg" className="w-full sm:w-auto" onClick={saveEmployeeAttendance}>
+                Save employee attendance
+              </Button>
             </div>
           </Card>
 

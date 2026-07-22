@@ -28,7 +28,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-slate-900">MOI Platform</h1>

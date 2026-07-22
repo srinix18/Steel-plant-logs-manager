@@ -32,11 +32,11 @@ apiClient.interceptors.response.use(
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     if (!error.response) {
-      if (error.code === 'ECONNABORTED') return 'Request timed out. Check that the backend is running.';
+      if (error.code === 'ECONNABORTED') return 'Request timed out. Check your connection and try again.';
       if (error.message === 'Network Error') {
-        return 'Cannot reach the server. Start the backend (uvicorn on port 8000) and try again.';
+        return 'Cannot reach the server. Check your network connection and try again.';
       }
-      return error.message || 'Network error — is the backend running?';
+      return error.message || 'Network error — check your connection.';
     }
     const detail = error.response?.data?.detail;
     if (typeof detail === 'string') return detail;

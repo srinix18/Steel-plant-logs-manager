@@ -9,6 +9,7 @@ import {
   type SectionDataMap,
 } from '../../components/logsheet/SectionRenderer';
 import type { GradeElement, MaterialCatalogItem, SteelGrade, TemplateSummary, TemplateVersionDetail } from '../../types';
+import { DesktopOnlyGate } from '../../components/layout/DesktopOnlyGate';
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 
@@ -81,6 +82,7 @@ export function LogSheetPage() {
   };
 
   return (
+    <DesktopOnlyGate featureLabel="Admin Log Sheet preview">
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Log Sheets</h1>
@@ -167,5 +169,6 @@ export function LogSheetPage() {
         </>
       )}
     </div>
+    </DesktopOnlyGate>
   );
 }

@@ -144,9 +144,19 @@ export function MessagesPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {(['inbox', 'sent', 'alerts', 'compose'] as Tab[]).map((t) => (
-          <Button key={t} variant={tab === t ? 'primary' : 'secondary'} onClick={() => setTab(t)}>
+          <Button
+            key={t}
+            size="lg"
+            className="shrink-0"
+            variant={tab === t ? 'primary' : 'secondary'}
+            onClick={() => {
+              setTab(t);
+              setSelected(null);
+              setSelectedAlert(null);
+            }}
+          >
             {t === 'alerts' ? 'Alerts' : t.charAt(0).toUpperCase() + t.slice(1)}
           </Button>
         ))}
@@ -161,7 +171,7 @@ export function MessagesPage() {
                   key={a.id}
                   type="button"
                   onClick={() => openAlert(a)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left hover:bg-slate-50 ${
+                  className={`w-full rounded-lg border px-3 py-3 text-left hover:bg-slate-50 min-h-[48px] ${
                     selectedAlert?.id === a.id
                       ? 'border-brand-400 bg-brand-50/60'
                       : a.read_at
