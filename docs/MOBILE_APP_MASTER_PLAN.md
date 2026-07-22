@@ -273,9 +273,11 @@ Mirror web:
 
 ## BUILD CHUNK `P1-06` — Design system components
 
+**Status: COMPLETE**
+
 Implement primitives in A.5 with Storybook optional; must be used on Login + Profile + one list.
 
-**Acceptance:** Lint-clean; Login uses `TextField` + `Button.lg`.
+**Acceptance:** Lint-clean; Login uses `TextField` + `Button.lg`. ✅ (`src/components/ui/*`, Login/Profile/Messages)
 
 ---
 
@@ -679,7 +681,7 @@ Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
 ```
 
-**Start:** `Implement BUILD CHUNK P1-06 from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P1-07 from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

@@ -1,12 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/src/auth/AuthContext';
-import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
+import { Badge } from '@/src/components/ui/Badge';
+import { Button } from '@/src/components/ui/Button';
+import { Card } from '@/src/components/ui/Card';
+import { Screen } from '@/src/components/ui/Screen';
+import { colors, spacing, typography } from '@/src/theme/tokens';
 
 /**
- * Profile placeholder — full screen in P1-07. Logout here for P1-02 acceptance.
+ * Profile placeholder — full form in P1-07. Uses P1-06 primitives.
  */
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -23,45 +27,30 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.card}>
+    <Screen>
+      <Card>
         <Text style={styles.title}>My Profile</Text>
         <Text style={styles.body}>{user?.full_name ?? '—'}</Text>
         <Text style={styles.meta}>{user?.email}</Text>
-        <Text style={styles.meta}>Role: {user?.role}</Text>
-        <Text style={styles.meta}>Full profile UI lands in P1-07.</Text>
+        <View style={styles.badgeRow}>
+          <Badge label={user?.role?.replace(/_/g, ' ') ?? 'unknown'} tone="brand" />
+        </View>
+        <Text style={styles.meta}>Full profile editor lands in P1-07.</Text>
 
-        <Pressable
-          style={styles.logout}
-          accessibilityRole="button"
+        <Button
+          title="Log out"
+          variant="danger"
+          fullWidth
+          loading={loggingOut}
           onPress={onLogout}
-          disabled={loggingOut}
-        >
-          {loggingOut ? (
-            <ActivityIndicator color={colors.danger} />
-          ) : (
-            <Text style={styles.logoutText}>Log out</Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
+          style={styles.logout}
+        />
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
   title: {
     ...typography.title,
     color: colors.text,
@@ -75,19 +64,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
+  badgeRow: {
+    marginVertical: spacing.xs,
+  },
   logout: {
     marginTop: spacing.md,
-    minHeight: touch.minTarget,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  logoutText: {
-    color: colors.danger,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

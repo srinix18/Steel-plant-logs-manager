@@ -23,6 +23,10 @@ Write-Host "== unit: drawer nav ==" -ForegroundColor Cyan
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-drawer-nav.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== unit: ui primitives ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-ui-primitives.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== demo logins (API if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {

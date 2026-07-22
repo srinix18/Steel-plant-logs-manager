@@ -13,7 +13,8 @@ Build plan: [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md
 | **P1-03 Login form polish** | **Done** |
 | **P1-04 Role home** | **Done** |
 | **P1-05 Drawer** | **Done** |
-| P1-06 Design system | Next |
+| **P1-06 Design system** | **Done** |
+| P1-07 Profile | Next |
 
 ## Requirements
 

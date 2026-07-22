@@ -11,6 +11,7 @@
     "test:unit": "node --experimental-strip-types ./scripts/test-api-errors.ts",
     "test:roles": "node --experimental-strip-types ./scripts/test-role-homes.ts",
     "test:drawer": "node --experimental-strip-types ./scripts/test-drawer-nav.ts",
+    "test:ui": "node --experimental-strip-types ./scripts/test-ui-primitives.ts",
     "test:logins": "node --experimental-strip-types ./scripts/test-demo-logins.ts",
     "gen:nav": "node --experimental-strip-types ./scripts/generate-nav-screens.ts",
     "smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke.ps1"
@@ -18,8 +19,10 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/drawer": "^7.13.4",
     "@react-navigation/native": "^7.1.8",
+    "babel-plugin-module-resolver": "^5.0.3",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.35",
     "expo-constants": "~18.0.13",
