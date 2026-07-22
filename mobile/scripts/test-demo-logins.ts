@@ -3,13 +3,18 @@
  * Skips (exit 0) if API is unreachable so local UI work isn't blocked.
  */
 import { ALL_DEMO_LOGINS } from '../src/auth/demoAccounts.ts';
+import { getRoleHomeHref } from '../src/auth/roleHome.ts';
+import type { UserRole } from '../src/types/user.ts';
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
   ''
 );
 
-async function tryLogin(email: string, password: string): Promise<{ ok: boolean; detail: string }> {
+async function tryLogin(
+  email: string,
+  password: string
+): Promise<{ ok: boolean; detail: string; role?: UserRole }> {
   try {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
@@ -19,9 +24,14 @@ async function tryLogin(email: string, password: string): Promise<{ ok: boolean;
     const text = await res.text();
     let detail = text;
     try {
-      const json = JSON.parse(text) as { detail?: unknown; access_token?: string; user?: { role?: string } };
-      if (res.ok && json.access_token) {
-        return { ok: true, detail: json.user?.role ?? 'ok' };
+      const json = JSON.parse(text) as {
+        detail?: unknown;
+        access_token?: string;
+        user?: { role?: UserRole };
+      };
+      if (res.ok && json.access_token && json.user?.role) {
+        const home = getRoleHomeHref(json.user.role);
+        return { ok: true, detail: `${json.user.role} → ${home}`, role: json.user.role };
       }
       detail = typeof json.detail === 'string' ? json.detail : text;
     } catch {

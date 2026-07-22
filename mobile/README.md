@@ -11,7 +11,9 @@ Build plan: [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md
 | P1-01 Scaffold | Done — Expo SDK 54 |
 | **P1-02 API + SecureStore** | **Done** |
 | **P1-03 Login form polish** | **Done** |
-| P1-04 Role home | Next |
+| **P1-04 Role home** | **Done** |
+| **P1-05 Drawer** | **Done** |
+| P1-06 Design system | Next |
 
 ## Requirements
 

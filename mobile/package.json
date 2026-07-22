@@ -9,7 +9,10 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --experimental-strip-types ./scripts/test-api-errors.ts",
+    "test:roles": "node --experimental-strip-types ./scripts/test-role-homes.ts",
+    "test:drawer": "node --experimental-strip-types ./scripts/test-drawer-nav.ts",
     "test:logins": "node --experimental-strip-types ./scripts/test-demo-logins.ts",
+    "gen:nav": "node --experimental-strip-types ./scripts/generate-nav-screens.ts",
     "smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke.ps1"
   },
   "dependencies": {

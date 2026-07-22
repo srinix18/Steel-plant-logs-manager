@@ -238,6 +238,8 @@ Convert to Expo Router stacks + drawer as needed.
 
 ## BUILD CHUNK `P1-04` — Role home redirect
 
+**Status: COMPLETE**
+
 Mirror web:
 
 | Role | Home route |
@@ -251,11 +253,13 @@ Mirror web:
 | `worker`, `member` | `/(app)/shift` |
 | else | `/(app)/shift` |
 
-**Acceptance:** Login as each role → correct home.
+**Acceptance:** Login as each role → correct home. ✅ (`scripts/test-role-homes.ts` + login redirect)
 
 ---
 
 ## BUILD CHUNK `P1-05` — Drawer navigation
+
+**Status: COMPLETE**
 
 **Always:** Profile, Messages (badge later).
 
@@ -263,7 +267,7 @@ Mirror web:
 
 **Placeholder screens:** Title + description + **next chunk ID** from this doc (so nothing is forgotten).
 
-**Acceptance:** Worker vs admin menus differ correctly; Sign out works.
+**Acceptance:** Worker vs admin menus differ correctly; Sign out works. ✅ (`scripts/test-drawer-nav.ts` + custom drawer Sign out)
 
 ---
 
@@ -675,7 +679,7 @@ Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
 ```
 
-**Start:** `Implement BUILD CHUNK P1-04 from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P1-06 from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

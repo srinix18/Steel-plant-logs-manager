@@ -1,51 +1,34 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/src/auth/AuthContext';
-import { colors, radius, spacing, typography } from '@/src/theme/tokens';
+import { getRoleHomeHref } from '@/src/auth/roleHome';
+import { colors } from '@/src/theme/tokens';
 
+/** Redirects to the role-specific home (P1-04). */
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  return (
-    <View style={styles.screen}>
-      <View style={styles.card}>
-        <Text style={styles.title}>MOI app shell</Text>
-        <Text style={styles.body}>
-          Signed in as {user?.full_name} ({user?.role}). Session is stored in SecureStore
-          (P1-02).
-        </Text>
-        <Text style={styles.meta}>Next: P1-03 — Login UI polish · P1-04 — Role home</Text>
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
-    </View>
-  );
+    );
+  }
+
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
+
+  return <Redirect href={getRoleHomeHref(user.role)} />;
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  center: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.background,
-    padding: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  title: {
-    ...typography.title,
-    color: colors.text,
-  },
-  body: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  meta: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
   },
 });

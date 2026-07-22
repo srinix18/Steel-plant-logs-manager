@@ -17,10 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApiBaseUrl, getErrorMessage } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthContext';
 import { DEMO_ACCOUNTS } from '@/src/auth/demoAccounts';
+import { getRoleHomeHref } from '@/src/auth/roleHome';
 import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
 
 /**
- * P1-03 — polished login: show/hide password, KeyboardAvoidingView, error banner, __DEV__ demo hints.
+ * P1-03 login UI + P1-04 role home redirect after sign-in.
  */
 export default function LoginScreen() {
   const { user, loading: authLoading, login } = useAuth();
@@ -40,15 +41,15 @@ export default function LoginScreen() {
   }
 
   if (user) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href={getRoleHomeHref(user.role)} />;
   }
 
   async function onSubmit() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
-      router.replace('/(app)/home');
+      const signedIn = await login(email.trim(), password);
+      router.replace(getRoleHomeHref(signedIn.role));
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

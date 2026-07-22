@@ -3,11 +3,11 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Drawer } from 'expo-router/drawer';
 
 import { useAuth } from '@/src/auth/AuthContext';
+import { AppDrawerContent } from '@/src/nav/AppDrawerContent';
 import { colors } from '@/src/theme/tokens';
 
 /**
- * Authenticated drawer shell.
- * Role-filtered links arrive in P1-05.
+ * Authenticated drawer — custom role-filtered content (P1-05).
  */
 export default function AppDrawerLayout() {
   const { user, loading } = useAuth();
@@ -26,31 +26,17 @@ export default function AppDrawerLayout() {
 
   return (
     <Drawer
+      drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
         headerTintColor: colors.brand,
         headerStyle: { backgroundColor: colors.card },
         drawerActiveTintColor: colors.brand,
         drawerInactiveTintColor: colors.textMuted,
-        drawerStyle: { backgroundColor: colors.card, width: 280 },
+        drawerStyle: { backgroundColor: colors.card, width: 300 },
+        // Custom drawer renders its own links.
+        drawerItemStyle: { display: 'none' },
       }}
-    >
-      <Drawer.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          drawerLabel: 'Home',
-          headerTitle: 'MOI Home',
-        }}
-      />
-      <Drawer.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          drawerLabel: 'My Profile',
-          headerTitle: 'My Profile',
-        }}
-      />
-    </Drawer>
+    />
   );
 }
 
