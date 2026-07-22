@@ -1,19 +1,48 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/src/theme/tokens';
+import { useAuth } from '@/src/auth/AuthContext';
+import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
 
 /**
- * Profile placeholder — full screen in P1-07.
+ * Profile placeholder — full screen in P1-07. Logout here for P1-02 acceptance.
  */
 export default function ProfileScreen() {
+  const { user, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function onLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.replace('/login');
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.title}>My Profile</Text>
-        <Text style={styles.body}>
-          Placeholder for BUILD CHUNK P1-07. Auth user fields will load after P1-02 / P1-03.
-        </Text>
-        <Text style={styles.meta}>Next chunk when ready: P1-07</Text>
+        <Text style={styles.body}>{user?.full_name ?? '—'}</Text>
+        <Text style={styles.meta}>{user?.email}</Text>
+        <Text style={styles.meta}>Role: {user?.role}</Text>
+        <Text style={styles.meta}>Full profile UI lands in P1-07.</Text>
+
+        <Pressable
+          style={styles.logout}
+          accessibilityRole="button"
+          onPress={onLogout}
+          disabled={loggingOut}
+        >
+          {loggingOut ? (
+            <ActivityIndicator color={colors.danger} />
+          ) : (
+            <Text style={styles.logoutText}>Log out</Text>
+          )}
+        </Pressable>
       </View>
     </View>
   );
@@ -45,5 +74,20 @@ const styles = StyleSheet.create({
   meta: {
     ...typography.caption,
     color: colors.textMuted,
+  },
+  logout: {
+    marginTop: spacing.md,
+    minHeight: touch.minTarget,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  logoutText: {
+    color: colors.danger,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

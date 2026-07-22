@@ -8,9 +8,10 @@ Build plan: [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md
 | Chunk | Status |
 |-------|--------|
 | P1-00 Prerequisites | Done |
-| **P1-01 Scaffold** | **Done** — Expo **SDK 54** (Play Store Expo Go) |
-| P1-02 API + SecureStore | Next |
-| P1-03 Login form | Pending |
+| P1-01 Scaffold | Done — Expo SDK 54 |
+| **P1-02 API + SecureStore** | **Done** |
+| **P1-03 Login form polish** | **Done** |
+| P1-04 Role home | Next |
 
 ## Requirements
 
@@ -71,21 +72,45 @@ EXPO_PUBLIC_API_URL=http://10.119.123.130:8000/api/v1
 
 Use your Wi‑Fi IPv4 from `scripts/print-lan-ip.ps1` — **not** `localhost` on a physical phone.
 
-## App structure (P1-01)
+## App structure
 
 ```text
 mobile/
   app/
-    _layout.tsx          # Root Stack + providers
-    index.tsx            # Redirect → /login
-    login.tsx            # Login shell (form in P1-03)
+    _layout.tsx          # AuthProvider + Stack
+    index.tsx            # Session restore → home or login
+    login.tsx            # Sign in (P1-03 polishes UI)
     (app)/
-      _layout.tsx        # Drawer
+      _layout.tsx        # Auth-guarded drawer
       home.tsx
-      profile.tsx
-  src/theme/tokens.ts
-  app.json               # MOI, com.chandan.moi, SDK 54
+      profile.tsx        # Logout clears SecureStore
+  src/
+    api/client.ts        # axios + Bearer + 401 + 30s timeout
+    api/auth.ts          # POST /auth/login, GET /auth/me
+    api/storage.ts       # SecureStore moi_access_token / moi_user
+    auth/AuthContext.tsx
+    types/user.ts
+    theme/tokens.ts
 ```
+
+## Auth (P1-02)
+
+- Token: SecureStore `moi_access_token`
+- User JSON: SecureStore `moi_user`
+- Kill app → reopen → still signed in (until logout or 401)
+- Profile → **Log out** clears SecureStore
+
+Demo login: see `LOGINS.md` (e.g. `admin@logbook.app` / `admin123`). API must be reachable at `EXPO_PUBLIC_API_URL`.
+
+## Smoke tests
+
+After code changes:
+
+```powershell
+.\scripts\smoke.ps1
+```
+
+Runs unit error-mapping checks, `tsc --noEmit`, and a Metro web export (proves the app bundles).
 
 ## EAS
 

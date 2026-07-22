@@ -1,18 +1,20 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAuth } from '@/src/auth/AuthContext';
 import { colors, radius, spacing, typography } from '@/src/theme/tokens';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
+
   return (
     <View style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.title}>MOI app shell</Text>
         <Text style={styles.body}>
-          BUILD CHUNK P1-01 scaffold is live (Expo SDK 54 — Play Store Expo Go). Open the drawer
-          for Home and Profile.
+          Signed in as {user?.full_name} ({user?.role}). Session is stored in SecureStore
+          (P1-02).
         </Text>
-        <Text style={styles.meta}>Next: P1-02 — API client + SecureStore</Text>
-        <Text style={styles.meta}>Then: P1-03 — Login form · P1-04 — Role home · P1-05 — Full drawer</Text>
+        <Text style={styles.meta}>Next: P1-03 — Login UI polish · P1-04 — Role home</Text>
       </View>
     </View>
   );

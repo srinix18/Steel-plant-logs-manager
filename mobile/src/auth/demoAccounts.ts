@@ -1,0 +1,41 @@
+/** Demo accounts from LOGINS.md — __DEV__ only. */
+export const DEMO_ACCOUNTS = [
+  { label: 'Admin', email: 'admin@logbook.app', password: 'admin123' },
+  { label: 'CEO', email: 'ceo@chandansteel.com', password: 'ceo123' },
+  { label: 'HR', email: 'hr@chandansteel.com', password: 'hr123' },
+  { label: 'HoD', email: 'hod@chandansteel.com', password: 'hod123' },
+  { label: 'IAF Sup', email: 'iaf.supervisor@chandansteel.com', password: 'iaf123' },
+  { label: 'Worker', email: 'melter@chandansteel.com', password: 'worker123' },
+  { label: 'Maint', email: 'maint.quality@chandansteel.com', password: 'maint123' },
+  { label: 'Rolling', email: 'supervisor.rolling@chandansteel.com', password: 'rolling123' },
+] as const;
+
+/** Full seed list for API smoke (LOGINS.md). */
+export const ALL_DEMO_LOGINS = [
+  { email: 'admin@logbook.app', password: 'admin123' },
+  { email: 'ceo@chandansteel.com', password: 'ceo123' },
+  { email: 'hr@chandansteel.com', password: 'hr123' },
+  { email: 'hod@chandansteel.com', password: 'hod123' },
+  { email: 'iaf.supervisor@chandansteel.com', password: 'iaf123' },
+  { email: 'aod.supervisor@chandansteel.com', password: 'aod123' },
+  { email: 'ccm.supervisor@chandansteel.com', password: 'ccm123' },
+  { email: 'supervisor@chandansteel.com', password: 'supervisor123' },
+  { email: 'melter@chandansteel.com', password: 'worker123' },
+  { email: 'maint.quality@chandansteel.com', password: 'maint123' },
+  { email: 'maint.safety@chandansteel.com', password: 'maint123' },
+  { email: 'maint.energy@chandansteel.com', password: 'maint123' },
+  { email: 'maint.equipment@chandansteel.com', password: 'maint123' },
+  { email: 'maint.process@chandansteel.com', password: 'maint123' },
+  { email: 'hod.rolling@chandansteel.com', password: 'hod123' },
+  { email: 'supervisor.rolling@chandansteel.com', password: 'rolling123' },
+  { email: 'worker.rolling@chandansteel.com', password: 'rolling123' },
+  { email: 'hod.wire@chandansteel.com', password: 'hod123' },
+  { email: 'supervisor.wire@chandansteel.com', password: 'wire123' },
+  { email: 'worker.wire@chandansteel.com', password: 'wire123' },
+  { email: 'hod.bbd@chandansteel.com', password: 'hod123' },
+  { email: 'supervisor.bbd@chandansteel.com', password: 'bbd123' },
+  { email: 'worker.bbd@chandansteel.com', password: 'bbd123' },
+  { email: 'hod.forge@chandansteel.com', password: 'hod123' },
+  { email: 'supervisor.forge@chandansteel.com', password: 'forge123' },
+  { email: 'worker.forge@chandansteel.com', password: 'forge123' },
+] as const;

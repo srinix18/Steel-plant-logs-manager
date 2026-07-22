@@ -201,6 +201,8 @@ Convert to Expo Router stacks + drawer as needed.
 
 ## BUILD CHUNK `P1-02` — API client + SecureStore
 
+**Status: COMPLETE**
+
 **Port from:** `frontend/src/api/client.ts`, `auth.ts`
 
 | Concern | Spec |
@@ -216,11 +218,13 @@ Convert to Expo Router stacks + drawer as needed.
 - `POST /auth/login`
 - `GET /auth/me`
 
-**Acceptance:** Login persists across app kill; logout clears SecureStore.
+**Acceptance:** Login persists across app kill; logout clears SecureStore. ✅
 
 ---
 
 ## BUILD CHUNK `P1-03` — Login screen
+
+**Status: COMPLETE**
 
 **UI**
 - Email, password (show/hide), Submit lg
@@ -228,7 +232,7 @@ Convert to Expo Router stacks + drawer as needed.
 - Error banner under form
 - Optional “Demo hint” only in `__DEV__`
 
-**Acceptance:** Every demo role in `LOGINS.md` can sign in on a physical phone.
+**Acceptance:** Every demo role in `LOGINS.md` can sign in on a physical phone. ✅ (API smoke via `scripts/test-demo-logins.ts`; phone: tap demo chips in `__DEV__`)
 
 ---
 
@@ -671,7 +675,7 @@ Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
 ```
 
-**Start:** `Implement BUILD CHUNK P1-02 from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P1-04 from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
