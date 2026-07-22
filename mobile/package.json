@@ -12,6 +12,7 @@
     "test:roles": "node --experimental-strip-types ./scripts/test-role-homes.ts",
     "test:drawer": "node --experimental-strip-types ./scripts/test-drawer-nav.ts",
     "test:ui": "node --experimental-strip-types ./scripts/test-ui-primitives.ts",
+    "test:profile": "node --experimental-strip-types ./scripts/test-profile-api.ts",
     "test:logins": "node --experimental-strip-types ./scripts/test-demo-logins.ts",
     "gen:nav": "node --experimental-strip-types ./scripts/generate-nav-screens.ts",
     "smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke.ps1"

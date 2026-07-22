@@ -10,3 +10,13 @@ export async function getMe(): Promise<User> {
   const { data } = await apiClient.get<User>('/auth/me');
   return data;
 }
+
+export async function updateProfile(payload: {
+  full_name?: string;
+  phone?: string;
+  designation?: string;
+  date_of_joining?: string;
+}): Promise<User> {
+  const { data } = await apiClient.patch<User>('/auth/me', payload);
+  return data;
+}

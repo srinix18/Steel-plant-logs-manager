@@ -14,7 +14,8 @@ Build plan: [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md
 | **P1-04 Role home** | **Done** |
 | **P1-05 Drawer** | **Done** |
 | **P1-06 Design system** | **Done** |
-| P1-07 Profile | Next |
+| **P1-07 Profile** | **Done** |
+| P1-08 Plan 1 exit gate | Next |
 
 ## Requirements
 

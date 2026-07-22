@@ -283,10 +283,12 @@ Implement primitives in A.5 with Storybook optional; must be used on Login + Pro
 
 ## BUILD CHUNK `P1-07` — Profile
 
+**Status: COMPLETE**
+
 **API:** `GET/PATCH /auth/me`  
 **Fields:** Match web `ProfilePage` (name, etc.).
 
-**Acceptance:** Load + save profile on device.
+**Acceptance:** Load + save profile on device. ✅ (`app/(app)/profile`, `scripts/test-profile-api.ts`)
 
 ---
 
@@ -681,7 +683,7 @@ Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
 ```
 
-**Start:** `Implement BUILD CHUNK P1-07 from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P1-08 from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

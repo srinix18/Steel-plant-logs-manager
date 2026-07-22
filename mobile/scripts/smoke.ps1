@@ -27,6 +27,17 @@ Write-Host "== unit: ui primitives ==" -ForegroundColor Cyan
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-ui-primitives.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== profile API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-profile-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== demo logins (API if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {
