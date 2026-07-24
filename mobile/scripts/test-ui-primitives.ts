@@ -18,6 +18,7 @@ const required = [
   'LoadingView.tsx',
   'ErrorBanner.tsx',
   'StickyFooter.tsx',
+  'ProgressBar.tsx',
   'Screen.tsx',
   'SegmentedTabs.tsx',
   'index.ts',

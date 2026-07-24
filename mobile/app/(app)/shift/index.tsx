@@ -1,11 +1,6 @@
-import { RoleHomePlaceholder } from '@/src/components/RoleHomePlaceholder';
+import { ShiftLauncherScreen } from '@/src/features/shift/ShiftLauncherScreen';
 
-export default function Screen() {
-  return (
-    <RoleHomePlaceholder
-      title="Shift Dashboard"
-      description="Placeholder for Shift Dashboard. Full screen lands in a later plan chunk."
-      nextChunk="P3-OPS-SHIFT"
-    />
-  );
+/** P2-ENGINE-04 — Shift launcher (IAF / BBAR / RMILL / …). */
+export default function ShiftScreen() {
+  return <ShiftLauncherScreen />;
 }

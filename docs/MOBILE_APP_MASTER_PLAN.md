@@ -294,14 +294,18 @@ Implement primitives in A.5 with Storybook optional; must be used on Login + Pro
 
 ## BUILD CHUNK `P1-08` — Plan 1 exit gate
 
-- [ ] Emulator + physical phone
-- [ ] Session restore
-- [ ] Role homes
-- [ ] Drawer correctness
-- [ ] Env-based API URL
-- [ ] `mobile/README.md` complete
+**Status: COMPLETE**
 
-**Plan 1 complete → start `P2-ENGINE-01`.**
+- [x] Emulator + physical phone (physical Expo Go verified in Plan 1; emulator optional)
+- [x] Session restore
+- [x] Role homes
+- [x] Drawer correctness
+- [x] Env-based API URL
+- [x] `mobile/README.md` complete
+
+**Doc:** [`docs/MOBILE_P1_08_EXIT_GATE.md`](./MOBILE_P1_08_EXIT_GATE.md) · Gate script: `mobile/scripts/p1-exit-gate.ps1`
+
+**Plan 1 complete → start `P2-ENGINE-01`.** → **… → P2-SMS-CCM done → start `P2-ROLLING-RMILL`.**
 
 ---
 
@@ -351,19 +355,41 @@ Implement primitives in A.5 with Storybook optional; must be used on Login + Pro
 
 **UX:** Progress bar, step title, StickyFooter Back|Save|Next, workflow CTAs on owning step, Wake Lock while open.
 
-**Acceptance:** Open any existing run; Save fields round-trips; pull-to-refresh reloads.
+**Acceptance:** Open any existing run; Save fields round-trips; pull-to-refresh reloads. ✅
+
+- [x] Route `/(app)/heat/[runId]` + My Runs thin launcher
+- [x] Load run + template; field save PATCH round-trip
+- [x] Progress bar, StickyFooter Back|Save|Next, workflow CTAs (IAF owning step)
+- [x] Wake Lock (`expo-keep-awake`); pull-to-refresh; events + remarks panel
+- [x] Smoke: `scripts/test-run-host-api.ts` + `test-build-card-steps.ts`
+
+**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-02` — `buildCardSteps`
 
 Port logic from `frontend/src/components/run-wizard/buildCardSteps.ts` — expand sections into chronological steps (list + row/sample/hour cards).
 
-**Acceptance:** Unit-testable pure function; IAF yields expected step count for empty chemistry (list + ≥1 sample).
+**Acceptance:** Unit-testable pure function; IAF yields expected step count for empty chemistry (list + ≥1 sample). ✅
+
+- [x] `buildCardSteps` + `countCardStepOptions` in `mobile/src/features/run-host/`
+- [x] Run host uses card steps (not 1:1 sections)
+- [x] Unit: `scripts/test-build-card-steps.ts` — IAF empty chemistry = list + ≥1 sample (9 steps)
+
+**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-03` — Adapters for every `section_type`
 
 Implement RN bodies for: `fields`, chemistry `table`, `repeatable_group`, `static_material_table`, `matrix_table`, `target_chemistry`, `sample_chemistry_matrix`, `production_log_table`, `production_register_table`, `delay_register_table`, `hourly_production_matrix`, remarks thread.
 
-**Acceptance:** Each adapter has a fixture render without crash; complex cells use Part C.1 editors.
+**Acceptance:** Each adapter has a fixture render without crash; complex cells use Part C.1 editors. ✅
+
+- [x] `CardStepBody` covers all card kinds from `buildCardSteps`
+- [x] `section-data` init + `sectionDataToPayload` (materials / static correct shapes)
+- [x] Part C.1 complex editors: time_range, strand_pair, zone_strand, mould_tube, ladle_temp, furnace_zones, heat_ref, coil_ref, object
+- [x] Remarks thread with reply
+- [x] Unit: `scripts/test-section-adapters.ts`
+
+**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-04` — Shift launcher
 
@@ -373,7 +399,15 @@ Port `ShiftDashboard` process list:
 
 **APIs:** plants, processes, instances, shifts, grades, `POST /process-instances/{id}/runs`, active runs, previous handover.
 
-**Acceptance:** Start IAF + daily BBAR (no shift) + shift RMILL from phone.
+**Acceptance:** Start IAF + daily BBAR (no shift) + shift RMILL from phone. ✅
+
+- [x] `/(app)/shift` Shift launcher UI
+- [x] Process filter + create payloads (heat / daily / shift)
+- [x] Navigate to `/(app)/heat/{runId}` after create
+- [x] Active runs list + previous handover banner
+- [x] Unit + API smoke: `test-process-options.ts`, `test-shift-launcher-api.ts`
+
+**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -437,6 +471,15 @@ Port `ShiftDashboard` process list:
 
 **Acceptance:** Full heat lifecycle on phone; all sections save; workflow buttons only on owning cards; chemistry supports multiple samples.
 
+**Done (P2-SMS-IAF):**
+- [x] `grade_ref` / `user_ref` / `asset_ref` SelectSheets (plant users, asset group filter)
+- [x] Client formula recompute (`formulaEngine`) for process_time / tap_to_tap / power_total
+- [x] IAF workflow stepper + jump to `stateTabKey` on load
+- [x] Workflow CTAs only on owning cards (engine)
+- [x] Smoke: `test-iaf-lifecycle-api.ts`, `test-formula-engine.ts`, `test-heat-workflow-ui.ts`
+
+**Next (completed):** `P2-SMS-AOD` → `P2-SMS-CCM` → now `P2-ROLLING-RMILL`
+
 ---
 
 ### D.1.2 AOD — F/PRD/03 — `ladle_metallurgy` — CHUNK `P2-SMS-AOD`
@@ -458,6 +501,16 @@ Port `ShiftDashboard` process list:
 | 12 | approvals | fields | shift_incharge + hod signatures |
 
 **Acceptance:** All 13 sections save; blow card exposes every column; sample cards include temperature.
+
+**Done (P2-SMS-AOD):**
+- [x] All 13 AOD section types via run-host adapters (fields / static / blow / target / sample)
+- [x] Blow card: all columns with group labels; datetime + Now; row name in step label
+- [x] Sample cards include temperature (`include_temperature`)
+- [x] Gas auto-rollup from blow → `o2_nm3` / `n2_nm3` / `ar_nm3` (saved with blow)
+- [x] Workflow CTAs available on every AOD card (not last-only)
+- [x] Smoke: `test-aod-lifecycle-api.ts`, `test-aod-gas-blow.ts`
+
+**Next (completed):** `P2-SMS-CCM` → now `P2-ROLLING-RMILL`
 
 ---
 
@@ -498,6 +551,15 @@ Port `ShiftDashboard` process list:
 | supervisor | Supervisor | text |
 
 **Acceptance:** Add row; edit mould_tube + time_range + zone_strand on phone; save; reopen values intact.
+
+**Done (P2-SMS-CCM):**
+- [x] Casting entries: DateTimeField for scalar datetime + strand_pair datetime; cast duration under cast_end
+- [x] Add row uses typed empty cell shells; list labels show heat no
+- [x] mould_tube / time_range / zone_strand editors (engine) + round-trip smoke
+- [x] Workflow CTAs on every CCM card
+- [x] Smoke: `test-ccm-lifecycle-api.ts`, `test-ccm-casting-cells.ts`
+
+**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -683,7 +745,7 @@ Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
 ```
 
-**Start:** `Implement BUILD CHUNK P1-08 from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

@@ -6,6 +6,7 @@ export { EmptyState } from '@/src/components/ui/EmptyState';
 export { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 export { ListRow } from '@/src/components/ui/ListRow';
 export { LoadingView } from '@/src/components/ui/LoadingView';
+export { ProgressBar } from '@/src/components/ui/ProgressBar';
 export { Screen } from '@/src/components/ui/Screen';
 export { SegmentedTabs } from '@/src/components/ui/SegmentedTabs';
 export { SelectSheet } from '@/src/components/ui/SelectSheet';
