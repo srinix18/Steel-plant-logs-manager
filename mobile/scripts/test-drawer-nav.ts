@@ -35,8 +35,11 @@ try {
   assert.ok(!workerHrefs.includes('/admin/users'), 'worker does not see users');
 
   assert.ok(workerHrefs.includes('/shift'), 'worker sees shift');
+  assert.ok(workerHrefs.includes('/peel'), 'worker sees peeling stub');
   assert.ok(workerHrefs.includes('/workforce/my-attendance'), 'worker self-service');
   assert.ok(!adminHrefs.includes('/workforce/my-attendance'), 'admin has no worker self-service');
+  assert.ok(!adminHrefs.includes('/peel'), 'platform admin has no shop-floor peel link');
+  assert.ok(!adminHrefs.includes('/shift'), 'platform admin has no shift');
 
   assert.ok(ceoHrefs.includes('/pulse/plant'), 'ceo plant pulse');
   assert.ok(ceoHrefs.includes('/executive'), 'ceo executive');

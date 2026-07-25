@@ -1,7 +1,7 @@
 # MOI Mobile (Expo SDK 54)
 
 Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).  
-**Source of truth:** [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md)  
+**Source of truth:** [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md) (v2.1 — Parts D–F have full Acceptance / APIs / fields)  
 **Plan 1 exit gate:** [`docs/MOBILE_P1_08_EXIT_GATE.md`](../docs/MOBILE_P1_08_EXIT_GATE.md) · Prerequisites: [`docs/MOBILE_P1_00_PREREQUISITES.md`](../docs/MOBILE_P1_00_PREREQUISITES.md)
 
 ## Status
@@ -24,8 +24,16 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P2-SMS-IAF** | **Done** |
 | **P2-SMS-AOD** | **Done** |
 | **P2-SMS-CCM** | **Done** |
+| **P2-ROLLING-RMILL** | **Done** |
+| **P2-WIRE-WFURN** | **Done** |
+| **P2-WIRE-WDRAW** | **Done** |
+| **P2-BBD-BBAR** | **Done** |
+| **P2-BBD-PEEL** | **Done** (blocked stub) |
+| **P2-FORGE-GRIND** | **Done** |
+| **P2-DEPT-SHELLS** | **Done** |
+| **P2-REPORTS** | **Done** |
 
-**Next chunk:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next chunk:** `Implement BUILD CHUNK P3-MAINT-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 
@@ -94,6 +102,19 @@ When Expo asks to log in → **Proceed anonymously**. Scan QR with Expo Go.
 | `npm run test:aod-lifecycle` | AOD 13 sections + blow cols + sample temp |
 | `npm run test:ccm-cells` | CCM empty row shapes + casting card steps |
 | `npm run test:ccm-lifecycle` | Cast create → mould/time_range/zone round-trip |
+| `npm run test:rmill-steps` | RMILL delay/batch/12-hour card steps |
+| `npm run test:rmill-lifecycle` | RMILL delay + batch + hourly save round-trip |
+| `npm run test:wfurn-coils` | WFURN detection + coil pickable filters |
+| `npm run test:wfurn-lifecycle` | Input coil upsert → furnace coil_ref save |
+| `npm run test:wdraw-drawing` | WDRAW dual coil_ref + seed dropdown options |
+| `npm run test:wdraw-lifecycle` | WFURN→WDRAW coil pick + condition/lubricant |
+| `npm run test:bbar-register` | BBAR detection + total_weight calc + columns |
+| `npm run test:bbar-lifecycle` | BBAR daily run + customers + weight×count save |
+| `npm run test:peel-blocked` | PEEL blocked copy + drawer `/peel` + no fake template |
+| `npm run test:grind-register` | GRIND detection + future jobs card steps |
+| `npm run test:grind-lifecycle` | GRIND daily create + header save + Start Register |
+| `npm run test:dept-shells` | QUAL/MAINT/UTIL shells + non-log process guard |
+| `npm run test:reports` | Report HTML builder + load run/template |
 
 ## App structure
 
@@ -108,7 +129,7 @@ mobile/
       home.tsx               # Redirect to role home
       heat/[runId].tsx       # P2-ENGINE-01 run host
       shift/                 # P2-ENGINE-04 shift launcher
-      my-runs/               # Thin run list → heat host
+      my-runs/               # P3-OPS-MYRUNS — list → Edit host / Report
       profile/index.tsx      # GET/PATCH /auth/me
       messages/              # List placeholder (P3-MSG-*)
       admin|pulse|workforce|…  # Role homes + module placeholders

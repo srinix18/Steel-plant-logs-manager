@@ -41,7 +41,7 @@ export function hasRole(userRole: UserRole, allowed: UserRole[]): boolean {
   }
   if (
     userRole === 'plant_admin' &&
-    allowed.some((r) => HOD_ROLES.includes(r) || HOD_TIER_ROLES.includes(r))
+    allowed.some((r) => HOD_ROLES.includes(r))
   ) {
     return true;
   }

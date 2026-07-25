@@ -106,13 +106,19 @@ Also seeded: **QUAL**, **MAINT**, **UTIL** for workforce grouping. Backend start
 | `P2-SMS-IAF` | **Done** | Full IAF heat lifecycle; grade/user/asset pickers; formulas; workflow stepper |
 | `P2-SMS-AOD` | **Done** | All 13 AOD sections; blow cards (16 cols); sample temperature; gas auto from blow |
 | `P2-SMS-CCM` | **Done** | Casting entries with mould_tube / time_range / zone_strand; datetime strand pairs |
-| `P2-ROLLING-RMILL` | **Next** | Rolling mill delay + batches + hourly |
-| `P2-WIRE-WFURN` … `P2-FORGE-GRIND` | Pending | Remaining department log sheets |
-| `P2-REPORTS` | Pending | Read-only run reports on phone |
+| `P2-ROLLING-RMILL` | **Done** | Delay codes + heat lookup; batches; all 12 hourly cards |
+| `P2-WIRE-WFURN` | **Done** | Input coils upsert; furnace `coil_ref` picker from `/coils` |
+| `P2-WIRE-WDRAW` | **Done** | Dual `inlet_coil_ref`; condition/lubricant seed options |
+| `P2-BBD-BBAR` | **Done** | Customer picker; `total_weight_kg` = weight×count |
+| `P2-BBD-PEEL` | **Done** | Blocked stub: “Peeling not digitized yet.” |
+| `P2-FORGE-GRIND` | **Done** | Header work_centre + date; engine-ready for future jobs |
+| `P2-DEPT-SHELLS` | **Done** | QUAL/MAINT/UTIL browse; no fake log hosts |
+| `P2-REPORTS` | **Done** | Read-only report + Share HTML; My Runs deep link |
+| `P3-*` … `P6-*` | Specced (v2.1) | Full Acceptance in master plan Parts E–F |
 
-**On phone today:** login as any demo role → correct home → Shift → start **IAF**, **AOD**, or **CCM** → fill cards → Save / workflow. Other modules appear in the drawer as placeholders until Plans 3–5.
+**On phone today:** login → Shift → start **IAF / AOD / CCM / RMILL / WFURN / WDRAW / BBAR / GRIND** → fill cards → Save / workflow. Peeling shows blocked stub. Other modules appear in the drawer as placeholders until Plans 3–5.
 
-**Phone smoke accounts:** melter `melter@chandansteel.com` / `worker123` (IAF) · AOD `aod.supervisor@chandansteel.com` / `aod123` · CCM `ccm.supervisor@chandansteel.com` / `ccm123`
+**Phone smoke accounts:** melter `melter@chandansteel.com` / `worker123` · AOD `aod.supervisor@chandansteel.com` / `aod123` · CCM `ccm.supervisor@chandansteel.com` / `ccm123` · Rolling `worker.rolling@chandansteel.com` / `rolling123` · Wire `worker.wire@chandansteel.com` / `wire123` · Bright Bar `worker.bbd@chandansteel.com` / `bbd123` · Forge `worker.forge@chandansteel.com` / `forge123`
 
 ```powershell
 cd mobile
@@ -453,5 +459,5 @@ cd backend && .\venv\Scripts\python scripts\test_db.py
 Internal demo / development project for Chandan Steel manufacturing operations.
 
 - **Web:** production-shaped demo — use as the reference for full capability.
-- **Mobile:** Plan 1 complete; Plan 2 through **CCM**; next chunk **RMILL**.
+- **Mobile:** Plan 1–2 complete; Plan 3 through **P3-MAINT-QUEUE**; next chunk **P3-MAINT-DASH**. Master plan **v2.1**.
 - **Do not use seeded passwords in production.**

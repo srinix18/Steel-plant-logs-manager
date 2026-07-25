@@ -35,6 +35,23 @@ export type TemplateVersionDetail = {
   sections: TemplateSection[];
 };
 
+export type TemplateSummary = {
+  id: string;
+  scope_type: string;
+  scope_id: string;
+  doc_no: string;
+  name: string;
+};
+
+export type TemplateDetail = TemplateSummary & {
+  versions: {
+    id: string;
+    rev_no: string;
+    status: string;
+    effective_from?: string | null;
+  }[];
+};
+
 export type WorkflowTransition = {
   from_state: string;
   to_state: string;

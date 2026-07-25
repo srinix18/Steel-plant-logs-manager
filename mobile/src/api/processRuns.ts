@@ -4,6 +4,8 @@ import type {
   ProcessRun,
   ProcessRunDetail,
   RunRemark,
+  TemplateDetail,
+  TemplateSummary,
   TemplateVersionDetail,
 } from '@/src/types/processRun';
 
@@ -12,8 +14,32 @@ export async function fetchMyRuns(): Promise<ProcessRun[]> {
   return data;
 }
 
+export async function fetchAllRuns(params?: {
+  plant_id?: string;
+  organisation_id?: string;
+  department_id?: string;
+  process_id?: string;
+  process_code?: string;
+  active_only?: boolean;
+  state?: string;
+  created_by?: string;
+}): Promise<ProcessRun[]> {
+  const { data } = await apiClient.get<ProcessRun[]>('/process-runs', { params });
+  return data;
+}
+
 export async function fetchProcessRun(runId: string): Promise<ProcessRunDetail> {
   const { data } = await apiClient.get<ProcessRunDetail>(`/process-runs/${runId}`);
+  return data;
+}
+
+export async function fetchTemplates(): Promise<TemplateSummary[]> {
+  const { data } = await apiClient.get<TemplateSummary[]>('/templates');
+  return data;
+}
+
+export async function fetchTemplate(templateId: string): Promise<TemplateDetail> {
+  const { data } = await apiClient.get<TemplateDetail>(`/templates/${templateId}`);
   return data;
 }
 

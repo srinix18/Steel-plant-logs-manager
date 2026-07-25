@@ -1,6 +1,6 @@
 import type { ProcessOption } from '@/src/types/platform';
 
-/** Shop-floor processes launched from Shift Dashboard (P2-ENGINE-04). */
+/** Shop-floor processes launched from Shift Dashboard (P3-OPS-SHIFT). */
 export const PROCESS_OPTIONS: ProcessOption[] = [
   { code: 'IAF', label: 'IAF — Induction Furnace', instanceLabel: 'Furnace', runType: 'heat' },
   {
@@ -30,12 +30,48 @@ export const PROCESS_OPTIONS: ProcessOption[] = [
     runType: 'daily',
   },
   {
+    code: 'PEEL',
+    label: 'Bright Bar — Peeling',
+    instanceLabel: 'Peeling Line',
+    runType: 'daily',
+    notDigitized: true,
+  },
+  {
     code: 'GRIND',
     label: 'Forge Shop — Grinding Material Details',
     instanceLabel: 'Work Centre',
     runType: 'daily',
   },
 ];
+
+export function isNotDigitizedProcess(option: ProcessOption | undefined): boolean {
+  return Boolean(option?.notDigitized);
+}
+
+/** Process codes that have (or will have) a mobile log-sheet path — never invent others. */
+export function logSheetProcessCodes(
+  options: ProcessOption[] = PROCESS_OPTIONS
+): string[] {
+  return options.map((p) => p.code);
+}
+
+export function isLogSheetProcessCode(
+  code: string,
+  options: ProcessOption[] = PROCESS_OPTIONS
+): boolean {
+  return options.some((p) => p.code === code);
+}
+
+/**
+ * API processes that are not in the shop-floor launcher catalog
+ * (e.g. QUAL/MAINT/UTIL shells or unknown codes) — must not open run host.
+ */
+export function nonLogProcessesFromApi(
+  apiProcesses: { code: string; name: string }[],
+  options: ProcessOption[] = PROCESS_OPTIONS
+): { code: string; name: string }[] {
+  return apiProcesses.filter((p) => !isLogSheetProcessCode(p.code, options));
+}
 
 export function filterProcessOptions(
   availableCodes: string[],
@@ -59,7 +95,12 @@ export function showsShiftField(runType: string | undefined): boolean {
   return !isDailyRunType(runType);
 }
 
-export function startButtonLabel(processCode: string, runType: string | undefined): string {
+export function startButtonLabel(
+  processCode: string,
+  runType: string | undefined,
+  notDigitized?: boolean
+): string {
+  if (notDigitized || processCode === 'PEEL') return 'View status';
   if (isDailyRunType(runType)) return 'Start Daily Register';
   if (processCode === 'CCM') return 'Start Shift Log';
   if (processCode === 'AOD') return 'Start AOD Run';

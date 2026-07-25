@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getErrorMessage } from '@/src/api/client';
+import { fetchCoils, type CoilRecord } from '@/src/api/coils';
 import {
   fetchAssetGroups,
   fetchAssets,
+  fetchCustomers,
+  fetchDelayCodes,
   fetchGradeElements,
   fetchMaterials,
   fetchPlantUsers,
   fetchPlants,
+  fetchProcessInstances,
   fetchShifts,
   fetchSteelGrades,
+  type Customer,
+  type DelayCode,
 } from '@/src/api/lookups';
 import {
   fetchProcessRun,
@@ -42,7 +48,12 @@ import { gasFieldsFromBlow } from '@/src/utils/aodGasFromBlow';
 import { mergeCalculatedIntoFields } from '@/src/utils/formulaEngine';
 import {
   firstStepIndexForSection,
+  isBbarDailyTemplate,
+  isGrindDailyTemplate,
   isIafHeatTemplate,
+  isRmillShiftTemplate,
+  isWdrawShiftTemplate,
+  isWireDivisionTemplate,
   stateTabKey,
 } from '@/src/utils/heatWorkflowUi';
 import type { BlowProcessSectionData } from '@/src/features/run-host/section-data/types';
@@ -57,20 +68,63 @@ function fieldValuesToRecord(
   return out;
 }
 
+function templateHasCoilRef(sections: TemplateSection[]): boolean {
+  return sections.some((s) =>
+    ((s.config.columns as { type?: string }[] | undefined) ?? []).some(
+      (c) => c.type === 'coil_ref'
+    )
+  );
+}
+
+function templateHasCustomerRef(sections: TemplateSection[]): boolean {
+  return sections.some((s) =>
+    ((s.config.columns as { type?: string; key?: string }[] | undefined) ?? []).some(
+      (c) => c.type === 'customer_ref' || c.key === 'customer_id'
+    )
+  );
+}
+
+function applyShiftFieldDefaults(
+  vals: Record<string, string>,
+  shiftCode: string | undefined
+): Record<string, string> {
+  const next = { ...vals };
+  if (!next.date) next.date = new Date().toISOString().slice(0, 10);
+  if (!next.shift && shiftCode) next.shift = shiftCode;
+  return next;
+}
+
 function applyIafDefaults(
   vals: Record<string, string>,
   detail: ProcessRunDetail,
   shiftCode: string | undefined,
   currentUserId: string | undefined
 ): Record<string, string> {
-  const next = { ...vals };
-  if (!next.date) next.date = new Date().toISOString().slice(0, 10);
+  const next = applyShiftFieldDefaults(vals, shiftCode);
   if (!next.grade && detail.grade_id) next.grade = detail.grade_id;
-  if (!next.shift && shiftCode) next.shift = shiftCode;
   if (!next.melter && currentUserId) next.melter = currentUserId;
   if (!next.heat_no) {
     next.heat_no = detail.run_number.split('-').pop() ?? detail.run_number;
   }
+  return next;
+}
+
+function applyWireDefaults(
+  vals: Record<string, string>,
+  shiftCode: string | undefined,
+  currentUserId: string | undefined
+): Record<string, string> {
+  const next = applyShiftFieldDefaults(vals, shiftCode);
+  if (!next.operator && currentUserId) next.operator = currentUserId;
+  return next;
+}
+
+function applyGrindDefaults(
+  vals: Record<string, string>,
+  workCentreHint?: string
+): Record<string, string> {
+  const next = applyShiftFieldDefaults(vals, undefined);
+  if (!next.work_centre && workCentreHint) next.work_centre = workCentreHint;
   return next;
 }
 
@@ -86,6 +140,10 @@ export function useRunHost(runId: string | undefined) {
   const [plantUsers, setPlantUsers] = useState<User[]>([]);
   const [assets, setAssets] = useState<PlantAsset[]>([]);
   const [assetGroupsByCode, setAssetGroupsByCode] = useState<Record<string, string>>({});
+  const [delayCodes, setDelayCodes] = useState<DelayCode[]>([]);
+  const [coils, setCoils] = useState<CoilRecord[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [plantId, setPlantId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [events, setEvents] = useState<OperationalEvent[]>([]);
   const [suggestedStepIndex, setSuggestedStepIndex] = useState<number | null>(null);
@@ -122,25 +180,50 @@ export function useRunHost(runId: string | undefined) {
         const sorted = [...template.sections].sort((a, b) => a.sort_order - b.sort_order);
         const sectionKeys = sorted.map((s) => s.key);
         const iaf = isIafHeatTemplate(sectionKeys);
+        const rmill = isRmillShiftTemplate(sectionKeys);
+        const wire = isWireDivisionTemplate(sectionKeys);
+        const bbar = isBbarDailyTemplate(sectionKeys);
+        const grind = isGrindDailyTemplate(sectionKeys);
 
-        let plantId = storedUser?.plant_id ?? null;
-        if (!plantId) {
+        let resolvedPlantId = storedUser?.plant_id ?? null;
+        if (!resolvedPlantId) {
           const plants = await fetchPlants().catch(() => []);
-          plantId = plants[0]?.id ?? null;
+          resolvedPlantId = plants[0]?.id ?? null;
         }
+        setPlantId(resolvedPlantId);
 
         let users: User[] = [];
         let plantAssets: PlantAsset[] = [];
+        let codes: DelayCode[] = [];
+        let coilList: CoilRecord[] = [];
+        let customerList: Customer[] = [];
         const groupMap: Record<string, string> = {};
-        if (plantId) {
-          const [fromPlant, groups, allAssets] = await Promise.all([
-            fetchPlantUsers(plantId).catch(() => [] as User[]),
-            fetchAssetGroups(plantId).catch(() => []),
-            fetchAssets({ plantId }).catch(() => [] as PlantAsset[]),
+        if (resolvedPlantId) {
+          const [fromPlant, groups, allAssets, delayList] = await Promise.all([
+            fetchPlantUsers(resolvedPlantId).catch(() => [] as User[]),
+            fetchAssetGroups(resolvedPlantId).catch(() => []),
+            fetchAssets({ plantId: resolvedPlantId }).catch(() => [] as PlantAsset[]),
+            fetchDelayCodes(resolvedPlantId).catch(() => [] as DelayCode[]),
           ]);
           users = fromPlant;
           plantAssets = allAssets;
+          codes = delayList.filter((c) => c.is_active !== false);
           for (const g of groups) groupMap[g.code] = g.id;
+
+          if (templateHasCoilRef(sorted) && runId) {
+            const purpose = isWdrawShiftTemplate(sectionKeys) ? 'drawing' : undefined;
+            // WFURN furnace picker needs non-completed coils for this run (no purpose).
+            // Always load both furnace list for WFURN; WDRAW uses drawing purpose.
+            coilList = await fetchCoils({
+              plantId: resolvedPlantId,
+              runId,
+              purpose: purpose === 'drawing' ? 'drawing' : undefined,
+            }).catch(() => [] as CoilRecord[]);
+          }
+
+          if (templateHasCustomerRef(sorted)) {
+            customerList = await fetchCustomers(resolvedPlantId).catch(() => [] as Customer[]);
+          }
         }
         if (storedUser && !users.some((u) => u.id === storedUser.id)) {
           users = [storedUser, ...users];
@@ -148,7 +231,7 @@ export function useRunHost(runId: string | undefined) {
 
         let shiftCode: string | undefined;
         if (detail.shift_id) {
-          const shifts = await fetchShifts(plantId ?? undefined).catch(() => []);
+          const shifts = await fetchShifts(resolvedPlantId ?? undefined).catch(() => []);
           shiftCode = shifts.find((s) => s.id === detail.shift_id)?.code;
         }
 
@@ -168,6 +251,17 @@ export function useRunHost(runId: string | undefined) {
         let vals = fieldValuesToRecord(detail.field_values);
         if (iaf) {
           vals = applyIafDefaults(vals, detail, shiftCode, storedUser?.id);
+        } else if (wire) {
+          vals = applyWireDefaults(vals, shiftCode, storedUser?.id);
+        } else if (grind) {
+          let workCentreHint: string | undefined;
+          if (!vals.work_centre) {
+            const instances = await fetchProcessInstances().catch(() => []);
+            workCentreHint = instances.find((i) => i.id === detail.process_instance_id)?.name;
+          }
+          vals = applyGrindDefaults(vals, workCentreHint);
+        } else if (rmill || bbar) {
+          vals = applyShiftFieldDefaults(vals, shiftCode);
         }
         vals = mergeCalculatedIntoFields(sorted, vals);
 
@@ -182,6 +276,9 @@ export function useRunHost(runId: string | undefined) {
         setPlantUsers(users);
         setAssets(plantAssets);
         setAssetGroupsByCode(groupMap);
+        setDelayCodes(codes);
+        setCoils(coilList);
+        setCustomers(customerList);
 
         if (iaf && !opts?.soft) {
           const tab = stateTabKey(detail.current_state);
@@ -381,6 +478,10 @@ export function useRunHost(runId: string | undefined) {
     plantUsers,
     assets,
     assetGroupsByCode,
+    delayCodes,
+    coils,
+    customers,
+    plantId,
     currentUserId,
     events,
     suggestedStepIndex,

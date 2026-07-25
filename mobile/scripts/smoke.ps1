@@ -55,6 +55,45 @@ Write-Host "== unit: CCM casting cells ==" -ForegroundColor Cyan
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-ccm-casting-cells.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== unit: RMILL card steps ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-rmill-card-steps.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: WFURN coils ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wfurn-coils.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: WDRAW drawing ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wdraw-drawing.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: BBAR register ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-bbar-register.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: PEEL blocked ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-peel-blocked.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: GRIND register ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-grind-register.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== unit: DEPT shells ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-dept-shells.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== reports (unit + API if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-reports-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== profile API (if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {
@@ -99,6 +138,76 @@ if (Test-Path .env) {
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-shift-launcher-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== my runs API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-my-runs-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== supervisor issue API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-supervisor-issue-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== hod overview (unit) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-hod-overview.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== safety scan API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-scan-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== safety dashboard API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-dashboard-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== safety lists API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-lists-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== maint queue API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-queue-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {
@@ -130,6 +239,61 @@ if (Test-Path .env) {
   }
 }
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-ccm-lifecycle-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== RMILL lifecycle API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-rmill-lifecycle-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== WFURN lifecycle API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wfurn-lifecycle-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== WDRAW lifecycle API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wdraw-lifecycle-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== BBAR lifecycle API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-bbar-lifecycle-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== GRIND lifecycle API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-grind-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== tsc ==" -ForegroundColor Cyan

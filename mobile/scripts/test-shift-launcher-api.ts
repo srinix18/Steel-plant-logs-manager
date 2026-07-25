@@ -1,5 +1,6 @@
 /**
- * Smoke: create IAF (melter) + BBAR (bbd worker) + RMILL (rolling worker).
+ * Smoke P3-OPS-SHIFT: create IAF / CCM / BBAR / RMILL / GRIND;
+ * plant active runs; handover-notes/previous endpoint.
  * Skips unreachable API or missing process/instance for that role.
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
@@ -13,6 +14,8 @@ type Scenario = {
   password: string;
   code: string;
   payload: { run_type: string; includeShift?: boolean; includeGrade?: boolean };
+  /** When true, create body must not contain grade_id (CCM / daily). */
+  forbidGrade?: boolean;
 };
 
 const SCENARIOS: Scenario[] = [
@@ -24,11 +27,20 @@ const SCENARIOS: Scenario[] = [
     payload: { run_type: 'heat', includeShift: true, includeGrade: true },
   },
   {
+    label: 'CCM cast (no grade)',
+    email: 'ccm.supervisor@chandansteel.com',
+    password: 'ccm123',
+    code: 'CCM',
+    payload: { run_type: 'cast', includeShift: true, includeGrade: false },
+    forbidGrade: true,
+  },
+  {
     label: 'BBAR daily',
     email: 'worker.bbd@chandansteel.com',
     password: 'bbd123',
     code: 'BBAR',
     payload: { run_type: 'daily' },
+    forbidGrade: true,
   },
   {
     label: 'RMILL shift',
@@ -36,6 +48,14 @@ const SCENARIOS: Scenario[] = [
     password: 'rolling123',
     code: 'RMILL',
     payload: { run_type: 'shift', includeShift: true, includeGrade: true },
+  },
+  {
+    label: 'GRIND daily',
+    email: 'worker.forge@chandansteel.com',
+    password: 'forge123',
+    code: 'GRIND',
+    payload: { run_type: 'daily' },
+    forbidGrade: true,
   },
 ];
 
@@ -123,6 +143,11 @@ async function runScenario(scenario: Scenario): Promise<boolean> {
     delete body.grade_id;
   }
 
+  if (scenario.forbidGrade && body.grade_id) {
+    console.error(`shift-launcher-api: ${scenario.label} must not send grade_id`, body);
+    process.exit(1);
+  }
+
   const create = await request(`/process-instances/${instances[0].id}/runs`, {
     method: 'POST',
     headers: auth,
@@ -141,6 +166,75 @@ async function runScenario(scenario: Scenario): Promise<boolean> {
   return true;
 }
 
+/** Plant-scoped active runs + previous handover GET (does not require a note to exist). */
+async function checkActiveRunsAndHandover(): Promise<void> {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'melter@chandansteel.com', password: 'worker123' }),
+  });
+  if (!login.res.ok) {
+    console.log('skip active/handover: melter login failed');
+    return;
+  }
+  const token = (login.json as { access_token: string }).access_token;
+  const auth = { Authorization: `Bearer ${token}` };
+
+  const meRes = await request('/auth/me', { headers: auth });
+  const me = meRes.res.ok
+    ? (meRes.json as { plant_id?: string; department_id?: string })
+    : {};
+
+  const plantsRes = await request('/plants', { headers: auth });
+  if (!plantsRes.res.ok) {
+    console.error('shift-launcher-api: plants failed', plantsRes.json);
+    process.exit(1);
+  }
+  const plants = plantsRes.json as { id: string }[];
+  const plantId = me.plant_id || plants[0]?.id;
+  if (!plantId) {
+    console.log('skip active runs: no plant');
+    return;
+  }
+
+  const activeRes = await request(`/plants/${plantId}/runs/active`, { headers: auth });
+  if (!activeRes.res.ok) {
+    console.error('shift-launcher-api: active runs failed', activeRes.json);
+    process.exit(1);
+  }
+  if (!Array.isArray(activeRes.json)) {
+    console.error('shift-launcher-api: active runs not an array', activeRes.json);
+    process.exit(1);
+  }
+  console.log(`ok  active runs (plant) → ${activeRes.json.length} run(s)`);
+
+  const shiftsRes = await request(`/shifts?plant_id=${plantId}`, { headers: auth });
+  if (!shiftsRes.res.ok || !Array.isArray(shiftsRes.json) || !(shiftsRes.json as { id: string }[]).length) {
+    console.log('skip handover: no shifts');
+    return;
+  }
+  const shiftId = (shiftsRes.json as { id: string }[])[0].id;
+  const deptId = me.department_id;
+  if (!deptId) {
+    console.log('skip handover: no department_id on user');
+    return;
+  }
+
+  const handRes = await request(
+    `/workforce/handover-notes/previous?department_id=${deptId}&shift_id=${shiftId}`,
+    { headers: auth }
+  );
+  if (!handRes.res.ok) {
+    console.error('shift-launcher-api: handover previous failed', handRes.json);
+    process.exit(1);
+  }
+  const note = handRes.json as { note?: string } | null;
+  console.log(
+    note?.note
+      ? `ok  handover previous → note present (${String(note.note).slice(0, 40)}…)`
+      : 'ok  handover previous → null/empty (banner hidden)'
+  );
+}
+
 async function main() {
   try {
     await request('/auth/login', {
@@ -157,6 +251,8 @@ async function main() {
     if (await runScenario(scenario)) okCount += 1;
   }
 
+  await checkActiveRunsAndHandover();
+
   if (okCount === 0) {
     console.log('shift-launcher-api: no create targets available — skipped');
     process.exit(0);
@@ -168,7 +264,7 @@ async function main() {
       `shift-launcher-api: ok (${okCount}/${SCENARIOS.length}; ${missing} skipped by role scope)`
     );
   } else {
-    console.log(`shift-launcher-api: ok (IAF + BBAR + RMILL)`);
+    console.log(`shift-launcher-api: ok (IAF + CCM + BBAR + RMILL + GRIND + active/handover)`);
   }
 }
 

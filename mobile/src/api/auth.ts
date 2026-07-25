@@ -6,8 +6,8 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return data;
 }
 
-export async function getMe(): Promise<User> {
-  const { data } = await apiClient.get<User>('/auth/me');
+export async function getMe(opts?: { timeoutMs?: number }): Promise<User> {
+  const { data } = await apiClient.get<User>('/auth/me', opts);
   return data;
 }
 

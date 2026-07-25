@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const cached = await getStoredUser();
         if (cached && !cancelled) setUser(cached);
 
-        const me = await getMe();
+        const me = await getMe({ timeoutMs: 8_000 });
         if (!cancelled) {
           setUser(me);
           await setStoredUser(me);

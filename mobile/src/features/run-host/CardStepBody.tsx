@@ -46,7 +46,11 @@ import type {
   StrandPairValue,
   TargetChemistrySectionData,
 } from '@/src/features/run-host/section-data/types';
+import type { CoilRecord } from '@/src/api/coils';
+import type { Customer, DelayCode } from '@/src/api/lookups';
+import type { User } from '@/src/types/user';
 import type { TemplateSection } from '@/src/types/processRun';
+import { applyCalculatedColumns } from '@/src/utils/formulaEngine';
 import { colors, spacing, touch, typography } from '@/src/theme/tokens';
 
 export type CardStepContext = {
@@ -59,9 +63,50 @@ export type CardStepContext = {
   fieldValues: Record<string, string>;
   onFieldChange: (key: string, value: string) => void;
   fieldLookups?: FieldLookupContext;
+  delayCodes?: DelayCode[];
+  plantUsers?: User[];
+  coils?: CoilRecord[];
+  customers?: Customer[];
+  /** drawing = WDRAW completed coils; undefined = WFURN non-completed */
+  coilPurpose?: 'drawing';
   remarksRefreshKey: number;
   disabled?: boolean;
 };
+
+function sectionCoilPurpose(section: TemplateSection): 'drawing' | undefined {
+  if (section.config.coil_picker_purpose === 'drawing') return 'drawing';
+  if (
+    section.key === 'input_material' ||
+    section.key === 'output_material' ||
+    section.key.includes('draw')
+  ) {
+    return 'drawing';
+  }
+  return undefined;
+}
+
+function productionRowTitle(
+  values: Record<string, unknown>,
+  index: number
+): string {
+  const coilRaw = values.inlet_coil_ref ?? values.coil_ref;
+  if (coilRaw && typeof coilRaw === 'object' && 'coil_no' in coilRaw) {
+    const cn = (coilRaw as { coil_no?: unknown }).coil_no;
+    if (typeof cn === 'string' && cn.trim()) return `Coil ${cn.trim()}`;
+  }
+  const finish = values.finish_coil_no;
+  if (typeof finish === 'string' && finish.trim()) return `Finish ${finish.trim()}`;
+
+  const raw = values.heat_no ?? values.heat_ref;
+  if (typeof raw === 'string' && raw.trim()) return `Heat ${raw.trim()}`;
+  if (raw && typeof raw === 'object' && 'heat_no' in raw) {
+    const hn = (raw as { heat_no?: unknown }).heat_no;
+    if (typeof hn === 'string' && hn.trim()) return `Heat ${hn.trim()}`;
+  }
+  const coilNo = values.coil_no;
+  if (typeof coilNo === 'string' && coilNo.trim()) return `Coil ${coilNo.trim()}`;
+  return `Row ${index + 1}`;
+}
 
 type Props = {
   step: CardStep;
@@ -571,20 +616,13 @@ export function CardStepBody({
     if (step.kind === 'production_list') {
       return (
         <View style={styles.stack}>
-          {data.rows.map((row, i) => {
-            const heatNo = row.values.heat_no;
-            const title =
-              typeof heatNo === 'string' && heatNo.trim()
-                ? `Heat ${heatNo.trim()}`
-                : `Row ${i + 1}`;
-            return (
-              <JumpRow
-                key={i}
-                title={title}
-                onPress={() => onJumpToStep?.(`${section.key}:row:${i}`)}
-              />
-            );
-          })}
+          {data.rows.map((row, i) => (
+            <JumpRow
+              key={i}
+              title={productionRowTitle(row.values as Record<string, unknown>, i)}
+              onPress={() => onJumpToStep?.(`${section.key}:row:${i}`)}
+            />
+          ))}
           <Button
             title="Add row"
             variant="secondary"
@@ -608,12 +646,28 @@ export function CardStepBody({
       label: g.description ? `${g.code} — ${g.description}` : g.code,
       value: g.id,
     }));
+    const customerOptions = (ctx.customers ?? []).map((c) => ({
+      label: c.code ? `${c.name} (${c.code})` : c.name,
+      value: c.id,
+    }));
     const castStartPair =
       (row.values.cast_start as StrandPairValue | undefined) ?? null;
 
+    const patchRowValue = (key: string, value: unknown) => {
+      onSectionDataChange(section.key, {
+        rows: data.rows.map((r, i) => {
+          if (i !== idx) return r;
+          return {
+            ...r,
+            values: applyCalculatedColumns(columns, { ...r.values, [key]: value }),
+          };
+        }),
+      });
+    };
+
     return (
       <View style={styles.stack}>
-        <Text style={styles.hint}>{columns.length} columns — scroll and fill this casting entry.</Text>
+        <Text style={styles.hint}>{columns.length} columns — scroll and fill this row.</Text>
         {columns.map((col) => {
           if (col.type === 'dropdown' && col.options?.length) {
             return (
@@ -622,13 +676,7 @@ export function CardStepBody({
                 label={col.label}
                 options={col.options.map((o) => ({ label: o, value: o }))}
                 value={typeof row.values[col.key] === 'string' ? (row.values[col.key] as string) : null}
-                onChange={(v) =>
-                  onSectionDataChange(section.key, {
-                    rows: data.rows.map((r, i) =>
-                      i === idx ? { ...r, values: { ...r.values, [col.key]: v } } : r
-                    ),
-                  })
-                }
+                onChange={(v) => patchRowValue(col.key, v)}
                 disabled={disabled}
               />
             );
@@ -640,14 +688,24 @@ export function CardStepBody({
                 label={col.label}
                 options={gradeOptions}
                 value={typeof row.values[col.key] === 'string' ? (row.values[col.key] as string) : null}
-                onChange={(v) =>
-                  onSectionDataChange(section.key, {
-                    rows: data.rows.map((r, i) =>
-                      i === idx ? { ...r, values: { ...r.values, [col.key]: v } } : r
-                    ),
-                  })
-                }
+                onChange={(v) => patchRowValue(col.key, v)}
                 disabled={disabled}
+              />
+            );
+          }
+          if (
+            (col.type === 'customer_ref' || col.key === 'customer_id') &&
+            customerOptions.length
+          ) {
+            return (
+              <SelectSheet
+                key={col.key}
+                label={col.label}
+                options={customerOptions}
+                value={typeof row.values[col.key] === 'string' ? (row.values[col.key] as string) : null}
+                onChange={(v) => patchRowValue(col.key, v)}
+                disabled={disabled}
+                placeholder="Select customer…"
               />
             );
           }
@@ -661,13 +719,14 @@ export function CardStepBody({
               castStartPair={
                 col.key === 'cast_end' && col.subtype === 'datetime' ? castStartPair : null
               }
-              onChange={(v) =>
-                onSectionDataChange(section.key, {
-                  rows: data.rows.map((r, i) =>
-                    i === idx ? { ...r, values: { ...r.values, [col.key]: v } } : r
-                  ),
-                })
+              coils={ctx.coils}
+              coilPurpose={ctx.coilPurpose ?? sectionCoilPurpose(section)}
+              onHeatGradePick={
+                col.type === 'heat_ref'
+                  ? (gradeId) => patchRowValue('grade_id', gradeId)
+                  : undefined
               }
+              onChange={(v) => patchRowValue(col.key, v)}
             />
           );
         })}
@@ -734,18 +793,40 @@ export function CardStepBody({
           value={row.time_from}
           onChangeText={(t) => patch({ time_from: t })}
           editable={!disabled}
+          placeholder="08:00"
         />
         <TextField
           label="To (HH:MM)"
           value={row.time_to}
           onChangeText={(t) => patch({ time_to: t })}
           editable={!disabled}
+          placeholder="08:30"
         />
         <TextField
           label="Lost minutes"
           value={row.time_lost_minutes == null ? '' : String(row.time_lost_minutes)}
           editable={false}
         />
+        {(ctx.delayCodes?.length ?? 0) > 0 ? (
+          <SelectSheet
+            label="Delay code"
+            options={(ctx.delayCodes ?? []).map((c) => ({
+              label: `${c.code} — ${c.description}`,
+              value: c.id,
+            }))}
+            value={row.delay_code_id || null}
+            onChange={(v) => patch({ delay_code_id: v })}
+            disabled={disabled}
+            placeholder="Select delay code…"
+          />
+        ) : (
+          <TextField
+            label="Delay code id"
+            value={row.delay_code_id}
+            onChangeText={(t) => patch({ delay_code_id: t })}
+            editable={!disabled}
+          />
+        )}
         <TextField
           label="Reason"
           value={row.reason}
@@ -757,6 +838,36 @@ export function CardStepBody({
           value={row.action_taken}
           onChangeText={(t) => patch({ action_taken: t })}
           editable={!disabled}
+        />
+        {(ctx.plantUsers ?? ctx.fieldLookups?.plantUsers ?? []).length > 0 ? (
+          <SelectSheet
+            label="Assigned to"
+            options={(ctx.plantUsers ?? ctx.fieldLookups?.plantUsers ?? []).map((u) => ({
+              label: u.employee_uid ? `${u.full_name} (${u.employee_uid})` : u.full_name,
+              value: u.id,
+            }))}
+            value={row.assigned_to || null}
+            onChange={(v) => patch({ assigned_to: v })}
+            disabled={disabled}
+            placeholder="Select person…"
+          />
+        ) : (
+          <TextField
+            label="Assigned to"
+            value={row.assigned_to}
+            onChangeText={(t) => patch({ assigned_to: t })}
+            editable={!disabled}
+          />
+        )}
+        <SelectSheet
+          label="Status"
+          options={[
+            { label: 'Open', value: 'open' },
+            { label: 'Closed', value: 'closed' },
+          ]}
+          value={row.status || 'open'}
+          onChange={(v) => patch({ status: v })}
+          disabled={disabled}
         />
       </View>
     );

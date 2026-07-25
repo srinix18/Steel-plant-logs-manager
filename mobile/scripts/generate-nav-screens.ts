@@ -64,6 +64,28 @@ for (const route of routes) {
     continue;
   }
 
+  // Implemented screens — do not overwrite with RoleHomePlaceholder.
+  const hrefNorm = route.href.replace(/^\/\(app\)/, '') || route.href;
+  const implemented = new Set([
+    '/shift',
+    '/my-runs',
+    '/peel',
+    '/messages',
+    '/profile',
+    '/admin/departments',
+    '/supervisor',
+    '/hod',
+    '/safety/scan',
+    '/safety/dashboard',
+    '/safety/inspections',
+    '/safety/sops',
+    '/safety/incidents',
+    '/maintenance',
+  ]);
+  if (implemented.has(hrefNorm) || implemented.has(route.href)) {
+    continue;
+  }
+
   const leaf = route.href.replace(/^\/\(app\)\//, '').replace(/^\//, '');
   if (!leaf.includes('/')) {
     const sibling = path.join(appDir, `${leaf}.tsx`);

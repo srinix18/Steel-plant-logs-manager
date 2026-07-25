@@ -14,6 +14,15 @@ export type Process = {
   default_template_id?: string | null;
 };
 
+export type Department = {
+  id: string;
+  plant_id: string;
+  organisation_id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+};
+
 export type ProcessInstance = {
   id: string;
   process_id: string;
@@ -71,4 +80,6 @@ export type ProcessOption = {
   label: string;
   instanceLabel: string;
   runType: ProcessRunType;
+  /** When true, launcher opens blocked status screen — never creates a run. */
+  notDigitized?: boolean;
 };

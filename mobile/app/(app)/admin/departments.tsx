@@ -1,11 +1,6 @@
-import { RoleHomePlaceholder } from '@/src/components/RoleHomePlaceholder';
+import { DeptBrowserScreen } from '@/src/features/org/DeptBrowserScreen';
 
-export default function Screen() {
-  return (
-    <RoleHomePlaceholder
-      title="Departments"
-      description="Placeholder for Departments. Full screen lands in a later plan chunk."
-      nextChunk="P5-ADM-DEPT"
-    />
-  );
+/** P2-DEPT-SHELLS — read-only department browser (P5 may add CRUD later). */
+export default function AdminDepartmentsScreen() {
+  return <DeptBrowserScreen />;
 }

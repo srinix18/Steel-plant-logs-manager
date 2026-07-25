@@ -1,8 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/src/components/ui/Button';
 import { DateTimeField } from '@/src/components/ui/DateTimeField';
+import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { TextField } from '@/src/components/ui/TextField';
+import { type CoilRecord, coilOptionLabel, pickableCoils } from '@/src/api/coils';
+import { lookupHeatNo, type HeatLookup } from '@/src/api/lookups';
 import {
   computeTotalMinutes,
   emptyFurnaceZones,
@@ -349,29 +353,82 @@ export function HeatRefEditor({
   label,
   value,
   onChange,
+  onGradePick,
   disabled,
 }: {
   label: string;
   value: HeatRefValue;
   onChange: (v: HeatRefValue) => void;
+  onGradePick?: (gradeId: string) => void;
   disabled?: boolean;
 }) {
   const v = value ?? { run_id: '', heat_no: '' };
+  const [suggestions, setSuggestions] = useState<HeatLookup[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const q = v.heat_no.trim();
+    if (disabled || q.length < 2 || v.run_id) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setSearching(true);
+      void lookupHeatNo(q)
+        .then((hits) => {
+          if (!cancelled) setSuggestions(hits);
+        })
+        .catch(() => {
+          if (!cancelled) setSuggestions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [v.heat_no, v.run_id, disabled]);
+
   return (
     <View style={styles.box}>
       <Text style={styles.boxTitle}>{label}</Text>
       <TextField
         label="Heat no"
         value={v.heat_no}
-        onChangeText={(t) => onChange({ ...v, heat_no: t })}
+        onChangeText={(t) => onChange({ heat_no: t, run_id: '' })}
         editable={!disabled}
+        placeholder="Type ≥2 chars to search"
       />
-      <TextField
-        label="Run id"
-        value={v.run_id}
-        onChangeText={(t) => onChange({ ...v, run_id: t })}
-        editable={!disabled}
-      />
+      {searching ? <Text style={styles.durationHint}>Searching…</Text> : null}
+      {suggestions.length > 0 ? (
+        <View style={styles.suggestList}>
+          {suggestions.map((s) => (
+            <Pressable
+              key={s.run_id}
+              style={({ pressed }) => [styles.suggestRow, pressed && styles.suggestPressed]}
+              onPress={() => {
+                onChange({ run_id: s.run_id, heat_no: s.heat_no });
+                if (s.grade_id) onGradePick?.(s.grade_id);
+                setSuggestions([]);
+              }}
+            >
+              <Text style={styles.suggestTitle}>{s.heat_no}</Text>
+              <Text style={styles.durationHint}>
+                {s.process_code ? `${s.process_code} · ` : ''}
+                {s.run_number}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      {v.run_id ? (
+        <Text style={styles.durationHint} numberOfLines={1}>
+          Linked run {v.run_id}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -381,26 +438,67 @@ export function CoilRefEditor({
   value,
   onChange,
   disabled,
+  coils = [],
+  coilPurpose,
 }: {
   label: string;
   value: CoilRefValue;
   onChange: (v: CoilRefValue) => void;
   disabled?: boolean;
+  coils?: CoilRecord[];
+  coilPurpose?: 'drawing';
 }) {
   const v = value ?? { coil_id: '', coil_no: '' };
+  const pickable = pickableCoils(coils, coilPurpose);
+  const options = pickable.map((c) => ({
+    label: coilOptionLabel(c),
+    value: c.id,
+  }));
+
+  if (options.length > 0 || v.coil_id) {
+    return (
+      <View style={styles.box}>
+        <SelectSheet
+          label={label}
+          options={
+            v.coil_id && !options.some((o) => o.value === v.coil_id)
+              ? [{ label: v.coil_no || v.coil_id, value: v.coil_id }, ...options]
+              : options
+          }
+          value={v.coil_id || null}
+          onChange={(id) => {
+            const picked = pickable.find((c) => c.id === id);
+            onChange(
+              picked
+                ? { coil_id: picked.id, coil_no: picked.coil_no }
+                : { coil_id: id, coil_no: v.coil_no }
+            );
+          }}
+          disabled={disabled}
+          placeholder={
+            options.length
+              ? 'Select coil…'
+              : coilPurpose === 'drawing'
+                ? 'No completed coils yet'
+                : 'Save input coils first'
+          }
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.box}>
       <Text style={styles.boxTitle}>{label}</Text>
+      <Text style={styles.durationHint}>
+        {coilPurpose === 'drawing'
+          ? 'No completed coils available for drawing.'
+          : 'No coils for this run yet — fill and save Input Coils, then return here.'}
+      </Text>
       <TextField
-        label="Coil no"
+        label="Coil no (fallback)"
         value={v.coil_no}
-        onChangeText={(t) => onChange({ ...v, coil_no: t })}
-        editable={!disabled}
-      />
-      <TextField
-        label="Coil id"
-        value={v.coil_id}
-        onChangeText={(t) => onChange({ ...v, coil_id: t })}
+        onChangeText={(t) => onChange({ ...v, coil_no: t, coil_id: '' })}
         editable={!disabled}
       />
     </View>
@@ -456,6 +554,9 @@ export function ProductionCellEditor({
   disabled,
   gradeOptions,
   castStartPair,
+  onHeatGradePick,
+  coils,
+  coilPurpose,
 }: {
   column: ProductionLogColumnDef;
   value: ProductionLogCellValue;
@@ -464,6 +565,9 @@ export function ProductionCellEditor({
   gradeOptions?: { label: string; value: string }[];
   /** For cast_end strand_pair — pair from cast_start for duration display. */
   castStartPair?: StrandPairValue | null;
+  onHeatGradePick?: (gradeId: string) => void;
+  coils?: CoilRecord[];
+  coilPurpose?: 'drawing';
 }) {
   const type = column.type;
 
@@ -559,6 +663,7 @@ export function ProductionCellEditor({
         label={column.label}
         value={(value as HeatRefValue) ?? { run_id: '', heat_no: '' }}
         onChange={onChange}
+        onGradePick={onHeatGradePick}
         disabled={disabled}
       />
     );
@@ -570,6 +675,8 @@ export function ProductionCellEditor({
         value={(value as CoilRefValue) ?? { coil_id: '', coil_no: '' }}
         onChange={onChange}
         disabled={disabled}
+        coils={coils}
+        coilPurpose={coilPurpose}
       />
     );
   }
@@ -622,4 +729,19 @@ const styles = StyleSheet.create({
   datetimeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   nowBtn: { marginBottom: 2 },
   durationHint: { ...typography.caption, color: colors.textMuted },
+  suggestList: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+  },
+  suggestRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  suggestPressed: { backgroundColor: colors.brandSoft },
+  suggestTitle: { ...typography.body, fontWeight: '600', color: colors.text },
 });

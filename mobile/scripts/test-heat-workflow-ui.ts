@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 
 import {
   firstStepIndexForSection,
+  isBbarDailyTemplate,
+  isGrindDailyTemplate,
   isIafHeatTemplate,
   stateTabKey,
   transitionTabKey,
@@ -16,6 +18,10 @@ import type { WorkflowTransition } from '../src/types/processRun.ts';
 
 assert.equal(isIafHeatTemplate(['heat_info', 'charge_mix']), true);
 assert.equal(isIafHeatTemplate(['heat_info', 'blow_process']), false);
+assert.equal(isBbarDailyTemplate(['register_header', 'production_register']), true);
+assert.equal(isBbarDailyTemplate(['register_header']), false);
+assert.equal(isGrindDailyTemplate(['register_header']), true);
+assert.equal(isGrindDailyTemplate(['register_header', 'production_register']), false);
 
 assert.equal(stateTabKey('waiting_for_sample'), 'chemistry');
 assert.equal(stateTabKey('ready_to_tap'), 'ferro_alloys');

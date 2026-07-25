@@ -4,7 +4,9 @@
 import assert from 'node:assert/strict';
 
 import {
+  applyCalculatedColumns,
   evaluateFormula,
+  evalProductionFormula,
   formatDurationMinutes,
   mergeCalculatedIntoFields,
 } from '../src/utils/formulaEngine.ts';
@@ -83,5 +85,16 @@ const merged = mergeCalculatedIntoFields(sections, {
 
 assert.equal(merged.process_time, '1h 30m');
 assert.equal(merged.power_total, '200');
+
+assert.equal(evalProductionFormula('coil_weight_kg * coil_count', { coil_weight_kg: 12.5, coil_count: 4 }), 50);
+assert.equal(evalProductionFormula('coil_weight_kg * coil_count', { coil_weight_kg: 12.5 }), null);
+
+const bbarCols = [
+  { key: 'coil_weight_kg', type: 'number' },
+  { key: 'coil_count', type: 'integer' },
+  { key: 'total_weight_kg', type: 'calculated', formula: 'coil_weight_kg * coil_count' },
+];
+const applied = applyCalculatedColumns(bbarCols, { coil_weight_kg: 10, coil_count: 3 });
+assert.equal(applied.total_weight_kg, 30);
 
 console.log('formula-engine: OK');

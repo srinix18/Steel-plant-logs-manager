@@ -75,6 +75,43 @@ export function isCcmCastTemplate(sectionKeys: string[]): boolean {
   return sectionKeys.includes('casting_entries') && sectionKeys.includes('shift_header');
 }
 
+/** RMILL F/PRD/05 — delay + batches + hourly matrix. */
+export function isRmillShiftTemplate(sectionKeys: string[]): boolean {
+  return (
+    sectionKeys.includes('delay_register') &&
+    sectionKeys.includes('production_batches') &&
+    sectionKeys.includes('hourly_matrix')
+  );
+}
+
+/** WFURN F/PRD/06 — input coils + furnace output. */
+export function isWfurnShiftTemplate(sectionKeys: string[]): boolean {
+  return sectionKeys.includes('input_coils') && sectionKeys.includes('furnace_output');
+}
+
+/** WDRAW F/PRD/07 — input/output material with coil refs. */
+export function isWdrawShiftTemplate(sectionKeys: string[]): boolean {
+  return sectionKeys.includes('input_material') && sectionKeys.includes('output_material');
+}
+
+/** Any wire template that needs coil pickers / every-card workflow CTAs. */
+export function isWireDivisionTemplate(sectionKeys: string[]): boolean {
+  return isWfurnShiftTemplate(sectionKeys) || isWdrawShiftTemplate(sectionKeys);
+}
+
+/** BBAR F51 — daily production register (no shift). */
+export function isBbarDailyTemplate(sectionKeys: string[]): boolean {
+  return sectionKeys.includes('register_header') && sectionKeys.includes('production_register');
+}
+
+/**
+ * GRIND F/PRD/08 — forge daily register.
+ * Today: register_header only. Future jobs tables keep register_header without BBAR's production_register.
+ */
+export function isGrindDailyTemplate(sectionKeys: string[]): boolean {
+  return sectionKeys.includes('register_header') && !sectionKeys.includes('production_register');
+}
+
 export function transitionTabKey(transition: WorkflowTransition): string | null {
   const key = `${transition.from_state}->${transition.to_state}`;
   return IAF_TRANSITION_TAB[key] ?? null;

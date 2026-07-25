@@ -10,6 +10,12 @@ const API_URL =
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  // Helps diagnose phone → LAN: this must be your Wi‑Fi IP, never localhost.
+  // eslint-disable-next-line no-console
+  console.log(`[moi-api] base URL = ${API_URL}`);
+}
+
 /** Called by AuthProvider so 401 also clears in-memory user. */
 let onUnauthorized: (() => void) | null = null;
 
@@ -31,13 +37,24 @@ async function handleUnauthorized(url: string) {
   router.replace('/login');
 }
 
-async function request<T>(method: HttpMethod, path: string, body?: unknown): Promise<{ data: T }> {
+async function request<T>(
+  method: HttpMethod,
+  path: string,
+  body?: unknown,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<{ data: T }> {
   const token = await getToken();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${API_URL}${path}`;
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // eslint-disable-next-line no-console
+    console.log(`[moi-api] ${method} ${url}`);
+  }
 
   try {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -94,9 +111,14 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
 
 /** Drop-in shape used by auth helpers (axios-like). */
 export const apiClient = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  delete: <T>(path: string) => request<T>('DELETE', path),
+  get: <T>(path: string, opts?: { timeoutMs?: number }) =>
+    request<T>('GET', path, undefined, opts?.timeoutMs),
+  post: <T>(path: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>('POST', path, body, opts?.timeoutMs),
+  patch: <T>(path: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>('PATCH', path, body, opts?.timeoutMs),
+  put: <T>(path: string, body?: unknown, opts?: { timeoutMs?: number }) =>
+    request<T>('PUT', path, body, opts?.timeoutMs),
+  delete: <T>(path: string, opts?: { timeoutMs?: number }) =>
+    request<T>('DELETE', path, undefined, opts?.timeoutMs),
 };

@@ -25,6 +25,8 @@ import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import {
   buildCreateRunPayload,
   filterProcessOptions,
+  isNotDigitizedProcess,
+  nonLogProcessesFromApi,
   showsGradeField,
   showsShiftField,
   startButtonLabel,
@@ -40,7 +42,7 @@ import type { SteelGrade } from '@/src/features/run-host/section-data/types';
 import { colors, spacing, typography } from '@/src/theme/tokens';
 
 /**
- * P2-ENGINE-04 — Shift launcher (port of web ShiftDashboard).
+ * P3-OPS-SHIFT — Shift Dashboard (port of web ShiftDashboard).
  */
 export function ShiftLauncherScreen() {
   const { user } = useAuth();
@@ -65,12 +67,20 @@ export function ShiftLauncherScreen() {
     [processes]
   );
 
+  const nonLogApiProcesses = useMemo(
+    () => nonLogProcessesFromApi(processes),
+    [processes]
+  );
+
   const processMeta =
     allowedProcessOptions.find((p) => p.code === processCode) ?? allowedProcessOptions[0];
 
   const isDaily = processMeta?.runType === 'daily';
-  const showShift = showsShiftField(processMeta?.runType);
-  const showGrade = showsGradeField(processCode || processMeta?.code || '', processMeta?.runType);
+  const blocked = isNotDigitizedProcess(processMeta);
+  const showShift = !blocked && showsShiftField(processMeta?.runType);
+  const showGrade =
+    !blocked &&
+    showsGradeField(processCode || processMeta?.code || '', processMeta?.runType);
 
   const loadBootstrap = useCallback(
     async (soft = false) => {
@@ -132,7 +142,10 @@ export function ShiftLauncherScreen() {
     let cancelled = false;
     fetchProcessInstances(proc.id)
       .then((list) => {
-        if (!cancelled) setInstances(list);
+        if (!cancelled) {
+          setInstances(list);
+          setSelectedInstance(list[0]?.id ?? '');
+        }
       })
       .catch((e) => {
         if (!cancelled) {
@@ -144,6 +157,18 @@ export function ShiftLauncherScreen() {
       cancelled = true;
     };
   }, [processCode, processes]);
+
+  // Auto-pick first shift when shift field becomes visible and empty
+  useEffect(() => {
+    if (!showShift || selectedShift || !shifts.length) return;
+    setSelectedShift(shifts[0].id);
+  }, [showShift, selectedShift, shifts]);
+
+  // Auto-pick first grade when grade field becomes visible and empty
+  useEffect(() => {
+    if (!showGrade || selectedGrade || !grades.length) return;
+    setSelectedGrade(grades[0].id);
+  }, [showGrade, selectedGrade, grades]);
 
   useEffect(() => {
     if (!user?.department_id || !selectedShift || isDaily) {
@@ -164,7 +189,12 @@ export function ShiftLauncherScreen() {
   }, [user?.department_id, selectedShift, isDaily]);
 
   async function onStartRun() {
-    if (!selectedInstance || !processMeta) return;
+    if (!processMeta) return;
+    if (isNotDigitizedProcess(processMeta)) {
+      router.push('/(app)/peel' as Href);
+      return;
+    }
+    if (!selectedInstance) return;
     setStarting(true);
     setError(null);
     try {
@@ -216,8 +246,12 @@ export function ShiftLauncherScreen() {
         <Text style={styles.section}>Start New Run</Text>
         {!allowedProcessOptions.length ? (
           <EmptyState
-            title="No processes available"
-            description="No processes are scoped to your department for this launcher."
+            title="No log-sheet processes"
+            description={
+              nonLogApiProcesses.length
+                ? `Your scope has ${nonLogApiProcesses.length} process(es) without a mobile log sheet (e.g. QUAL / MAINT / UTIL shells). They will not open a run host.`
+                : 'No processes are scoped to your department for this launcher.'
+            }
           />
         ) : (
           <View style={styles.form}>
@@ -241,7 +275,14 @@ export function ShiftLauncherScreen() {
               value={selectedInstance || null}
               onChange={setSelectedInstance}
               placeholder={`Select ${(processMeta?.instanceLabel ?? 'instance').toLowerCase()}`}
+              disabled={blocked}
             />
+
+            {blocked ? (
+              <Text style={styles.muted}>
+                Peeling is not digitized yet. Open the status screen — no run will be created.
+              </Text>
+            ) : null}
 
             {showShift ? (
               <SelectSheet
@@ -270,16 +311,26 @@ export function ShiftLauncherScreen() {
               title={
                 starting
                   ? 'Starting…'
-                  : startButtonLabel(processCode || processMeta?.code || '', processMeta?.runType)
+                  : startButtonLabel(
+                      processCode || processMeta?.code || '',
+                      processMeta?.runType,
+                      blocked
+                    )
               }
               size="lg"
               fullWidth
               loading={starting}
-              disabled={!selectedInstance || starting || !processMeta}
+              disabled={(!blocked && !selectedInstance) || starting || !processMeta}
               onPress={() => void onStartRun()}
             />
           </View>
         )}
+        {nonLogApiProcesses.length > 0 && allowedProcessOptions.length > 0 ? (
+          <Text style={styles.shellNote}>
+            Also in your scope (browse only, no run host):{' '}
+            {nonLogApiProcesses.map((p) => p.code).join(', ')}
+          </Text>
+        ) : null}
       </Card>
 
       <Text style={styles.activeTitle}>Active Runs</Text>
@@ -321,6 +372,12 @@ const styles = StyleSheet.create({
   handoverAuthor: { ...typography.caption, color: '#92400E', marginTop: spacing.xs },
   section: { ...typography.section, color: colors.text, marginBottom: spacing.sm },
   form: { gap: spacing.md },
+  shellNote: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.md,
+    lineHeight: 18,
+  },
   activeTitle: {
     ...typography.section,
     color: colors.text,

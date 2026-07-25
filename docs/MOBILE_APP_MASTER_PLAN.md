@@ -1,8 +1,9 @@
 # MOI Mobile App — Master Build Plan (Expo / React Native)
 
-**Version:** 2.0 (detail expansion)  
+**Version:** 2.1 (Parts D–F production-depth specs)  
 **Status:** Source of truth for full-parity mobile  
-**How to build:** Send the agent exactly one `BUILD CHUNK <ID>` at a time. Never “implement the whole plan.”
+**How to build:** Send the agent exactly one `BUILD CHUNK <ID>` at a time. Never “implement the whole plan.”  
+**Spec rule:** Every chunk in Parts D–F has **Acceptance**. If Acceptance is missing, expand the chunk before coding (Q9).
 
 ---
 
@@ -27,9 +28,9 @@
 | **A** | Vision, quality bar, architecture, design system |
 | **B** | Plan 1 — Expo foundation (`P1-*`) — **start here** |
 | **C** | Shared log-sheet engine + cell editors (`P2-ENGINE-*`) |
-| **D** | Manufacturing depts — every section & field (`P2-*`) |
-| **E** | All other modules (`P3`–`P5`) |
-| **F** | Plans 2–6 sequence + chunk index |
+| **D** | Manufacturing depts — section/field specs + remaining `P2-*` |
+| **E** | Ops / Safety / Maint / Messages / Workforce / Pulse / Foundation / Finance / Admin (`P3`–`P5`) — full BUILD CHUNKs |
+| **F** | Plan sequence, exit gates, Plan 6 hardening, chunk index |
 | **G** | API quick reference |
 
 ---
@@ -305,7 +306,7 @@ Implement primitives in A.5 with Storybook optional; must be used on Login + Pro
 
 **Doc:** [`docs/MOBILE_P1_08_EXIT_GATE.md`](./MOBILE_P1_08_EXIT_GATE.md) · Gate script: `mobile/scripts/p1-exit-gate.ps1`
 
-**Plan 1 complete → start `P2-ENGINE-01`.** → **… → P2-SMS-CCM done → start `P2-ROLLING-RMILL`.**
+**Plan 1 complete → start `P2-ENGINE-01`.** → **… → Plan 2 complete (REPORTS) → start `P3-OPS-SHIFT`.**
 
 ---
 
@@ -363,7 +364,7 @@ Implement primitives in A.5 with Storybook optional; must be used on Login + Pro
 - [x] Wake Lock (`expo-keep-awake`); pull-to-refresh; events + remarks panel
 - [x] Smoke: `scripts/test-run-host-api.ts` + `test-build-card-steps.ts`
 
-**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-02` — `buildCardSteps`
 
@@ -375,7 +376,7 @@ Port logic from `frontend/src/components/run-wizard/buildCardSteps.ts` — expan
 - [x] Run host uses card steps (not 1:1 sections)
 - [x] Unit: `scripts/test-build-card-steps.ts` — IAF empty chemistry = list + ≥1 sample (9 steps)
 
-**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-03` — Adapters for every `section_type`
 
@@ -389,7 +390,7 @@ Implement RN bodies for: `fields`, chemistry `table`, `repeatable_group`, `stati
 - [x] Remarks thread with reply
 - [x] Unit: `scripts/test-section-adapters.ts`
 
-**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## BUILD CHUNK `P2-ENGINE-04` — Shift launcher
 
@@ -407,7 +408,7 @@ Port `ShiftDashboard` process list:
 - [x] Active runs list + previous handover banner
 - [x] Unit + API smoke: `test-process-options.ts`, `test-shift-launcher-api.ts`
 
-**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -559,7 +560,7 @@ Port `ShiftDashboard` process list:
 - [x] Workflow CTAs on every CCM card
 - [x] Smoke: `test-ccm-lifecycle-api.ts`, `test-ccm-casting-cells.ts`
 
-**Next:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next (completed):** `P2-ROLLING-RMILL` → now `P2-WIRE-WFURN`
 
 ---
 
@@ -585,6 +586,15 @@ Port `ShiftDashboard` process list:
 
 **Acceptance:** Delay + batch + all 12 hour cards save.
 
+**Done (P2-ROLLING-RMILL):**
+- [x] Delay register: delay-code SelectSheet (`/delay-codes`), assigned_to users, status, auto lost minutes
+- [x] Production batches: heat_ref lookup (`/process-runs/heat-lookup`), grade auto-fill, furnace_zones
+- [x] Hourly matrix: all 12 hour cards save (I–XII)
+- [x] RMILL detection + workflow CTAs on every card; shift date defaults
+- [x] Smoke: `test-rmill-lifecycle-api.ts`, `test-rmill-card-steps.ts`
+
+**Next (completed):** `P2-WIRE-WFURN` → now `P2-WIRE-WDRAW`
+
 ---
 
 ## D.3 WIRE
@@ -598,6 +608,17 @@ Port `ShiftDashboard` process list:
 | furnace_output | coil_ref, tube_head_no, speed_m_min, weight_kg, remark |
 | approvals | prepared_by, approved_by |
 
+**Acceptance:** Save input coils → coils appear in furnace `coil_ref` picker; pick coil + save output; heat_ref/grade work on input rows.
+
+**Done (P2-WIRE-WFURN):**
+- [x] `GET /coils` client + `CoilRefEditor` SelectSheet (non-completed for furnace)
+- [x] Input coils save upserts coils; furnace output links `coil_ref`
+- [x] heat_ref lookup + grade SelectSheet on input rows
+- [x] WFURN/wire detection: date/shift/operator defaults; workflow CTAs on every card
+- [x] Smoke: `test-wfurn-lifecycle-api.ts`, `test-wfurn-coils.ts`
+
+**Next (completed):** `P2-WIRE-WDRAW` → now `P2-BBD-BBAR`
+
 ### D.3.2 WDRAW F/PRD/07 — CHUNK `P2-WIRE-WDRAW`
 
 | Section | Contents |
@@ -608,6 +629,14 @@ Port `ShiftDashboard` process list:
 | approvals | prepared_by, approved_by |
 
 **Acceptance:** Coil pickers work; drawing condition/lubricant options match seed.
+
+**Done (P2-WIRE-WDRAW):**
+- [x] Dual `inlet_coil_ref` pickers with `coil_picker_purpose: drawing` (completed coils)
+- [x] Condition / lubricant SelectSheets match seed options
+- [x] Wire defaults + workflow CTAs (shared with WFURN)
+- [x] Smoke: `test-wdraw-lifecycle-api.ts`, `test-wdraw-drawing.ts`
+
+**Next (completed):** `P2-BBD-BBAR` → `P2-BBD-PEEL` → now `P2-FORGE-GRIND`
 
 ---
 
@@ -621,131 +650,830 @@ Port `ShiftDashboard` process list:
 | production_register | r_size_mm, grade_id, final_size_mm, heat_no, coil_weight_kg, coil_count, total_weight_kg (calc), customer_id |
 | approvals | approved_by |
 
+**Acceptance:** Customer SelectSheet → `/customers`; edit coil weight×count → `total_weight_kg` updates; header date defaults; register rows + approvals save.
+
+**Done (P2-BBD-BBAR):**
+- [x] `customer_ref` SelectSheet via `GET /customers?plant_id=`
+- [x] Row calc `total_weight_kg = coil_weight_kg * coil_count`
+- [x] BBAR detection, date default, every-card workflow CTAs
+- [x] Smoke: `test-bbar-lifecycle-api.ts`, `test-bbar-register.ts`
+
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
+
 ### D.4.2 PEEL — CHUNK `P2-BBD-PEEL`
 
-Blocked until seeded. Screen: “Peeling not digitized yet.”
+**Status:** **Blocked** — no `seed_peel*`, no `PEEL` process in backend. Hierarchy: peeling planned / TBD.
+
+| Item | Spec |
+|------|------|
+| Route | `/(app)/peel` or process option entry when process appears |
+| UX | Full-screen empty state: **“Peeling not digitized yet.”** + short note that log sheet arrives after seed |
+| Do **not** | Invent columns or fake template |
+| Unblock trigger | When `seed_peel*.py` lands: rewrite this chunk like BBAR (sections table + Acceptance), then implement |
+
+**Acceptance:**
+- [x] Opening PEEL (nav or process code if present) shows the blocked message — never crashes
+- [x] No DesktopOnlyGate; no stub JSON editors
+- [x] Smoke: route reachable from drawer for BBD roles without 500
+
+**Done (P2-BBD-PEEL):**
+- [x] Route `/(app)/peel` — `PeelBlockedScreen` with exact title copy
+- [x] Drawer **Peeling** under Shop floor (SHIFT_FLOOR roles)
+- [x] `PEEL` in `PROCESS_OPTIONS` with `notDigitized` — launcher → View status (no create run)
+- [x] Smoke: `test-peel-blocked.ts`
+
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ## D.5 FORGE — GRIND F/PRD/08 — CHUNK `P2-FORGE-GRIND`
 
-**Seeded today:** `register_header` — work_centre (req), date (req).  
-**When jobs table appears:** full register row cards per hierarchy doc columns.
+**Seed:** `backend/app/utils/seed_forge_grinding.py` · Doc `F/PRD/08`  
+**Port types from:** engine adapters already handle `fields`; do not hardcode only header.
 
-**Acceptance:** Header saves; if API returns more sections, engine renders them without hardcoding only header.
+| Section | Contents |
+|---------|----------|
+| register_header | `work_centre` (req), `date` (req) |
+
+**When jobs table is seeded later:** engine must render new `section_type` / columns via `buildCardSteps` + adapters without a GRIND-only rewrite. Hierarchy doc columns become row cards.
+
+**Defaults:** date → today; work_centre via asset/user_ref SelectSheet if field type requires it.
+
+**Acceptance:**
+- [x] Create daily/shift GRIND run from launcher (per `processOptions`)
+- [x] Header fields save + reload intact
+- [x] If template later returns extra sections, they appear as cards without hardcoding “header only”
+- [x] Workflow CTAs usable; smoke: `test-grind-lifecycle-api.ts` (or extend shift-launcher)
+
+**Done (P2-FORGE-GRIND):**
+- [x] `isGrindDailyTemplate` — date + work_centre (instance name) defaults
+- [x] Every-card workflow CTAs; engine `buildCardSteps` absorbs future job tables
+- [x] Launcher already has GRIND daily; smoke: `test-grind-register.ts`, `test-grind-lifecycle-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
-## D.6 QUAL / MAINT / UTIL
+## D.6 QUAL / MAINT / UTIL — CHUNK `P2-DEPT-SHELLS`
 
-Dept shells only — no log sheets. Show in org browsers; Maintenance **module** is Part E.
+Dept shells only — **no** manufacturing log sheets.
+
+| Dept | Mobile behavior |
+|------|-----------------|
+| QUAL | Appear in org/process browsers if API returns them; no log host |
+| MAINT | Log sheets N/A — use **Part E.3 Maintenance** |
+| UTIL | Same as QUAL — browse only |
+
+**Acceptance:**
+- [x] No fake log templates; drawer links to Maintenance / Foundation as appropriate
+- [x] Selecting a non-log process does not open empty run host
+
+**Done (P2-DEPT-SHELLS):**
+- [x] `deptShells.ts` + read-only `DeptBrowserScreen` at `/admin/departments`
+- [x] Shift launcher whitelist only; non-log API codes noted / never started
+- [x] Run host empty state when no sections (no fake editors)
+- [x] Smoke: `test-dept-shells.ts`
+
+**Next:** `Implement BUILD CHUNK P3-OPS-SHIFT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ## D.7 Reports — CHUNK `P2-REPORTS`
 
-`/(app)/reports/[runId]` — read-only structured view; share HTML/PDF if available; deep link from My Runs / Supervisor.
+**Web:** `frontend/src/pages/reports/RunReportPage.tsx` — structured read-only + **Print / HTML** (`window.print()`). **No PDF API today.**
+
+| Item | Spec |
+|------|------|
+| Route | `/(app)/reports/[runId]` |
+| Data | `GET /process-runs/{id}` + template version; render sections read-only (reuse adapters / report layout) |
+| Dedicated layouts | Prefer parity with web sheets for F/PRD/02–07 + BBAR when present; else generic section renderer (GRIND / future PEEL) |
+| Share | `Share` / print-friendly HTML via `expo-sharing` or WebView print — **do not invent PDF backend** unless API added |
+| Deep links | My Runs → Report; Supervisor run row → Report; notification deep link → Report when `run_id` set |
+
+**Acceptance:**
+- [x] Open report for IAF + BBAR runs; fields/sections readable, not editable
+- [x] Share or open HTML works on device
+- [x] Deep link from My Runs works
+- [x] Smoke: `test-reports-api.ts` loads run + template
+
+**Done (P2-REPORTS):**
+- [x] Route `/(app)/reports/[runId]` — read-only `CardStepBody` (disabled) for all sections
+- [x] Doc labels for F/PRD/02–07 + BBAR + GRIND; generic renderer for any template
+- [x] Share HTML via `expo-sharing` + `expo-file-system/legacy` (no PDF backend)
+- [x] My Runs **Report** + run host **Report** CTA
+- [x] Smoke: `test-reports-api.ts`
+
+**Plan 2 complete** when PEEL stub + GRIND + REPORTS Acceptance all pass → start Plan 3 (`P3-OPS-SHIFT`).
 
 ---
 
-# Part E — Non-log modules
+# Part E — Non-log modules (production BUILD CHUNKs)
+
+**Rules for every E chunk**
+1. Port API shapes from `frontend/src/api/*` — do not invent fields (Q10).
+2. **No** `DesktopOnlyGate` (Q1). Web gates on Shift Planning / Skill Matrix / Cost Mapping **must** ship on mobile.
+3. Roles = web `ProtectedRoute` / `frontend/src/utils/roles.ts` (Sidebar alone is insufficient).
+4. Loading / empty / error on every list & form (Q7); failed saves show retry (Q8).
+5. Ship **Acceptance** + smoke script name in the Done checklist when implementing.
+6. Phone login: use `LOGINS.md` role for the module (e.g. `maintenance` / `hr` / `worker.*`).
+
+**Web reference root:** `frontend/src/pages/` + `frontend/src/api/`.
+
+---
+
+## E.0 Chunk template (copy when adding new)
+
+```text
+### CHUNK `<ID>` — <Name>
+**Route:** `/(app)/...`
+**Port from:** <web page + api file>
+**Roles:** <roles.ts constants>
+**APIs:** <method path list>
+**Must include:** <fields / actions>
+**Acceptance:**
+- [ ] ...
+**Smoke:** `mobile/scripts/test-....ts`
+```
+
+---
 
 ## E.1 Operations — Plan 3
 
-| Chunk | Screen | APIs | UX / parity |
-|-------|--------|------|-------------|
-| `P3-OPS-SHIFT` | Shift Dashboard | plants, processes, instances, shifts, grades, create run, active runs, handover | Full launcher + cards |
-| `P3-OPS-MYRUNS` | My Runs | `GET /process-runs/mine` | Edit / Report actions |
-| `P3-OPS-SUPER` | Supervisor | all runs, filters, create maintenance issue | Full issue form |
-| `P3-OPS-HOD` | HOD | same ops data scoped | Full |
+### CHUNK `P3-OPS-SHIFT` — Shift Dashboard
 
-## E.2 Safety
+**Route:** `/(app)/shift`  
+**Port from:** `frontend/src/pages/operations/ShiftDashboard.tsx`; meta in `mobile/src/features/shift/processOptions.ts` (extend, don’t fork).  
+**Roles:** `SHIFT_FLOOR_ROLES` (supervisor, department, worker, member).
 
-| Chunk | Screen | APIs |
-|-------|--------|------|
-| `P3-SAFE-SCAN` | Scan | Camera + `POST /safety/scan` + asset search |
-| `P3-SAFE-DASH` | Dashboard | `/safety/dashboard/{plantId}` |
-| `P3-SAFE-LISTS` | Inspections/SOPs/Incidents | GET + create where web supports |
+**APIs:**
+- `GET /plants`, `/processes`, `/process-instances?process_id=`, `/shifts?plant_id=`, `/steel-grades`
+- `GET /plants/{id}/runs/active`
+- `POST /process-instances/{id}/runs` `{ run_type, shift_id?, grade_id? }`
+- `GET /workforce/handover-notes/previous?department_id=&shift_id=`
 
-## E.3 Maintenance
+**Must include:**
+- Process → instance → optional Shift (hidden if `run_type=daily`) → optional Grade (hidden if CCM or daily)
+- CTA labels per process (Start Heat / AOD / Cast / Shift Log / Daily Register / …)
+- Active run cards → heat/run host
+- Amber previous-handover banner when dept+shift set
 
-| Chunk | Screen | Must include |
-|-------|--------|-------------|
-| `P3-MAINT-QUEUE` | Issue queue | tabs, assign, close + resolution notes |
-| `P3-MAINT-DASH` | PM analytics | KPIs + charts |
-| `P3-MAINT-WO-LIST` | WO list | status filters |
-| `P3-MAINT-WO-EXEC` | Execution | **all** checklist items + transitions |
-| `P3-MAINT-PM-LIST` | Programs | |
-| `P3-MAINT-PM-WIZ` | Wizard | **all 6 steps**, full fields (Program, Triggers, Tasks, Notifications, Auto WO, Review) |
+**Acceptance:**
+- [x] Start IAF (shift+grade), CCM (no grade), BBAR (daily, no shift/grade) from phone
+- [x] Active runs list plant-scoped; open run host
+- [x] Handover banner shows when previous note exists
+- [x] Smoke: extend `test-shift-launcher-api.ts`
 
-## E.4 Messages
+**Done (P3-OPS-SHIFT):**
+- [x] Route `/(app)/shift` gated to `SHIFT_FLOOR_ROLES`; others redirect home
+- [x] Launcher: process → instance → shift (non-daily) → grade (non-CCM / non-daily); CTA labels; PEEL → stub
+- [x] Active runs via `GET /plants/{id}/runs/active` → `/(app)/heat/[runId]`
+- [x] Amber previous-handover banner when dept+shift and note exists
+- [x] Smoke: `test-shift-launcher-api.ts` (IAF + CCM no-grade + BBAR + active/handover) + `test-process-options.ts`
 
-| Chunk | Must include |
-|-------|-------------|
-| `P3-MSG-INBOX` | Inbox/Sent list → detail |
-| `P3-MSG-ALERTS` | Notifications + deep links |
-| `P3-MSG-COMPOSE` | @all, @DEPT, attachments, suggest recipients |
-
-## E.5 Workforce — Plan 4 (full parity)
-
-| Chunk | Screen | Notes |
-|-------|--------|-------|
-| `P4-WF-DASH` | Dashboard | metrics |
-| `P4-WF-EMP` | Employees | all form fields from web modal |
-| `P4-WF-CON` | Contractors | full CRUD |
-| `P4-WF-ASSIGN` | Assignments | full |
-| `P4-WF-PLAN` | Shift planning | person×day editors + publish (not removed) |
-| `P4-WF-ATT` | Attendance | per-person status + contractor block |
-| `P4-WF-HAND` | Handover | |
-| `P4-WF-LEAVE` | Leave admin | approve/reject |
-| `P4-WF-SKILL` | Skills | per-employee level editors |
-| `P4-WF-TRAIN` | Training | |
-| `P4-WF-PAY` | Payroll | runs + line items + process |
-| `P4-WF-SAL` | Salary structures | |
-| `P4-WF-MY-*` | Self-service | attendance, leave, payslips |
-
-## E.6 Pulse / Energy / Inventory / Assets — Plan 5
-
-| Chunk | Requirement |
-|-------|-------------|
-| `P5-PULSE-*` | Full plant/dept/asset pulse data |
-| `P5-PULSE-WS` | **All** workspace sections: Overview, Live, Maint, Alerts, OEE, Energy, Inspections, SOP, QR |
-| `P5-ENERGY` | Full energy dashboard |
-| `P5-INV` | Pulse + adjust if API allows |
-
-## E.7 Foundation
-
-Assets CRUD, all masters tabs, observations, CAs, documents upload/download, KPI defs — chunks `P5-FND-*`.
-
-## E.8 Finance
-
-Plant→dept→process→asset drill-down, run cost sheet, **all** cost master tabs, **full** mapping builder, calculations, analytics — chunks `P5-FIN-*`. **No feature gates.**
-
-## E.9 Admin / Executive
-
-Orgs hierarchy, departments, sheets preview, activity, users CRUD, executive overview + employees — chunks `P5-ADM-*`, `P5-EXE-*`.
+**Next:** `Implement BUILD CHUNK P3-OPS-MYRUNS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
-# Part F — Plan sequence & how to order work
+### CHUNK `P3-OPS-MYRUNS` — My Runs
 
-| Plan | Chunks | Outcome |
-|------|--------|---------|
-| **1** | `P1-00`…`P1-08` | Expo app logs in, navigates by role |
-| **2** | `P2-ENGINE-*` + all `P2-SMS|ROLLING|WIRE|BBD|FORGE-*` + `P2-REPORTS` | Every seeded log sheet on phone |
-| **3** | `P3-*` | Floor ops, safety, maintenance, messages |
-| **4** | `P4-WF-*` | Full workforce |
-| **5** | `P5-*` | Pulse, foundation, finance, admin |
-| **6** | Hardening | EAS APK, offline drafts, push optional, device QA |
+**Route:** `/(app)/my-runs`  
+**Port from:** `frontend/src/pages/operations/MyRunsPage.tsx`  
+**Roles:** authenticated (nav for worker + supervisor).
 
-### Order text for the agent
+**APIs:** `GET /process-runs/mine`
+
+**Must include:**
+- List: run_number, state badge, started_at
+- **Edit** → run host if state ∈ `{created, in_progress, waiting_for_sample, refining, ready_to_tap}`
+- **Report** → `/(app)/reports/[runId]` always
+- Empty state → link to Shift
+
+**Acceptance:**
+- [x] Only user’s runs; Edit hidden outside editable states; Report always
+- [x] Smoke: `test-my-runs-api.ts`
+
+**Done (P3-OPS-MYRUNS):**
+- [x] `MyRunsScreen` — run_number, state badge, started_at (fallback created_at)
+- [x] Edit → heat host only for editable states; Report always
+- [x] Empty → “Open Shift Dashboard”
+- [x] Smoke: `test-my-runs-api.ts` (editable gate + `/process-runs/mine`)
+
+**Next:** `Implement BUILD CHUNK P3-OPS-SUPER from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+### CHUNK `P3-OPS-SUPER` — Supervisor Monitor
+
+**Route:** `/(app)/supervisor`  
+**Port from:** `frontend/src/pages/operations/SupervisorMonitor.tsx`  
+**Roles:** `SUPERVISOR_ROLES` (platform/CEO/HOD tiers + supervisor, department).
+
+**APIs:**
+- `GET /process-runs`, `/process-instances`, `/processes`, `/departments`, `/plants`
+- `GET /maintenance/categories`; `GET /maintenance/issues?status=open`; `POST /maintenance/issues`
+
+**Must include:**
+- Filters: Process code, State
+- Table/cards: run → report; Workspace → run host
+- Open issues panel (≤8)
+- Raise issue modal fields: **title***, **description***, **category*** (`quality|safety|energy|equipment|process`), **severity*** (`low|medium|high|critical`), optional `run_id`, auto `plant_id`
+
+**Acceptance:**
+- [x] Filters work; issue create requires title+description; list refreshes after create
+- [x] Smoke: `test-supervisor-issue-api.ts`
+
+**Done (P3-OPS-SUPER):**
+- [x] Route gated to `SUPERVISOR_ROLES`; `SupervisorMonitorScreen` (title override-ready for HOD)
+- [x] Process + State filters; run → report; Workspace → heat host
+- [x] Open issues ≤8; raise modal with required title/description + category/severity + optional run
+- [x] Smoke: `test-supervisor-issue-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-OPS-HOD from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+### CHUNK `P3-OPS-HOD` — HOD Department Overview
+
+**Route:** `/(app)/hod`  
+**Port from:** `frontend/src/pages/hod/HodDashboardPage.tsx` (wraps SupervisorMonitor)  
+**Roles:** `HOD_TIER_ROLES`; Sidebar HoD for hod/plant_admin.
+
+**APIs:** Same as Super (backend scopes to HoD dept).
+
+**Acceptance:**
+- [x] Same issue form + filters; data dept-scoped; title “Department Overview”
+- [x] Nav from HoD home works
+
+**Done (P3-OPS-HOD):**
+- [x] Route `/(app)/hod` gated to `HOD_TIER_ROLES`
+- [x] Reuses `SupervisorMonitorScreen` with title “Department Overview”
+- [x] Drawer Overview → `/hod` for hod/plant_admin
+- [x] Smoke: `test-hod-overview.ts`
+
+**Next:** `Implement BUILD CHUNK P3-SAFE-SCAN from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+## E.2 Safety — Plan 3
+
+### CHUNK `P3-SAFE-SCAN` — Asset Scan
+
+**Route:** `/(app)/safety/scan`  
+**Port from:** `SafetyScanPage.tsx`, `api/safety.ts`, `api/pulse.ts`  
+**Roles:** `SUPERVISOR_ROLES` ∪ `MAINTENANCE_ROLES` ∪ `WORKER_ROLES`.
+
+**APIs:**
+- `GET /safety/assets/search?q=&plant_id=&limit=10`
+- `POST /safety/scan` `{ payload }` → `{ asset_id, workspace_url }`
+- Optional: `GET /assets/{id}/qr`
+
+**Must include:** Debounced search; multi-match picker; **camera QR** on device (web is stub — mobile must be real); navigate to asset workspace.
+
+**Acceptance:**
+- [x] Search and QR both open workspace; unknown QR → clear error
+- [x] Smoke: `test-safety-scan-api.ts` (search + POST scan with known payload)
+
+**Done (P3-SAFE-SCAN):**
+- [x] Debounced search + multi-match picker → `/(app)/assets/[id]/workspace` (stub until P5-PULSE-WS)
+- [x] Real `expo-camera` QR scanner; unknown QR shows API error
+- [x] Role gate: supervisor ∪ maintenance ∪ worker
+- [x] Smoke: `test-safety-scan-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-SAFE-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+### CHUNK `P3-SAFE-DASH` — Safety Dashboard
+
+**Route:** `/(app)/safety` or `/safety/dashboard`  
+**Port from:** `SafetyDashboardPage.tsx`  
+**APIs:** `GET /plants`; `GET /safety/dashboard/{plantId}`
+
+**Must include:** KPIs — under maintenance, unsafe, expired certs, inspection due; recent incidents; emergency contacts; links to Scan / lists.
+
+**Acceptance:**
+- [x] Four KPI cards + incidents + contacts for user’s plant
+- [x] Smoke: dashboard GET 200
+
+**Done (P3-SAFE-DASH):**
+- [x] Dashboard with 4 KPIs, recent incidents, emergency contacts (tel: links)
+- [x] Links to Scan + Inspections / SOPs / Incidents (list stubs → P3-SAFE-LISTS)
+- [x] `/safety` redirects to `/safety/dashboard`; `SAFETY_MODULE_ROLES` gate
+- [x] Smoke: `test-safety-dashboard-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-SAFE-LISTS from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+### CHUNK `P3-SAFE-LISTS` — Inspections / SOPs / Incidents
+
+**Routes:** `/(app)/safety/inspections`, `/sops`, `/incidents`  
+**Port from:** list pages in `SafetyDashboardPage.tsx` exports  
+**APIs:** `GET /safety/inspections|sops|incidents/{plantId}`
+
+**Web today:** list-only. **Mobile minimum:** GET parity. **Optional (beyond web):** create via  
+`POST /safety/inspections/{plantId}` `{ inspection_type, findings?, asset_id?, next_due_at? }` ·  
+`POST /safety/incidents/{plantId}` `{ title, description, severity, occurred_at, asset_id? }` — only if product wants create on phone.
+
+**Acceptance:**
+- [x] Three lists load with empty/error states
+- [x] If create shipped: required fields validated; appears in list after POST — **N/A (GET-only, web parity; create not shipped)**
+
+**Done (P3-SAFE-LISTS):**
+- [x] Routes gated with `SAFETY_MODULE_ROLES`
+- [x] Shared `SafetyListScreen` + Inspections / SOPs / Incidents screens
+- [x] Loading / empty / error; pull-to-refresh; plant-scoped GET
+- [x] Smoke: `test-safety-lists-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-QUEUE from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+## E.3 Maintenance — Plan 3
+
+**API files:** `frontend/src/api/maintenance.ts`, `maintenancePm.ts`.
+
+### CHUNK `P3-MAINT-QUEUE` — Issue Queue
+
+**Route:** `/(app)/maintenance` (`?issue=` highlight)  
+**Roles:** **`maintenance` only** on route (managers may see Sidebar but can 403 — match web).
+
+**APIs:** `GET /maintenance/issues/mine`; `POST …/{id}/assign`; `POST …/{id}/close` `{ resolution_notes }`
+
+**Must include:** Tabs Open / In progress / Closed / All; Take issue; Mark completed + resolution notes; deep-link ring.
+
+**Acceptance:**
+- [x] Assign/close round-trip; closed shows resolution; `?issue=` highlights
+- [x] Smoke: `test-maint-queue-api.ts`
+
+**Done (P3-MAINT-QUEUE):**
+- [x] Route gated to `MAINTENANCE_ROLES` only
+- [x] Tabs Open / In progress / Closed / All; Take issue; Mark completed + notes modal
+- [x] `?issue=` highlight ring; closed shows resolution notes
+- [x] Smoke: `test-maint-queue-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
+
+### CHUNK `P3-MAINT-DASH` — PM Analytics
+
+**Route:** `/(app)/maintenance/dashboard`  
+**Roles:** `MAINTENANCE_PM_VIEW_ROLES`
+
+**APIs:** `GET /maintenance/pm/analytics?plant_id`; `GET /maintenance/intelligence?plant_id`; `POST /maintenance/pm/evaluate?plant_id&force?`
+
+**Must include:** Intel KPIs (running, under PM, breakdown, waiting parts/shutdown, completed today, upcoming PM, compliance, MTBF, MTTR, downtime); analytics cards + simple bar chart; Run / Force evaluate.
+
+**Acceptance:**
+- [ ] Both intel + analytics load; evaluate shows counts message
+- [ ] Link to WO list
+
+---
+
+### CHUNK `P3-MAINT-WO-LIST` — Work Orders
+
+**Route:** `/(app)/maintenance/work-orders`  
+**APIs:** `GET /maintenance/pm/work-orders?plant_id&status?`; `POST …/{id}/transition` `{ to_state, notes? }`
+
+**Must include:** Status tabs (`all|draft|assigned|in_progress|waiting_parts|completed|closed`); WO#, title, due, tasks done/total; quick Assign / Accept / Start; open → exec.
+
+**Acceptance:**
+- [ ] Server-side status filter; Start can accept→in_progress; open execution screen
+
+---
+
+### CHUNK `P3-MAINT-WO-EXEC` — WO Execution
+
+**Route:** `/(app)/maintenance/work-orders/[id]`  
+**APIs:** `GET …/work-orders/{id}`; `POST …/transition`; `POST …/tasks/{taskId}/execute` `{ status, checklist_responses?, remarks?, photos?, time_spent_min? }`
+
+**WO states:** `draft → assigned → accepted → in_progress → (waiting_shutdown|waiting_parts) → completed → verified → closed`  
+Wire **all** transitions the API allows (not only web’s subset).
+
+**Must include:** Every checklist item; Pass / Fail / N/A; remarks; photos if API accepts; complete only when no pending tasks.
+
+**Acceptance:**
+- [ ] Execute all tasks; transition to completed when done; reload persists
+- [ ] Smoke: `test-wo-exec-api.ts`
+
+---
+
+### CHUNK `P3-MAINT-PM-LIST` — PM Programs
+
+**Route:** `/(app)/maintenance/programs`  
+**Roles:** `MAINTENANCE_MANAGER_ROLES`
+
+**APIs:** `GET/PATCH /maintenance/pm/programs`; `POST …/{id}/generate-work-order`; `POST /maintenance/pm/evaluate`
+
+**Must include:** Table name→edit, category, priority, status, Auto WO, team; Activate draft; Generate WO; Create → wizard; evaluate.
+
+**Acceptance:**
+- [ ] Activate + Generate WO → draft WO appears in list
+
+---
+
+### CHUNK `P3-MAINT-PM-WIZ` — Program Wizard (6 steps)
+
+**Routes:** `…/programs/new`, `…/programs/[id]/edit`  
+**Port from:** `MaintenanceProgramWizardPage.tsx`
+
+| Step | Fields | Save APIs |
+|------|--------|-----------|
+| 0 Program | name*, description, category, priority, department, asset, responsible_team, estimated_duration_min | `POST/PATCH /maintenance/pm/programs` |
+| 1 Triggers | type `time` (interval_days) \| meter (`runtime_hours\|heat_count\|production_count\|tonnage` + threshold) \| `manual` | `POST …/triggers` |
+| 2 Tasks | name*, description, checklist lines → `{label,type:'checkbox'}` | `POST …/tasks` |
+| 3 Notifications | offset_days, recipient_role | `POST …/notifications` |
+| 4 Auto WO | `auto_generate_work_orders` | `PATCH` program |
+| 5 Review | summary; Finish → `active` (new) | final `PATCH` |
+
+Lookups: `GET /departments`, `GET /foundation/assets`.
+
+**Acceptance:**
+- [ ] All 6 steps on phone; ≥1 trigger + ≥1 task required to Finish new program
+- [ ] Edit existing program loads nested triggers/tasks/notifications
+- [ ] Smoke: `test-pm-wizard-api.ts`
+
+---
+
+## E.4 Messages — Plan 3
+
+**Port from:** `MessagesPage.tsx`, `RecipientComposer.tsx`, `utils/messageRecipients.ts`
+
+### CHUNK `P3-MSG-INBOX` — Inbox / Sent / Detail
+
+**APIs:** `GET /messages/inbox`, `/messages/sent`, `/messages/{id}`  
+**Must include:** Subject, sender, time; detail body; attachments (image lightbox, PDF open/share).  
+**Acceptance:** Inbox vs Sent; open detail; attachments work on device.
+
+### CHUNK `P3-MSG-ALERTS` — Notifications
+
+**APIs:** `GET /notifications`, `/notifications/unread-count`; `PATCH /notifications/{id}/read`  
+**Deep links:** maintenance → `/(app)/maintenance?issue=`; else if `run_id` → report.  
+**Acceptance:** Unread→read; deep links resolve; closed alert shows resolution when present. Drawer badge uses unread-count.
+
+### CHUNK `P3-MSG-COMPOSE` — Compose
+
+**APIs:** `GET /messages/recipients/suggest`; `GET /departments`; `POST /messages` `{ subject, body, recipient_ids?, is_broadcast? }`; `POST /messages/{id}/attachments` multipart (`image/jpeg|png`, `application/pdf`).
+
+**Recipient rules:**
+| Token | Resolve |
+|-------|---------|
+| User typeahead | name / email / employee_uid / role |
+| `@all` | CEO/HR → `is_broadcast: true`; else expand all suggested IDs |
+| `@DEPT_CODE` | Users in that department |
+| Mutual exclusion | `@all` clears other tokens |
+
+**Acceptance:** ≥1 recipient; @all/@DEPT; attach after create; lands on Sent. Smoke: `test-messages-compose-api.ts`.
+
+---
+
+## E.5 Workforce — Plan 4
+
+**API files:** `frontend/src/api/workforce.ts`, `workforceOps.ts`.  
+**Order:** Dashboard → Employees → Contractors → Assignments → Planning → Attendance → Handover → Leave → Skills → Training → Payroll → Salary → My-*.
+
+### CHUNK `P4-WF-DASH`
+
+**APIs:** `GET /workforce/summary?attendance_date=`; `GET /workforce/ops/summary`  
+**Must include:** Date picker; present/absent/leave/half_day; dept breakdown; pending leave; certs expiring; latest payroll status.  
+**Acceptance:** Date reload; empty/error states; HR can open.
+
+### CHUNK `P4-WF-EMP`
+
+**Port from:** `EmployeeFormModal.tsx`  
+**APIs:** `GET/POST /workforce/employees`; `PATCH …/{id}`; lookups departments/plants/processes/users; `GET /maintenance/categories`.
+
+**Create fields:** email*, password*, full_name*, role (`hr|hod|supervisor|worker|maintenance`), department, process (if supervisor), maintenance_division (if maintenance), designation, phone, date_of_joining, employment_type, manager_id, employment_status.  
+**Edit:** same minus email; optional new password.
+
+**Acceptance:** Add + edit save; conditional process/category fields; list usable on phone.
+
+### CHUNK `P4-WF-CON`
+
+**APIs:** contractors + contract-workers CRUD  
+**Tabs:** companies (`code,name,contact_person,phone`) / workers (`contractor_id,full_name,department_id,phone`); activate via PATCH.  
+**Acceptance:** Create both; edit/toggle active.
+
+### CHUNK `P4-WF-ASSIGN`
+
+**APIs:** shift-assignments + employees + shifts  
+**Add:** `user_id, department_id, shift_id, effective_date`  
+**Acceptance:** Create; list shows emp/dept/shift/date.
+
+### CHUNK `P4-WF-PLAN` — Shift planning (**no DesktopOnlyGate**)
+
+**APIs:** `GET/POST/PATCH /workforce/ops/rosters`; `POST …/publish`; employees; shifts  
+**Must include:** Dept + week start; person×day grid; New / Save / Publish.  
+**Acceptance:** Edit → save draft → publish; reload entries. Smoke: `test-roster-publish-api.ts`.
+
+### CHUNK `P4-WF-ATT`
+
+**APIs:** attendance GET + `POST …/bulk`; contractor-attendance  
+**Must include:** Filters date/dept/shift; per-person `present|absent|leave|half_day` + remarks; contractor present/absent counts + save.  
+**Acceptance:** Bulk save employees + contractor block persist.
+
+### CHUNK `P4-WF-HAND`
+
+**APIs:** `GET/POST /workforce/handover-notes` (optional `/previous`)  
+**Fields:** note_date, department_id, shift_id, note  
+**Roles:** write = `HANDOVER_WRITE_ROLES`  
+**Acceptance:** Submit appears in filtered history.
+
+### CHUNK `P4-WF-LEAVE`
+
+**APIs:** leave requests; approve/reject  
+**Tabs:** pending/approved/rejected/all  
+**Acceptance:** Approve/Reject transitions; remarks visible.
+
+### CHUNK `P4-WF-SKILL` (**no DesktopOnlyGate**)
+
+**APIs:** skills + employee-skills  
+**Must include:** Add skill `code,name`; levels `basic|intermediate|advanced|expert`  
+**Acceptance:** Add skill; set level per employee×skill.
+
+### CHUNK `P4-WF-TRAIN`
+
+**APIs:** training GET/POST (PATCH if useful)  
+**Fields:** user, name, certification, issue_date, expiry_date; “Soon” if ≤30d  
+**Acceptance:** Create; expiry highlight.
+
+### CHUNK `P4-WF-PAY`
+
+**APIs:** payroll runs create/process; line-items  
+**Must include:** Create run month/year; Process; lines: payable_days, gross, deductions, net  
+**Acceptance:** Process produces lines when salary structures exist; warn if none.
+
+### CHUNK `P4-WF-SAL`
+
+**APIs:** salary-structures GET/POST  
+**Fields:** user_id, basic, hra, allowances, pf, esi, other_deductions, effective_from  
+**Acceptance:** Create; list shows gross/deductions.
+
+### CHUNK `P4-WF-MY-ATT` / `P4-WF-MY-LEAVE` / `P4-WF-MY-PAY`
+
+| Chunk | APIs | Must include | Acceptance |
+|-------|------|--------------|------------|
+| MY-ATT | `GET /workforce/me` | Current assignment + recent attendance | Self data only |
+| MY-LEAVE | leave types; `/requests/mine`; create | Apply leave_type, from/to, remarks | Pending appears in list |
+| MY-PAY | payslips/mine; HTML GET | Period, days, gross/net; View HTML | Opens HTML; empty OK |
+
+---
+
+## E.6 Pulse / Energy / Inventory — Plan 5
+
+**API files:** `pulse.ts`, `energy.ts`, `inventoryPulse.ts`, `oee.ts`.
+
+### CHUNK `P5-PULSE-PLANT`
+
+**Route:** `/(app)/pulse/plant`  
+**APIs:** `GET /pulse/plant/{id}`, `/pulse/feed`, `/pulse/alerts`; `POST /pulse/refresh`  
+**Must include:** OEE, production, cost, power, downtime, alerts, pending maint, shift, attendance %; dept cards; feed; alerts; Refresh; links Energy/Inventory. Auto-refresh ~30s.  
+**Acceptance:** Refresh works; drill to dept.
+
+### CHUNK `P5-PULSE-DEPT`
+
+**APIs:** `GET /pulse/department/{id}`; `GET /oee/department/{id}`  
+**Must include:** Dept picker; status/run/production/OEE/power/issues; dept-specific cards (SMS/ROLLING/WIRE); OEE trend.  
+**Acceptance:** HOD default dept; query param switch works.
+
+### CHUNK `P5-PULSE-ASSET`
+
+**APIs:** `GET /pulse/asset/{id}`; `GET /oee/asset/{id}`  
+**Must include:** Health, OEE, operator, run; live params; Open Workspace.  
+**Acceptance:** Opens workspace route.
+
+### CHUNK `P5-PULSE-WS` — Asset Workspace
+
+**Route:** `/(app)/assets/[id]/workspace`  
+**API:** `GET /assets/{id}/workspace`  
+**Tabs (all required):** Overview (+ QR + emergency contacts), Live Parameters, Maintenance WOs, Alerts, OEE, Energy (kWh today), Inspections, SOP.  
+**Acceptance:** Every tab renders with empty states; WO links work. Smoke: `test-asset-workspace-api.ts`.
+
+### CHUNK `P5-ENERGY`
+
+**APIs:** `GET /energy/plant/{id}` (dept/asset/history clients optional)  
+**Must include:** today/week/month kWh, cost, peak/avg load; dept chart; top assets → workspace; history.  
+**Acceptance:** Plant loads; asset links open workspace.
+
+### CHUNK `P5-INV`
+
+**APIs:** `GET /inventory-pulse/{plantId}`; **`POST …/adjust`** `{ material_code, quantity, quality_grade?, location? }`  
+**Note:** Web list has **no adjust UI** — mobile **must** expose adjust (parity with API / Q1 spirit).  
+**Acceptance:** List loads; adjust updates qty on reload.
+
+---
+
+## E.7 Foundation — Plan 5
+
+**API file:** `foundation.ts`.
+
+### CHUNK `P5-FND-ASSETS`
+
+**APIs:** assets CRUD; groups; events; responsibilities; `GET …/maintenance-history`  
+**Form:** asset_no, name, group_id, department_id, life unit/expected/current, remarks, status; tabs Details / Maintenance; assign responsibility; log event.  
+**Acceptance:** Create/edit; detail shows events/resp/PM timeline.
+
+### CHUNK `P5-FND-MASTERS`
+
+**APIs:** `/masters/grades|materials|products|customers|delay-codes` + contractors GET  
+**Tabs:** grades, materials, products, customers, delay_codes, contractors (read-only). Create forms on writable tabs.  
+**Acceptance:** Create on writable tabs; contractors list-only.
+
+### CHUNK `P5-FND-OBS`
+
+**APIs:** observations GET/POST  
+**Fields:** title, description, category, severity, department  
+**Acceptance:** Create; list statuses.
+
+### CHUNK `P5-FND-CA`
+
+**APIs:** CAs list; `POST /observations/{id}/corrective-actions`; PATCH close  
+**Fields:** observation_id, title, assigned_to, due_date  
+**Acceptance:** Create from obs; close updates status.
+
+### CHUNK `P5-FND-DOCS`
+
+**APIs:** documents list; upload FormData; download blob  
+**Upload:** plant_id, department_id, category (`sop|work_instruction|…`), title, version, file  
+**Acceptance:** Upload (HOD/HR); download opens/shares file.
+
+### CHUNK `P5-FND-AN`
+
+**APIs:** kpi-definitions GET/POST/PATCH  
+**Fields:** code, name, formula, target_value, frequency, department_id  
+**Acceptance:** Create KPI; list shows formula.
+
+---
+
+## E.8 Finance — Plan 5 (**no feature gates**)
+
+**API file:** `finance.ts`. Web **DesktopOnlyGate** on mapping — **do not** port.
+
+### CHUNK `P5-FIN-DASH`
+
+**APIs:** plant-summary; `…/departments/{id}`; `…/processes/{id}`; `…/assets/{id}`  
+**Must include:** Cost today/month; by dept/category; drill plant→dept→process→asset; link run cost sheet.  
+**Acceptance:** Full drill path on phone.
+
+### CHUNK `P5-FIN-SHEET`
+
+**APIs:** cost-sheet GET; `POST /finance/calculations/runs/{id}/compute`  
+**Acceptance:** Compute refreshes sheet line items.
+
+### CHUNK `P5-FIN-MASTERS`
+
+**Tabs (all 5):** raw-materials, power, fuel, labour, maintenance — create rates + effective dates.  
+**Acceptance:** Create per tab; tables list.
+
+### CHUNK `P5-FIN-MAP` — Mapping builder
+
+**APIs:** mapping context; rules POST/DELETE  
+**Fields:** template version; field picker; source_type; cost_category; child_key; material_field_key; label  
+**Acceptance:** Add/delete rule; context reloads. Smoke: `test-finance-map-api.ts`.
+
+### CHUNK `P5-FIN-CALC`
+
+**API:** `POST /finance/calculations/bulk`  
+**Fields:** plant, optional dept, from/to  
+**Acceptance:** Returns computed/failed/skipped counts.
+
+### CHUNK `P5-FIN-AN`
+
+**APIs:** top-drivers; trends `group_by`  
+**Acceptance:** groupBy day/dept/process/asset reloads.
+
+---
+
+## E.9 Admin / Executive — Plan 5
+
+### CHUNK `P5-ADM-HOME`
+
+**APIs:** dashboard metrics; runs; templates; orgs/plants/depts/processes/instances  
+**Acceptance:** KPI cards + recent activity for admin.
+
+### CHUNK `P5-ADM-ORG`
+
+**APIs:** GET orgs, plants, depts, processes, instances  
+**Must include:** Hierarchy browser org→plant→dept→process→instance.  
+**Note:** Write CRUD exists in unused web components — **browse-only unless product asks to wire writes**.  
+**Acceptance:** Select org filters tree.
+
+### CHUNK `P5-ADM-DEPT`
+
+**APIs:** platform depts/plants/processes  
+**Acceptance:** Dept list + linked processes.
+
+### CHUNK `P5-ADM-SHEETS`
+
+**APIs:** templates + version; grades/materials as needed  
+**Acceptance:** Select template/version renders section preview (read-only).
+
+### CHUNK `P5-ADM-ACT`
+
+**APIs:** runs; instances; observations/actions  
+**Acceptance:** Activity feed loads without crash.
+
+### CHUNK `P5-ADM-USERS`
+
+**Web `/admin/users`:** list-only.  
+**Mobile:** list users (`GET /users`). Full create/edit → implement via **`P5-EXE-EMP`** patterns (`/organisations/{orgId}/users`) or wire unused `users.ts` CRUD — **document choice in Done checklist**.  
+**Acceptance:** List loads; if CRUD shipped, create/edit org user.
+
+### CHUNK `P5-EXE-HOME`
+
+**APIs:** dashboard metrics; runs; plants/depts; open maint count  
+**Acceptance:** CEO-tier overview + open issues.
+
+### CHUNK `P5-EXE-EMP`
+
+**APIs:** `GET/POST/PATCH /organisations/{orgId}/users`  
+**Fields:** email, password, name, role, dept, process, plant, designation, maintenance_division  
+**Acceptance:** Add/edit org users.
+
+---
+
+# Part F — Plan sequence, exit gates & ordering
+
+## F.1 Plan outcomes
+
+| Plan | Chunks | Outcome | Exit gate |
+|------|--------|---------|-----------|
+| **1** | `P1-00`…`P1-08` | Login + role nav | `docs/MOBILE_P1_08_EXIT_GATE.md` ✅ |
+| **2** | `P2-ENGINE-*` + dept logs + `P2-REPORTS` | Every **seeded** log sheet + reports | **F.2** |
+| **3** | all `P3-*` | Floor ops, safety, maintenance, messages | **F.3** |
+| **4** | all `P4-WF-*` | Full workforce + self-service | **F.4** |
+| **5** | all `P5-*` | Pulse, foundation, finance, admin/exec | **F.5** |
+| **6** | `P6-*` | Production hardening | **F.6** |
+
+## F.2 Plan 2 exit gate
+
+- [ ] All seeded processes: IAF, AOD, CCM, RMILL, WFURN, WDRAW, BBAR, GRIND — create + save + workflow on phone
+- [ ] PEEL shows blocked empty state (not a crash)
+- [ ] Reports open for at least IAF + BBAR; share/HTML works
+- [ ] `mobile/scripts/smoke.ps1` green (unit + reachable API smokes + `tsc`)
+- [ ] No DesktopOnlyGate; no JSON stubs for complex cells
+
+## F.3 Plan 3 exit gate
+
+- [ ] Shift / My Runs / Super / HOD Acceptance green
+- [ ] Safety scan (camera or search) → workspace
+- [ ] Maint: queue assign/close; WO exec all checklist; PM wizard 6 steps
+- [ ] Messages: inbox/sent/compose/@DEPT + alerts deep links
+- [ ] Role gates match `roles.ts` (queue = maintenance only)
+
+## F.4 Plan 4 exit gate
+
+- [ ] HR can: employee CRUD, attendance bulk, leave approve, payroll process (with structures)
+- [ ] Shift planning **publish** works on phone
+- [ ] Skill matrix editable on phone
+- [ ] Worker self-service: my attendance / leave / payslip HTML
+
+## F.5 Plan 5 exit gate
+
+- [ ] Pulse plant→dept→asset→**all** workspace tabs
+- [ ] Inventory adjust works
+- [ ] Finance drill + masters + mapping (no gate) + bulk calc
+- [ ] Foundation assets/masters/obs/CA/docs/KPI
+- [ ] Admin browse + Exec employees CRUD
+
+## F.6 Plan 6 — Hardening (`P6-*`)
+
+| Chunk | Requirement | Acceptance |
+|-------|-------------|------------|
+| `P6-EAS` | EAS project; Android APK/AAB; env `EXPO_PUBLIC_API_URL` for staging/prod | Installable build from CI or documented `eas build` |
+| `P6-OFFLINE` | Offline banner; draft field/section saves queued with retry (Q8); never silent fail | Kill network mid-save → user sees retry; resume works |
+| `P6-PERF` | Lists virtualized where >50 rows; run host cards stay scrollable; no JS freeze >2s on open | Spot-check IAF + WO list + employee list on mid-range Android |
+| `P6-PUSH` | **Optional:** Expo notifications for alerts/issues if backend push exists; else skip with note | If skipped, document “alerts via polling / open Alerts tab” |
+| `P6-DEVICE-QA` | Physical device matrix: login all `LOGINS.md` roles; one happy path per Plan 2–5 module | Checklist signed in `docs/MOBILE_P6_DEVICE_QA.md` (create when executing) |
+| `P6-SEC` | No tokens in logs; SecureStore only; HTTPS prod URL; clear session on 401 | Spot-check + logout clears store |
+
+## F.7 How to order work (agent)
 
 ```text
 Implement BUILD CHUNK <ID> from docs/MOBILE_APP_MASTER_PLAN.md
 Full feature parity. No desktop-only gates. Follow Acceptance in that chunk.
+Port API types from frontend/src/api. Add smoke script named in the chunk.
+Mark Done checklist + point Next to the following chunk ID.
 ```
 
-**Start:** `Implement BUILD CHUNK P2-ROLLING-RMILL from docs/MOBILE_APP_MASTER_PLAN.md`
+**Within a plan:** implement chunks in the **Chunk index** order below.  
+**Do not** start Plan N+1 until that plan’s exit gate (F.2–F.6) is checked.
+
+**Web gates explicitly removed on mobile:** Shift Planning, Skill Matrix, Cost Mapping Builder.
+
+**Blocked / partial (do not invent):**
+| Item | Rule |
+|------|------|
+| PEEL | Stub only until seed |
+| GRIND jobs table | Header now; engine must absorb future sections |
+| Reports PDF | HTML/share only until backend PDF exists |
+| Admin org write | Browse unless product asks to wire unused CRUD |
+| Safety list create | Optional beyond web |
+
+## F.8 Current Start pointer
+
+**Start:** `Implement BUILD CHUNK P3-MAINT-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -755,17 +1483,20 @@ Base: `EXPO_PUBLIC_API_URL` → `/api/v1`
 
 | Domain | Key paths |
 |--------|-----------|
-| Auth | `POST /auth/login`, `GET|PATCH /auth/me` |
+| Auth | `POST /auth/login`, `GET\|PATCH /auth/me` |
 | Runs | `GET /process-runs`, `/mine`, `/{id}`; `PATCH /{id}`; `POST /{id}/transitions`; remarks + attachments |
-| Create run | `POST /process-instances/{id}/runs` |
+| Create run | `POST /process-instances/{id}/runs` `{ run_type, shift_id?, grade_id? }` |
 | Templates | `GET /templates/versions/{id}` |
-| Maintenance | `/maintenance/issues/*`, `/maintenance/pm/*` |
-| Workforce | `/workforce/*`, `/workforce/ops/*`, `/workforce/payroll/*`, `/workforce/leave/*` |
-| Messages | `/messages/*`, `/notifications/*` |
-| Pulse/Safety | `/pulse/*`, `/assets/{id}/workspace`, `POST /safety/scan` |
-| Foundation | `/foundation/*`, `/masters/*` |
-| Finance | `/finance/*` |
-| Lookups | plants, processes, instances, shifts, steel-grades, materials, coils, customers, delay-codes, users |
+| Maintenance issues | `/maintenance/categories`, `/issues`, `/issues/mine`, `…/assign`, `…/close` |
+| Maintenance PM | `/maintenance/pm/programs`, triggers, tasks, notifications, work-orders, `…/transition`, `…/tasks/{id}/execute`, analytics, evaluate |
+| Workforce | `/workforce/employees`, contractors, shift-assignments, attendance, handover-notes, summary |
+| Workforce ops | `/workforce/ops/rosters` (+ publish), leave, skills, training, payroll, salary-structures, payslips |
+| Messages | `/messages/inbox\|sent`, `POST /messages`, attachments, `/recipients/suggest`; `/notifications` |
+| Pulse / Energy / Inv | `/pulse/*`, `/assets/{id}/workspace`, `/energy/plant/{id}`, `/inventory-pulse/{plantId}` (+ adjust) |
+| Safety | `/safety/dashboard/{plantId}`, `/assets/search`, `POST /safety/scan`, inspections/sops/incidents |
+| Foundation | `/foundation/assets`, observations, CAs, documents, kpi-definitions; `/masters/*` |
+| Finance | `/finance/...` plant/dept/process/asset summaries, cost-sheet, masters, mappings, calculations, analytics |
+| Lookups | plants, processes, instances, shifts, steel-grades, materials, coils, customers, delay-codes, users, departments |
 
 ---
 
@@ -773,7 +1504,7 @@ Base: `EXPO_PUBLIC_API_URL` → `/api/v1`
 
 **Plan 1:** `P1-00` `P1-01` `P1-02` `P1-03` `P1-04` `P1-05` `P1-06` `P1-07` `P1-08`
 
-**Plan 2:** `P2-ENGINE-01` `P2-ENGINE-02` `P2-ENGINE-03` `P2-ENGINE-04` · `P2-SMS-IAF` `P2-SMS-AOD` `P2-SMS-CCM` · `P2-ROLLING-RMILL` · `P2-WIRE-WFURN` `P2-WIRE-WDRAW` · `P2-BBD-BBAR` `P2-BBD-PEEL` · `P2-FORGE-GRIND` · `P2-REPORTS`
+**Plan 2:** `P2-ENGINE-01` `P2-ENGINE-02` `P2-ENGINE-03` `P2-ENGINE-04` · `P2-SMS-IAF` `P2-SMS-AOD` `P2-SMS-CCM` · `P2-ROLLING-RMILL` · `P2-WIRE-WFURN` `P2-WIRE-WDRAW` · `P2-BBD-BBAR` `P2-BBD-PEEL` · `P2-FORGE-GRIND` · `P2-DEPT-SHELLS` · `P2-REPORTS`
 
 **Plan 3:** `P3-OPS-SHIFT` `P3-OPS-MYRUNS` `P3-OPS-SUPER` `P3-OPS-HOD` · `P3-SAFE-SCAN` `P3-SAFE-DASH` `P3-SAFE-LISTS` · `P3-MAINT-QUEUE` `P3-MAINT-DASH` `P3-MAINT-WO-LIST` `P3-MAINT-WO-EXEC` `P3-MAINT-PM-LIST` `P3-MAINT-PM-WIZ` · `P3-MSG-INBOX` `P3-MSG-ALERTS` `P3-MSG-COMPOSE`
 
@@ -781,6 +1512,8 @@ Base: `EXPO_PUBLIC_API_URL` → `/api/v1`
 
 **Plan 5:** `P5-PULSE-PLANT` `P5-PULSE-DEPT` `P5-PULSE-ASSET` `P5-PULSE-WS` `P5-ENERGY` `P5-INV` · `P5-FND-ASSETS` `P5-FND-MASTERS` `P5-FND-OBS` `P5-FND-CA` `P5-FND-DOCS` `P5-FND-AN` · `P5-FIN-DASH` `P5-FIN-SHEET` `P5-FIN-MASTERS` `P5-FIN-MAP` `P5-FIN-CALC` `P5-FIN-AN` · `P5-ADM-HOME` `P5-ADM-ORG` `P5-ADM-DEPT` `P5-ADM-SHEETS` `P5-ADM-ACT` `P5-ADM-USERS` · `P5-EXE-HOME` `P5-EXE-EMP`
 
+**Plan 6:** `P6-EAS` `P6-OFFLINE` `P6-PERF` `P6-PUSH` `P6-DEVICE-QA` `P6-SEC`
+
 ---
 
-*End of master plan v2.0. Feed one BUILD CHUNK at a time for top-notch implementation.*
+*End of master plan v2.1. Feed one BUILD CHUNK at a time. Every chunk must have Acceptance before coding.*

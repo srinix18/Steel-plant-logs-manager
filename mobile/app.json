@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.chandan.moi",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#EFF6FF"
@@ -34,7 +35,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow MOI to use the camera to scan asset QR codes.",
+          "barcodeScannerEnabled": true,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

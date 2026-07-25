@@ -1,9 +1,11 @@
+import { router, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
@@ -15,8 +17,12 @@ import { useRunHost } from '@/src/features/run-host/useRunHost';
 import { useKeepAwake } from '@/src/hooks/useKeepAwake';
 import {
   isAodLadleTemplate,
+  isBbarDailyTemplate,
   isCcmCastTemplate,
+  isGrindDailyTemplate,
   isIafHeatTemplate,
+  isRmillShiftTemplate,
+  isWireDivisionTemplate,
   transitionHint,
   transitionsForTab,
 } from '@/src/utils/heatWorkflowUi';
@@ -37,6 +43,10 @@ export function RunHostScreen({ runId }: Props) {
   const useGuided = isIafHeatTemplate(sectionKeys);
   const isAod = isAodLadleTemplate(sectionKeys);
   const isCcm = isCcmCastTemplate(sectionKeys);
+  const isRmill = isRmillShiftTemplate(sectionKeys);
+  const isWire = isWireDivisionTemplate(sectionKeys);
+  const isBbar = isBbarDailyTemplate(sectionKeys);
+  const isGrind = isGrindDailyTemplate(sectionKeys);
   const availableTransitions = host.run?.workflow?.available_transitions ?? [];
 
   useEffect(() => {
@@ -54,11 +64,11 @@ export function RunHostScreen({ runId }: Props) {
   const step = host.steps[stepIndex];
   const section = step ? host.sections.find((s) => s.key === step.sectionKey) : undefined;
 
-  // IAF: owning-card CTAs. AOD/CCM: always show (many cards). Else: last card only.
+  // IAF: owning-card CTAs. AOD/CCM/RMILL/Wire/BBAR/GRIND: always show. Else: last card only.
   const tabTransitions =
     useGuided && step
       ? transitionsForTab(availableTransitions, step.sectionKey)
-      : isAod || isCcm || stepIndex === host.steps.length - 1
+      : isAod || isCcm || isRmill || isWire || isBbar || isGrind || stepIndex === host.steps.length - 1
         ? availableTransitions
         : [];
 
@@ -100,7 +110,10 @@ export function RunHostScreen({ runId }: Props) {
     return (
       <Screen>
         {host.error ? <ErrorBanner message={host.error} /> : null}
-        <Text style={styles.empty}>No sections to fill for this run.</Text>
+        <EmptyState
+          title="No log sheet for this run"
+          description="This process has no fillable template sections on mobile. QUAL / MAINT / UTIL department shells never open a fake run host — use Maintenance or the department browser instead."
+        />
       </Screen>
     );
   }
@@ -152,7 +165,15 @@ export function RunHostScreen({ runId }: Props) {
             Step {stepIndex + 1} of {host.steps.length}
           </Text>
         </View>
-        <Badge label={host.run.current_state.replace(/_/g, ' ')} tone="brand" />
+        <View style={styles.headerActions}>
+          <Button
+            title="Report"
+            variant="secondary"
+            size="md"
+            onPress={() => router.push(`/(app)/reports/${runId}` as Href)}
+          />
+          <Badge label={host.run.current_state.replace(/_/g, ' ')} tone="brand" />
+        </View>
       </View>
 
       <ProgressBar progress={progress} />
@@ -191,6 +212,10 @@ export function RunHostScreen({ runId }: Props) {
               assetGroupsByCode: host.assetGroupsByCode,
               currentUserId: host.currentUserId,
             },
+            delayCodes: host.delayCodes,
+            plantUsers: host.plantUsers,
+            coils: host.coils,
+            customers: host.customers,
             remarksRefreshKey: host.remarksRefreshKey,
             disabled: host.saving || host.transitioning,
           }}
@@ -250,6 +275,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   headerText: { flex: 1, minWidth: 0 },
+  headerActions: { alignItems: 'flex-end', gap: spacing.xs },
   runNumber: { ...typography.title, color: colors.text },
   stepMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   banner: { marginTop: spacing.sm },

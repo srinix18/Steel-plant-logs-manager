@@ -121,7 +121,23 @@ export default function LoginScreen() {
             {__DEV__ ? (
               <View style={styles.devBlock}>
                 <Text style={styles.devTitle}>Demo accounts (dev)</Text>
-                <Text style={styles.devHint}>API: {getApiBaseUrl()}</Text>
+                <Text
+                  style={[
+                    styles.devHint,
+                    getApiBaseUrl().includes('localhost') || getApiBaseUrl().includes('127.0.0.1')
+                      ? styles.devWarn
+                      : null,
+                  ]}
+                >
+                  API: {getApiBaseUrl()}
+                </Text>
+                {(getApiBaseUrl().includes('localhost') ||
+                  getApiBaseUrl().includes('127.0.0.1')) && (
+                  <Text style={styles.devWarn}>
+                    Wrong for phone — set mobile/.env EXPO_PUBLIC_API_URL to your Wi‑Fi IP, then
+                    restart Expo with --clear.
+                  </Text>
+                )}
                 <View style={styles.chipRow}>
                   {DEMO_ACCOUNTS.map((account) => (
                     <Pressable
@@ -182,6 +198,12 @@ const styles = StyleSheet.create({
   devHint: {
     ...typography.caption,
     color: colors.textMuted,
+  },
+  devWarn: {
+    ...typography.caption,
+    color: colors.danger,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',

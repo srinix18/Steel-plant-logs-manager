@@ -79,7 +79,7 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
       section('Administration'),
       link('Overview', '/admin', 'P5-ADM-HOME'),
       link('Organisations', '/admin/organisations', 'P5-ADM-ORG'),
-      link('Departments', '/admin/departments', 'P5-ADM-DEPT'),
+      link('Departments', '/admin/departments', 'P2-DEPT-SHELLS'),
       link('Log Sheets', '/admin/sheets', 'P5-ADM-SHEETS'),
       link('Activity', '/admin/activity', 'P5-ADM-ACT'),
       link('Users', '/admin/users', 'P5-ADM-USERS')
@@ -106,7 +106,8 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
       link('Department Pulse', '/pulse/department', 'P5-PULSE-DEPT'),
       link('Scan QR', '/safety/scan', 'P3-SAFE-SCAN'),
       section('Department'),
-      link('Overview', '/hod', 'P3-OPS-HOD')
+      link('Overview', '/hod', 'P3-OPS-HOD'),
+      link('Departments', '/admin/departments', 'P2-DEPT-SHELLS')
     );
   }
 
@@ -139,7 +140,10 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
     if (isWorker || isSupervisorOnly) {
       items.push(link('My Runs', '/my-runs', 'P3-OPS-MYRUNS'));
     }
-    items.push(link('Scan QR', '/safety/scan', 'P3-SAFE-SCAN'));
+    items.push(
+      link('Peeling', '/peel', 'P2-BBD-PEEL'),
+      link('Scan QR', '/safety/scan', 'P3-SAFE-SCAN')
+    );
   }
 
   if (showWorkforceDashboard) {
@@ -186,7 +190,10 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
   if (showFoundationSection) {
     items.push(section('Plant Foundation'));
     if (showFoundationAssets) {
-      items.push(link('Assets', '/foundation/assets', 'P5-FND-ASSETS'));
+      items.push(
+        link('Departments', '/admin/departments', 'P2-DEPT-SHELLS'),
+        link('Assets', '/foundation/assets', 'P5-FND-ASSETS')
+      );
     }
     if (showFoundationMasters) {
       items.push(link('Masters', '/foundation/masters', 'P5-FND-MASTERS'));

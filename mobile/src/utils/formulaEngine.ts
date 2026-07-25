@@ -101,3 +101,32 @@ export function mergeCalculatedIntoFields(
 ): Record<string, string> {
   return { ...fieldValues, ...evaluateCalculatedFields(sections, fieldValues) };
 }
+
+/** Production-register formulas — currently `a * b` (BBAR total_weight_kg). */
+const PRODUCT_PATTERN = /^\s*(\w+)\s*\*\s*(\w+)\s*$/;
+
+export function evalProductionFormula(
+  formula: string,
+  values: Record<string, unknown>
+): number | null {
+  const match = PRODUCT_PATTERN.exec(formula.trim());
+  if (!match) return null;
+  const left = values[match[1]];
+  const right = values[match[2]];
+  if (typeof left !== 'number' || typeof right !== 'number') return null;
+  if (Number.isNaN(left) || Number.isNaN(right)) return null;
+  return left * right;
+}
+
+export function applyCalculatedColumns(
+  columns: Array<{ key: string; type: string; formula?: string }>,
+  values: Record<string, unknown>
+): Record<string, unknown> {
+  const next = { ...values };
+  for (const col of columns) {
+    if (col.type === 'calculated' && col.formula) {
+      next[col.key] = evalProductionFormula(col.formula, next);
+    }
+  }
+  return next;
+}

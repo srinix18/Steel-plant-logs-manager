@@ -11,7 +11,7 @@ import {
 
 assert.deepEqual(
   PROCESS_OPTIONS.map((p) => p.code),
-  ['IAF', 'AOD', 'CCM', 'RMILL', 'WFURN', 'WDRAW', 'BBAR', 'GRIND']
+  ['IAF', 'AOD', 'CCM', 'RMILL', 'WFURN', 'WDRAW', 'BBAR', 'PEEL', 'GRIND']
 );
 
 const filtered = filterProcessOptions(['IAF', 'BBAR', 'RMILL', 'OTHER']);
@@ -67,7 +67,22 @@ assert.deepEqual(
 );
 
 assert.equal(showsGradeField('CCM', 'cast'), false);
+assert.equal(showsShiftField('cast'), true);
 assert.equal(startButtonLabel('CCM', 'cast'), 'Start Shift Log');
+assert.deepEqual(
+  buildCreateRunPayload({
+    runType: 'cast',
+    shiftId: 'shift-ccm',
+    gradeId: 'grade-should-omit',
+    isDaily: false,
+    showGrade: false,
+  }),
+  { run_type: 'cast', shift_id: 'shift-ccm' }
+);
 assert.equal(startButtonLabel('AOD', 'ladle_metallurgy'), 'Start AOD Run');
 
-console.log('processOptions: ok (IAF heat / BBAR daily / RMILL shift)');
+const peel = PROCESS_OPTIONS.find((p) => p.code === 'PEEL')!;
+assert.equal(peel.notDigitized, true);
+assert.equal(startButtonLabel('PEEL', peel.runType, true), 'View status');
+
+console.log('processOptions: ok (IAF / CCM no-grade / BBAR daily / RMILL / PEEL blocked)');
