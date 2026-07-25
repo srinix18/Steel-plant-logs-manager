@@ -1,6 +1,6 @@
 # MOI Mobile App — Master Build Plan (Expo / React Native)
 
-**Version:** 2.1 (Parts D–F production-depth specs)  
+**Version:** 2.2 (Parts D–F production-depth; Plan 5 Energy→Exec thickened to Plan-4 quality)  
 **Status:** Source of truth for full-parity mobile  
 **How to build:** Send the agent exactly one `BUILD CHUNK <ID>` at a time. Never “implement the whole plan.”  
 **Spec rule:** Every chunk in Parts D–F has **Acceptance**. If Acceptance is missing, expand the chunk before coding (Q9).
@@ -1427,17 +1427,38 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** OEE, production, cost, power, downtime, alerts, pending maint, shift, attendance %; dept cards; feed; alerts; Refresh; links Energy/Inventory. Auto-refresh ~30s.  
 **Acceptance:** Refresh works; drill to dept.
 
+**Done (P5-PULSE-PLANT):**
+- [x] Plant Pulse KPIs + OEE breakdown + dept cards + feed + alerts; Refresh; 30s auto-refresh
+- [x] Links Energy/Inventory; dept drill → `/pulse/department?dept=`
+- [x] Route gate `CEO_TIER_ROLES`; smoke: `test-pulse-plant-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-PULSE-DEPT from docs/MOBILE_APP_MASTER_PLAN.md`
+
 ### CHUNK `P5-PULSE-DEPT`
 
 **APIs:** `GET /pulse/department/{id}`; `GET /oee/department/{id}`  
 **Must include:** Dept picker; status/run/production/OEE/power/issues; dept-specific cards (SMS/ROLLING/WIRE); OEE trend.  
 **Acceptance:** HOD default dept; query param switch works.
 
+**Done (P5-PULSE-DEPT):**
+- [x] Department Pulse: picker, SMS/ROLLING/WIRE cards, KPIs, shift progress, active runs, OEE + 7d trend
+- [x] HOD `department_id` default + `?dept=` / SelectSheet switch
+- [x] Route gate `HOD_TIER_ROLES`; smoke: `test-pulse-dept-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-PULSE-ASSET from docs/MOBILE_APP_MASTER_PLAN.md`
+
 ### CHUNK `P5-PULSE-ASSET`
 
 **APIs:** `GET /pulse/asset/{id}`; `GET /oee/asset/{id}`  
 **Must include:** Health, OEE, operator, run; live params; Open Workspace.  
 **Acceptance:** Opens workspace route.
+
+**Done (P5-PULSE-ASSET):**
+- [x] Asset Pulse: health/OEE/operator/run, live params, OEE + daily trend
+- [x] Open Workspace → `/(app)/assets/[id]/workspace`
+- [x] Smoke: `test-pulse-asset-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-PULSE-WS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P5-PULSE-WS` — Asset Workspace
 
@@ -1446,98 +1467,335 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Tabs (all required):** Overview (+ QR + emergency contacts), Live Parameters, Maintenance WOs, Alerts, OEE, Energy (kWh today), Inspections, SOP.  
 **Acceptance:** Every tab renders with empty states; WO links work. Smoke: `test-asset-workspace-api.ts`.
 
+**Done (P5-PULSE-WS):**
+- [x] All 8 tabs with empty states; Overview QR + emergency contacts; WO → work-order exec
+- [x] Pulse view link; smoke: `test-asset-workspace-api.ts`
+- [x] Pulse stack complete through workspace
+
+**Next:** `Implement BUILD CHUNK P5-ENERGY from docs/MOBILE_APP_MASTER_PLAN.md`
+
 ### CHUNK `P5-ENERGY`
 
-**APIs:** `GET /energy/plant/{id}` (dept/asset/history clients optional)  
-**Must include:** today/week/month kWh, cost, peak/avg load; dept chart; top assets → workspace; history.  
-**Acceptance:** Plant loads; asset links open workspace.
+**Route:** `/(app)/energy`  
+**Port from:** `EnergyDashboardPage.tsx` · API: `energy.ts`  
+**Route gate:** `CEO_TIER_ROLES`  
+**APIs:**
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/plants` | resolve `plant_id` (first plant OK) |
+| GET | `/energy/plant/{plantId}` | **primary** — embeds depts/assets/history |
+| GET | `/energy/departments\|assets\|history/{plantId}` | optional clients; web page unused |
+
+**Response (`EnergyDashboard`):** `today_kwh`, `week_kwh`, `month_kwh`, `today_cost`, `peak_load_kw?`, `avg_load_kw?`, `departments[]` (`department_id`,`code`,`name`,`kwh`), `assets[]` (`asset_id`,`name`,`kwh`), `history[]` (`reading_at`,`kwh`,`cost?`).
+
+**Must include:**
+- Metric cards: Today / Week / Month kWh; Today’s Cost (₹); Peak Load kW; Avg Load kW
+- Department usage (bars or ranked list by `code` × `kwh`)
+- Top assets (~8 by kWh) → `/(app)/assets/{asset_id}/workspace`
+- History rows: `reading_at`, kWh (+ cost if present)
+- Empty / error states
+
+**Acceptance:**
+- [x] Plant energy loads for resolved plant
+- [x] Asset row opens workspace
+- [x] Smoke: `test-energy-api.ts`
+
+**Done (P5-ENERGY):**
+- [x] Energy KPIs (today/week/month kWh, cost, peak/avg load)
+- [x] Dept usage bars; top assets → workspace; consumption history
+- [x] Route gate `CEO_TIER_ROLES`; smoke: `test-energy-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-INV from docs/MOBILE_APP_MASTER_PLAN.md`
+
+---
 
 ### CHUNK `P5-INV`
 
-**APIs:** `GET /inventory-pulse/{plantId}`; **`POST …/adjust`** `{ material_code, quantity, quality_grade?, location? }`  
-**Note:** Web list has **no adjust UI** — mobile **must** expose adjust (parity with API / Q1 spirit).  
-**Acceptance:** List loads; adjust updates qty on reload.
+**Route:** `/(app)/inventory-pulse`  
+**Port from:** `InventoryPulsePage.tsx` · API: `inventoryPulse.ts`  
+**Route gate:** `CEO_TIER_ROLES`  
+**APIs:**
+| Method | Path | Body / notes |
+|--------|------|--------------|
+| GET | `/plants` | |
+| GET | `/inventory-pulse/{plantId}` | → `InventoryItem[]` |
+| POST | `/inventory-pulse/{plantId}/adjust` | `{ material_code, quantity, quality_grade?, location? }` |
+
+**List fields:** `material_code`, `material_name`, `quantity`, `unit`, `quality_grade?`, `location?`, `avg_daily_consumption?`, `days_remaining?`, `current_value?`, `supplier?`, `low_stock_threshold?`, `status`, `last_updated`.
+
+**Must include:**
+- Critical count banner (`status === 'critical'`)
+- Cards: name, code, status badge, qty+unit, location, days remaining, avg consumption/day, value ₹, supplier
+- **Adjust UI (web has none — required on mobile):** pick/enter `material_code`, `quantity`, optional `quality_grade` / `location` → POST → reload list
+
+**Acceptance:**
+- [x] List loads; critical count matches items
+- [x] Adjust persists; quantity updates on reload
+- [x] Smoke: `test-inventory-pulse-api.ts` (must exercise adjust)
+
+**Done (P5-INV):**
+- [x] Inventory cards + critical banner; Adjust form (absolute qty + optional grade/location)
+- [x] Adjust → reload updates quantity; empty-OK
+- [x] Route gate `CEO_TIER_ROLES`; smoke: `test-inventory-pulse-api.ts`
+- [x] Pulse / Energy / Inventory slice complete
+
+**Next:** `Implement BUILD CHUNK P5-FND-ASSETS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ## E.7 Foundation — Plan 5
 
-**API file:** `foundation.ts`.
+**API files:** `foundation.ts` (+ masters via `/masters/*`; maintenance-history via `maintenancePm.ts`).  
+**Do not invent:** Approvals APIs in `foundation.ts` unused by web pages — skip UI.
 
 ### CHUNK `P5-FND-ASSETS`
 
-**APIs:** assets CRUD; groups; events; responsibilities; `GET …/maintenance-history`  
-**Form:** asset_no, name, group_id, department_id, life unit/expected/current, remarks, status; tabs Details / Maintenance; assign responsibility; log event.  
-**Acceptance:** Create/edit; detail shows events/resp/PM timeline.
+**Route:** `/(app)/foundation/assets`  
+**Port from:** Foundation assets page + `AssetFormModal`  
+**Route gate:** `HOD_TIER_ROLES` ∪ `PLATFORM_ADMIN_ROLES`  
+**Write UI:** HOD-tier only (create/edit/event/assign).
 
-### CHUNK `P5-FND-MASTERS`
+**APIs:**
+| Method | Path | Params / body |
+|--------|------|----------------|
+| GET | `/plants`, `/departments`, `/foundation/asset-groups` | `plant_id?` |
+| GET | `/foundation/assets` | `plant_id?`, `group_id?`, `department_id?`, `status?` |
+| POST | `/foundation/assets` | create + `plant_id` |
+| PATCH | `/foundation/assets/{assetId}` | update |
+| GET/POST | `/foundation/assets/{id}/events` | POST `{ event_type, occurred_at, payload? }` |
+| GET/POST | `/foundation/assets/{id}/responsibilities` | POST `{ user_id, role_label?, is_primary? }` |
+| GET | `/plants/{plantId}/users` | assign picker |
+| GET | `/foundation/assets/{id}/maintenance-history` | PM timeline |
 
-**APIs:** `/masters/grades|materials|products|customers|delay-codes` + contractors GET  
-**Tabs:** grades, materials, products, customers, delay_codes, contractors (read-only). Create forms on writable tabs.  
-**Acceptance:** Create on writable tabs; contractors list-only.
+**Create/edit form:** `asset_no*` (locked on edit), `name*`, `group_id*`, `department_id?`, `status` (default `active`), `remarks`; life UI → API `expected_life: { unit, value }`, `life_counters: { [unit]: number }`.  
+**Manual event (web parity):** `event_type: 'manual_entry'`, `occurred_at` ISO, `payload: { note }`.
 
-### CHUNK `P5-FND-OBS`
+**Must include:**
+- List: `asset_no`, `name`, `group_name`, `status`, remaining life
+- Detail tabs **Details** (life, events, responsibilities, Assign, Edit, Log event) / **Maintenance** (`last_pm_at`, `next_pm_due_at`, `total_maintenance_cost`, timeline entries)
 
-**APIs:** observations GET/POST  
-**Fields:** title, description, category, severity, department  
-**Acceptance:** Create; list statuses.
-
-### CHUNK `P5-FND-CA`
-
-**APIs:** CAs list; `POST /observations/{id}/corrective-actions`; PATCH close  
-**Fields:** observation_id, title, assigned_to, due_date  
-**Acceptance:** Create from obs; close updates status.
-
-### CHUNK `P5-FND-DOCS`
-
-**APIs:** documents list; upload FormData; download blob  
-**Upload:** plant_id, department_id, category (`sop|work_instruction|…`), title, version, file  
-**Acceptance:** Upload (HOD/HR); download opens/shares file.
-
-### CHUNK `P5-FND-AN`
-
-**APIs:** kpi-definitions GET/POST/PATCH  
-**Fields:** code, name, formula, target_value, frequency, department_id  
-**Acceptance:** Create KPI; list shows formula.
+**Acceptance:**
+- [ ] Create + edit save; detail shows events + responsibilities
+- [ ] Assign employee appears; maintenance history empty-OK
+- [ ] Smoke: `test-foundation-assets-api.ts`
 
 ---
 
-## E.8 Finance — Plan 5 (**no feature gates**)
+### CHUNK `P5-FND-MASTERS`
 
-**API file:** `finance.ts`. Web **DesktopOnlyGate** on mapping — **do not** port.
+**Route:** `/(app)/foundation/masters`  
+**Route gate:** same as assets  
+**Write:** `CEO_TIER_ROLES` only; contractors never writable here.
+
+**APIs:**
+| Method | Path | Body / query |
+|--------|------|--------------|
+| GET/POST | `/masters/grades` | POST `{ organisation_id, code, description? }` |
+| GET/POST | `/masters/materials` | POST `{ organisation_id, type, code, name }` — **expose `type`** (web defaults `alloy`) |
+| GET/POST | `/masters/products` | POST `{ organisation_id, code, name, department_id? }` |
+| GET/POST | `/masters/customers` | GET `plant_id?`; POST `{ plant_id, name, code? }` |
+| GET/POST | `/masters/delay-codes` | GET `plant_id?`; POST `{ plant_id, code, description, category }` — **expose `category`** |
+| GET | `/masters/contractors` | read-only (“Manage in Workforce”) |
+| GET | `/plants` | resolve `plant_id` / `organisation_id` |
+
+**Tabs:** grades · materials · products · customers · delay_codes · contractors (list-only).
+
+**Acceptance:**
+- [ ] Create on all writable tabs; contractors list-only
+- [ ] Tables reload after create
+- [ ] Smoke: `test-foundation-masters-api.ts`
+
+---
+
+### CHUNK `P5-FND-OBS`
+
+**Route:** `/(app)/foundation/observations`  
+**Route gate:** `SUPERVISOR_ROLES` ∪ `MAINTENANCE_ROLES`  
+**APIs:** `GET /foundation/observations` (`plant_id?`, `status?`); `POST /foundation/observations`; `GET /plants`.
+
+**Create body:** `plant_id`, `title`, `description`, `category` (`quality|safety|energy|equipment|process`), `severity` (`low|medium|high|critical`), `department_id?` (default user dept).
+
+**Must include:** list columns title, category, severity, status, observed_at; create form; empty/error.
+
+**Acceptance:**
+- [ ] Create appears in list with status
+- [ ] Enums enforced in UI
+- [ ] Smoke: `test-foundation-obs-api.ts`
+
+---
+
+### CHUNK `P5-FND-CA`
+
+**Route:** `/(app)/foundation/corrective-actions`  
+**Route gate:** same as OBS  
+**APIs:**
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/foundation/corrective-actions` | `plant_id?`, `status?` |
+| GET | `/foundation/observations` | observation picker |
+| GET | `/plants/{id}/users` | assignee |
+| POST | `/foundation/observations/{observationId}/corrective-actions` | `{ title, assigned_to, due_date? }` |
+| PATCH | `/foundation/corrective-actions/{actionId}` | close `{ status: 'closed', closure_notes }` |
+
+**Form:** `observation_id`, `title`, `assigned_to`, `due_date`.  
+**List:** title, observation_title, status, due_date, Close.
+
+**Acceptance:**
+- [ ] Create from observation; Close → status `closed`
+- [ ] Smoke: `test-foundation-ca-api.ts`
+
+---
+
+### CHUNK `P5-FND-DOCS`
+
+**Route:** `/(app)/foundation/documents`  
+**Route gate:** any authenticated (web has no role ProtectedRoute)  
+**Upload roles:** HOD-tier **or** `hr`.
+
+**APIs:** `GET /foundation/documents` (`plant_id?`, `department_id?`, `category?`); `POST /foundation/documents` **multipart FormData**; `GET …/{docId}/download` (blob → share); `GET /departments`.
+
+**FormData keys:** `plant_id`, `department_id`, `category`, `title`, `version`, `file`.  
+**Categories:** `sop|work_instruction|safety_procedure|quality_document|maintenance_manual|training_material`.
+
+**Must include:** list title/category/version/file_name/uploader; Upload (gated); Download opens/shares.
+
+**Acceptance:**
+- [ ] HOD/HR upload succeeds; row appears
+- [ ] Download opens/shares on device
+- [ ] Non-upload roles: list + download only
+- [ ] Smoke: `test-foundation-docs-api.ts`
+
+---
+
+### CHUNK `P5-FND-AN`
+
+**Route:** `/(app)/foundation/analytics`  
+**Route gate:** `CEO_TIER_ROLES` ∪ `PLATFORM_ADMIN_ROLES`  
+**Write:** CEO-tier.  
+**APIs:** `GET/POST /foundation/kpi-definitions`; `PATCH …/{kpiId}` (API exists; web create-only OK); `GET /departments`.
+
+**Create fields:** `code`, `name`, `formula`, `target_value?`, `frequency` (`shift|daily|weekly|monthly`), `department_id?`.  
+**List:** code, name, formula, target_value, frequency.  
+**UI note:** “stored only — no auto-calculation yet” (web parity).
+
+**Acceptance:**
+- [ ] Create KPI; list shows formula; empty OK
+- [ ] Smoke: `test-foundation-kpi-api.ts`
+
+---
+
+## E.8 Finance — Plan 5 (**no DesktopOnlyGate**)
+
+**API file:** `finance.ts`.  
+**Parent route gate:** `FINANCE_VIEW_ROLES`.  
+**Web DesktopOnlyGate on Cost Masters + Cost Mapping (+ Admin Log Sheets) — never port.**  
+**Missing mobile routes to add with these chunks:**  
+`/(app)/finance/dashboard/departments/[id]`, `…/processes/[id]`, `…/assets/[id]`, `/(app)/finance/runs/[runId]/cost-sheet`.
 
 ### CHUNK `P5-FIN-DASH`
 
-**APIs:** plant-summary; `…/departments/{id}`; `…/processes/{id}`; `…/assets/{id}`  
-**Must include:** Cost today/month; by dept/category; drill plant→dept→process→asset; link run cost sheet.  
-**Acceptance:** Full drill path on phone.
+**Routes:** `/(app)/finance/dashboard` (+ nested dept/process/asset drills)  
+**Port from:** Finance dashboard pages  
+**APIs:**
+| Method | Path | Query |
+|--------|------|-------|
+| GET | `/finance/dashboard/plant-summary` | `plant_id` |
+| GET | `/finance/dashboard/departments/{deptId}` | |
+| GET | `/finance/dashboard/processes/{processId}` | |
+| GET | `/finance/dashboard/assets/{assetId}` | |
+| GET | `/processes` | `department_id` (dept → process list) |
+| GET | `/plants` | |
+
+**Plant UI:** `total_cost_today` + `run_count_today`; `total_cost_month` + `run_count_month`; by_department → drill; by_category (`category`, `amount`, `percentage`).  
+**Dept:** total_cost, cost_per_run, cost_per_ton?; process list → process drill.  
+**Process:** total/avg/high/low cost; links → cost-sheet `/(app)/finance/runs/{runId}/cost-sheet`.  
+**Asset:** total_production_kg, power_cost, maintenance_cost, total_cost, cost_per_ton?.
+
+**Acceptance:**
+- [ ] Full drill plant→dept→process→cost-sheet on phone
+- [ ] Asset detail route loads when opened
+- [ ] Smoke: `test-finance-dash-api.ts`
+
+---
 
 ### CHUNK `P5-FIN-SHEET`
 
-**APIs:** cost-sheet GET; `POST /finance/calculations/runs/{id}/compute`  
-**Acceptance:** Compute refreshes sheet line items.
+**Route:** `/(app)/finance/runs/[runId]/cost-sheet`  
+**Compute button:** `FINANCE_MASTERS_WRITE_ROLES`  
+**APIs:** `GET /finance/dashboard/runs/{runId}/cost-sheet`; `POST /finance/calculations/runs/{runId}/compute`.
+
+**Must include:** run_number, dept/process codes; calc `version`/`status`/`total_cost`; warnings; category breakdown; line items (`cost_category`, `item_name`, `quantity`+`unit`, `rate`, `amount`); Recalculate; empty “no calc yet” + Calculate for writers.
+
+**Acceptance:**
+- [ ] Compute/recalculate refreshes line items
+- [ ] Smoke: `test-finance-sheet-api.ts`
+
+---
 
 ### CHUNK `P5-FIN-MASTERS`
 
-**Tabs (all 5):** raw-materials, power, fuel, labour, maintenance — create rates + effective dates.  
-**Acceptance:** Create per tab; tables list.
+**Route:** `/(app)/finance/masters`  
+**Write:** `FINANCE_MASTERS_WRITE_ROLES` · **no DesktopOnlyGate**  
+**Lookups:** `GET /plants`; `GET /masters/materials` (raw-materials picker).
+
+**Tabs + POST bodies:**
+| Tab | GET | POST |
+|-----|-----|------|
+| raw_materials | `/finance/masters/raw-materials?organisation_id=` | `{ organisation_id, material_id, unit?, rate, effective_from, effective_to? }` |
+| power | `/finance/masters/power?plant_id=` | `{ plant_id, cost_per_unit, effective_from, effective_to? }` |
+| fuel | `/finance/masters/fuel?plant_id=` | `{ plant_id, fuel_name, unit?, rate, effective_from }` |
+| labour | `/finance/masters/labour?plant_id=` | `{ plant_id, role_label, cost_per_hour, department_id? }` |
+| maintenance | `/finance/masters/maintenance?plant_id=` | `{ plant_id, category (`equipment\|quality\|safety\|energy\|process`), default_cost }` |
+
+**Acceptance:**
+- [ ] Create per tab; tables list rates
+- [ ] Smoke: `test-finance-masters-api.ts`
+
+---
 
 ### CHUNK `P5-FIN-MAP` — Mapping builder
 
-**APIs:** mapping context; rules POST/DELETE  
-**Fields:** template version; field picker; source_type; cost_category; child_key; material_field_key; label  
-**Acceptance:** Add/delete rule; context reloads. Smoke: `test-finance-map-api.ts`.
+**Route:** `/(app)/finance/mappings`  
+**Write:** `FINANCE_MAPPING_WRITE_ROLES` · **no DesktopOnlyGate**  
+**APIs:** `GET /templates`; `GET /finance/mappings/template-versions/{versionId}`; `POST /finance/mappings/rules`; `DELETE /finance/mappings/rules/{ruleId}`.
+
+**POST rule fields:** `template_version_id`, `source_type` (`scalar_field|section_row|section_aggregate`), `source_key`, `cost_category`, `child_key?`, `material_field_key?`, `item_label_override?`, `unit_override?`, `labour_role_label?`, `sort_order?`.
+
+**Must include:** template version select; field picker (parity with web mapping logic); cost_category; optional label; active rules + delete; optional qty×rate preview (client-only OK).
+
+**Acceptance:**
+- [ ] Add/delete rule; context reloads
+- [ ] Smoke: `test-finance-map-api.ts`
+
+---
 
 ### CHUNK `P5-FIN-CALC`
 
-**API:** `POST /finance/calculations/bulk`  
-**Fields:** plant, optional dept, from/to  
-**Acceptance:** Returns computed/failed/skipped counts.
+**Route:** `/(app)/finance/calculations`  
+**Write:** `FINANCE_MASTERS_WRITE_ROLES`  
+**API:** `POST /finance/calculations/bulk-compute` *(not `/bulk`)*  
+**Body:** `{ plant_id?, department_id?, process_id?, from_date?, to_date? }`  
+**Response:** `{ computed, failed, skipped }`.
+
+**Must include:** optional dept + from/to dates; Bulk Compute; result counts; read-only message for non-writers.
+
+**Acceptance:**
+- [ ] Returns computed/failed/skipped counts
+- [ ] Smoke: `test-finance-calc-api.ts`
+
+---
 
 ### CHUNK `P5-FIN-AN`
 
-**APIs:** top-drivers; trends `group_by`  
-**Acceptance:** groupBy day/dept/process/asset reloads.
+**Route:** `/(app)/finance/analytics`  
+**Gate:** `FINANCE_VIEW_ROLES`  
+**APIs:** `GET /finance/analytics/top-drivers?plant_id=`; `GET /finance/analytics/trends?plant_id=&group_by=` (`day|department|process|asset`).
+
+**Must include:** groupBy control; drivers (category, amount, percentage); trends (label, total_cost, run_count) as list/bars.
+
+**Acceptance:**
+- [ ] Changing groupBy reloads trends
+- [ ] Smoke: `test-finance-an-api.ts`
 
 ---
 
@@ -1545,47 +1803,126 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 
 ### CHUNK `P5-ADM-HOME`
 
-**APIs:** dashboard metrics; runs; templates; orgs/plants/depts/processes/instances  
-**Acceptance:** KPI cards + recent activity for admin.
+**Route:** `/(app)/admin`  
+**Gate:** `PLATFORM_ADMIN_ROLES`  
+**APIs:** `GET /dashboard`; `GET /process-runs` (recent ~8); `GET /templates`; `GET /organisations`, `/plants`, `/departments`, `/processes`, `/process-instances`.
+
+**Metrics:** `total_organisations`, `total_plants`, `active_runs`, `open_observations`, `open_corrective_actions`.  
+**Must include:** KPI cards; org hierarchy snapshot; log-sheet shortcuts → sheets; recent heats → heat/report.
+
+**Acceptance:**
+- [ ] KPI cards + recent activity without crash
+- [ ] Smoke: `test-admin-home-api.ts`
+
+---
 
 ### CHUNK `P5-ADM-ORG`
 
-**APIs:** GET orgs, plants, depts, processes, instances  
-**Must include:** Hierarchy browser org→plant→dept→process→instance.  
-**Note:** Write CRUD exists in unused web components — **browse-only unless product asks to wire writes**.  
-**Acceptance:** Select org filters tree.
+**Route:** `/(app)/admin/organisations`  
+**Gate:** `PLATFORM_ADMIN_ROLES`  
+**APIs (GET only):** `/organisations`, `/plants`, `/departments`, `/processes`, `/process-instances`.
+
+**Must include:** org list → filter plants (`name`,`code`,`timezone`), departments (`name`,`code`, plant, process codes), equipment instances (`name`, process code, `status`).  
+**Do not invent:** write CRUD (unused web components) unless product asks.
+
+**Acceptance:**
+- [ ] Select org filters hierarchy panels
+- [ ] Smoke: `test-admin-org-api.ts`
+
+---
 
 ### CHUNK `P5-ADM-DEPT`
 
-**APIs:** platform depts/plants/processes  
-**Acceptance:** Dept list + linked processes.
+**Route:** `/(app)/admin/departments`  
+**Gate:** `PLATFORM_ADMIN_ROLES`  
+**APIs:** `GET /departments`, `/organisations`, `/plants`, `/processes`.
+
+**Must include:** org filter; rows name, code, org, plant, processes; linked log-sheet shortcuts (process-code → sheets).
+
+**Acceptance:**
+- [ ] Dept list + linked processes
+- [ ] Smoke: `test-admin-dept-api.ts`
+
+---
 
 ### CHUNK `P5-ADM-SHEETS`
 
-**APIs:** templates + version; grades/materials as needed  
-**Acceptance:** Select template/version renders section preview (read-only).
+**Route:** `/(app)/admin/sheets`  
+**Gate:** `PLATFORM_ADMIN_ROLES` · **no DesktopOnlyGate** (web has it)  
+**APIs:** `GET /templates`; `GET /templates/versions/{versionId}`; `GET /steel-grades` (+ elements); `GET /materials?type=alloy|scrap` as needed.
+
+**Must include:** template + revision select; read-only section preview (phone-simplified OK); support `?doc=` query.
+
+**Acceptance:**
+- [ ] Select template/version renders section preview
+- [ ] Smoke: `test-admin-sheets-api.ts`
+
+---
 
 ### CHUNK `P5-ADM-ACT`
 
-**APIs:** runs; instances; observations/actions  
-**Acceptance:** Activity feed loads without crash.
+**Route:** `/(app)/admin/activity`  
+**Gate:** `PLATFORM_ADMIN_ROLES`  
+**APIs:** `GET /process-runs`; `GET /observations?plant_id=` (**ops**, not foundation); `GET /dashboards/actions/open?plant_id=`; platform trees (orgs/plants/depts/processes/instances).
+
+**Must include:** filters org/dept/process/state; runs (`run_number` → report/heat, process, type, instance, state, location, started_at); observations + open CAs cards.
+
+**Acceptance:**
+- [ ] Feed loads without crash; filters narrow runs
+- [ ] Smoke: `test-admin-act-api.ts`
+
+---
 
 ### CHUNK `P5-ADM-USERS`
 
-**Web `/admin/users`:** list-only.  
-**Mobile:** list users (`GET /users`). Full create/edit → implement via **`P5-EXE-EMP`** patterns (`/organisations/{orgId}/users`) or wire unused `users.ts` CRUD — **document choice in Done checklist**.  
-**Acceptance:** List loads; if CRUD shipped, create/edit org user.
+**Route:** `/(app)/admin/users`  
+**Gate:** `PLATFORM_ADMIN_ROLES`  
+**Live web:** list-only via `GET /users` + `GET /organisations`.  
+**Decision (document in Done):** **list-only** here; full create/edit belongs in **`P5-EXE-EMP`** (`/organisations/{orgId}/users`). Do not invent new user shapes; unused `users.ts` PUT/POST/DELETE optional only if EXE-EMP already covers.
+
+**List columns:** full_name, email, role, organisation name.
+
+**Acceptance:**
+- [ ] List loads on phone
+- [ ] Smoke: `test-admin-users-api.ts`
+
+---
 
 ### CHUNK `P5-EXE-HOME`
 
-**APIs:** dashboard metrics; runs; plants/depts; open maint count  
-**Acceptance:** CEO-tier overview + open issues.
+**Route:** `/(app)/executive`  
+**Gate:** `CEO_TIER_ROLES`  
+**APIs:**
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/dashboard` | plants, active_runs, open_obs, open_CAs |
+| GET | `/process-runs` | recent ~10 → reports |
+| GET | `/plants`, `/departments`, `/processes`, `/process-instances` | hierarchy (optional UI) |
+| GET | `/maintenance/issues/open-count` | `{ count }` |
+| GET | `/maintenance/issues?status=open` | top ~8 |
+
+**Must include:** metric cards + open maint count; open issues (title, category, raised_by, status, run link); recent runs.
+
+**Acceptance:**
+- [ ] CEO-tier overview + open issues load
+- [ ] Smoke: `test-exe-home-api.ts`
+
+---
 
 ### CHUNK `P5-EXE-EMP`
 
-**APIs:** `GET/POST/PATCH /organisations/{orgId}/users`  
-**Fields:** email, password, name, role, dept, process, plant, designation, maintenance_division  
-**Acceptance:** Add/edit org users.
+**Route:** `/(app)/executive/employees`  
+**Gate:** `CEO_TIER_ROLES`  
+**APIs:** `GET/POST/PATCH /organisations/{orgId}/users`; `GET /departments`, `/plants`, `/processes?department_id=`; `GET /maintenance/categories` (maintenance_division).
+
+**Create fields:** `email*`, `password*`, `full_name*`, `role` (`hr|hod|supervisor|worker|maintenance`), `department_id`, `process_id` (if supervisor), `maintenance_division` (if maintenance), `plant_id`, `designation` (`phone` in type unused on web — optional on mobile).  
+**Edit:** same minus email; optional `password`; no edit for `super_admin`/`ceo` rows.
+
+**Must include:** list name/email/role/dept/process-or-category + Add/Edit forms (phone cards).
+
+**Acceptance:**
+- [ ] Add + edit save; conditional process/category fields
+- [ ] Smoke: `test-exe-emp-api.ts`
 
 ---
 
@@ -1627,11 +1964,12 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 
 ## F.5 Plan 5 exit gate
 
-- [ ] Pulse plant→dept→asset→**all** workspace tabs
-- [ ] Inventory adjust works
-- [ ] Finance drill + masters + mapping (no gate) + bulk calc
-- [ ] Foundation assets/masters/obs/CA/docs/KPI
-- [ ] Admin browse + Exec employees CRUD
+- [ ] Pulse plant→dept→asset→**all** workspace tabs ✅ (P5-PULSE-* Done)
+- [ ] Energy plant metrics + asset→workspace; Inventory list + **adjust**
+- [ ] Finance drill + cost-sheet compute + masters + mapping (**no DesktopOnlyGate**) + `bulk-compute`
+- [ ] Foundation assets/masters/obs/CA/docs/KPI with named smokes
+- [ ] Admin browse (org/dept/sheets/activity/users list) + Exec home + employees CRUD
+- [ ] `mobile/scripts/smoke.ps1` includes all P5 smoke scripts named in chunks
 
 ## F.6 Plan 6 — Hardening (`P6-*`)
 
@@ -1656,7 +1994,7 @@ Mark Done checklist + point Next to the following chunk ID.
 **Within a plan:** implement chunks in the **Chunk index** order below.  
 **Do not** start Plan N+1 until that plan’s exit gate (F.2–F.6) is checked.
 
-**Web gates explicitly removed on mobile:** Shift Planning, Skill Matrix, Cost Mapping Builder.
+**Web gates explicitly removed on mobile:** Shift Planning, Skill Matrix, Cost Mapping Builder, Finance Cost Masters, Admin Log Sheets.
 
 **Blocked / partial (do not invent):**
 | Item | Rule |
@@ -1665,11 +2003,13 @@ Mark Done checklist + point Next to the following chunk ID.
 | GRIND jobs table | Header now; engine must absorb future sections |
 | Reports PDF | HTML/share only until backend PDF exists |
 | Admin org write | Browse unless product asks to wire unused CRUD |
+| Admin users CRUD | List-only in `P5-ADM-USERS`; create/edit via `P5-EXE-EMP` |
+| Foundation approvals | APIs exist; no web page — skip UI |
 | Safety list create | Optional beyond web |
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P5-PULSE-PLANT from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P5-FND-ASSETS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1691,7 +2031,7 @@ Base: `EXPO_PUBLIC_API_URL` → `/api/v1`
 | Pulse / Energy / Inv | `/pulse/*`, `/assets/{id}/workspace`, `/energy/plant/{id}`, `/inventory-pulse/{plantId}` (+ adjust) |
 | Safety | `/safety/dashboard/{plantId}`, `/assets/search`, `POST /safety/scan`, inspections/sops/incidents |
 | Foundation | `/foundation/assets`, observations, CAs, documents, kpi-definitions; `/masters/*` |
-| Finance | `/finance/...` plant/dept/process/asset summaries, cost-sheet, masters, mappings, calculations, analytics |
+| Finance | `/finance/dashboard/*`, cost-sheet, masters, mappings, `POST /finance/calculations/bulk-compute`, analytics |
 | Lookups | plants, processes, instances, shifts, steel-grades, materials, coils, customers, delay-codes, users, departments |
 
 ---
@@ -1712,4 +2052,4 @@ Base: `EXPO_PUBLIC_API_URL` → `/api/v1`
 
 ---
 
-*End of master plan v2.1. Feed one BUILD CHUNK at a time. Every chunk must have Acceptance before coding.*
+*End of master plan v2.2. Feed one BUILD CHUNK at a time. Every chunk must have Acceptance before coding.*

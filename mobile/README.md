@@ -1,7 +1,7 @@
 # MOI Mobile (Expo SDK 54)
 
 Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).  
-**Source of truth:** [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md) (v2.1 — Parts D–F have full Acceptance / APIs / fields)  
+**Source of truth:** [`docs/MOBILE_APP_MASTER_PLAN.md`](../docs/MOBILE_APP_MASTER_PLAN.md) (v2.2 — Parts D–F have full Acceptance / APIs / fields; Plan 5 Energy→Exec thickened)  
 **Plan 1 exit gate:** [`docs/MOBILE_P1_08_EXIT_GATE.md`](../docs/MOBILE_P1_08_EXIT_GATE.md) · Prerequisites: [`docs/MOBILE_P1_00_PREREQUISITES.md`](../docs/MOBILE_P1_00_PREREQUISITES.md)
 
 ## Status
@@ -51,8 +51,14 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P4-WF-MY-ATT** | **Done** |
 | **P4-WF-MY-LEAVE** | **Done** |
 | **P4-WF-MY-PAY** | **Done** — Plan 4 workforce complete |
+| **P5-PULSE-PLANT** | **Done** |
+| **P5-PULSE-DEPT** | **Done** |
+| **P5-PULSE-ASSET** | **Done** |
+| **P5-PULSE-WS** | **Done** — pulse stack through workspace |
+| **P5-ENERGY** | **Done** |
+| **P5-INV** | **Done** — energy + inventory pulse complete |
 
-**Next chunk:** `Implement BUILD CHUNK P5-PULSE-PLANT from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next chunk:** `Implement BUILD CHUNK P5-FND-ASSETS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 

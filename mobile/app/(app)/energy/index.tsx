@@ -1,11 +1,24 @@
-import { RoleHomePlaceholder } from '@/src/components/RoleHomePlaceholder';
+import { Redirect } from 'expo-router';
 
-export default function Screen() {
-  return (
-    <RoleHomePlaceholder
-      title="Energy"
-      description="Placeholder for Energy. Full screen lands in a later plan chunk."
-      nextChunk="P5-ENERGY"
-    />
-  );
+import { useAuth } from '@/src/auth/AuthContext';
+import { CEO_TIER_ROLES, hasRole } from '@/src/auth/roles';
+import { getRoleHomeHref } from '@/src/auth/roleHome';
+import { LoadingView } from '@/src/components/ui/LoadingView';
+import { EnergyDashboardScreen } from '@/src/features/energy/EnergyDashboardScreen';
+
+/** P5-ENERGY — CEO-tier plant energy dashboard. */
+export default function EnergyRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingView message="Loading…" />;
+  }
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
+  if (!hasRole(user.role, CEO_TIER_ROLES)) {
+    return <Redirect href={getRoleHomeHref(user.role)} />;
+  }
+
+  return <EnergyDashboardScreen />;
 }

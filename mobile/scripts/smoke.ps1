@@ -419,6 +419,72 @@ if (Test-Path .env) {
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-pay-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== pulse plant API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-plant-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== pulse department API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-dept-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== pulse asset API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-asset-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== asset workspace API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-asset-workspace-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== energy API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-energy-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== inventory pulse API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-inventory-pulse-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {
