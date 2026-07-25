@@ -307,6 +307,118 @@ if (Test-Path .env) {
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-dash-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== workforce employees API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-emp-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce contractors API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-con-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce shift assignments API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-assign-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce roster publish API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-roster-publish-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce attendance API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-att-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce handover API (if up) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-hand-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce leave API (if up) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-leave-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce skills API ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-skill-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce training API ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-train-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce payroll API ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-pay-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce salary API ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-sal-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce my-attendance API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-att-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce my-leave API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-leave-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce my-pay API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-pay-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {

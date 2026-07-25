@@ -37,8 +37,22 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P3-MSG-ALERTS** | **Done** |
 | **P3-MSG-COMPOSE** | **Done** — Plan 3 messages complete |
 | **P4-WF-DASH** | **Done** |
+| **P4-WF-EMP** | **Done** |
+| **P4-WF-CON** | **Done** |
+| **P4-WF-ASSIGN** | **Done** |
+| **P4-WF-PLAN** | **Done** |
+| **P4-WF-ATT** | **Done** |
+| **P4-WF-HAND** | **Done** |
+| **P4-WF-LEAVE** | **Done** |
+| **P4-WF-SKILL** | **Done** |
+| **P4-WF-TRAIN** | **Done** |
+| **P4-WF-PAY** | **Done** |
+| **P4-WF-SAL** | **Done** — workforce HR management complete |
+| **P4-WF-MY-ATT** | **Done** |
+| **P4-WF-MY-LEAVE** | **Done** |
+| **P4-WF-MY-PAY** | **Done** — Plan 4 workforce complete |
 
-**Next chunk:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next chunk:** `Implement BUILD CHUNK P5-PULSE-PLANT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 

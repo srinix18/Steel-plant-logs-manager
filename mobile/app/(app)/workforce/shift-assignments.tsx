@@ -1,11 +1,25 @@
-import { RoleHomePlaceholder } from '@/src/components/RoleHomePlaceholder';
+import { Redirect } from 'expo-router';
 
-export default function Screen() {
-  return (
-    <RoleHomePlaceholder
-      title="Shift Assignments"
-      description="Placeholder for Shift Assignments. Full screen lands in a later plan chunk."
-      nextChunk="P4-WF-ASSIGN"
-    />
-  );
+import { useAuth } from '@/src/auth/AuthContext';
+import { hasRole } from '@/src/auth/roles';
+import { getRoleHomeHref } from '@/src/auth/roleHome';
+import { LoadingView } from '@/src/components/ui/LoadingView';
+import { ShiftAssignmentsScreen } from '@/src/features/workforce/ShiftAssignmentsScreen';
+import { WORKFORCE_HR_ROLES } from '@/src/features/workforce/workforceRoles';
+
+/** P4-WF-ASSIGN — Shift assignments. */
+export default function ShiftAssignmentsRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingView message="Loading…" />;
+  }
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
+  if (!hasRole(user.role, WORKFORCE_HR_ROLES)) {
+    return <Redirect href={getRoleHomeHref(user.role)} />;
+  }
+
+  return <ShiftAssignmentsScreen />;
 }

@@ -1236,31 +1236,79 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Create fields:** email*, password*, full_name*, role (`hr|hod|supervisor|worker|maintenance`), department, process (if supervisor), maintenance_division (if maintenance), designation, phone, date_of_joining, employment_type, manager_id, employment_status.  
 **Edit:** same minus email; optional new password.
 
-**Acceptance:** Add + edit save; conditional process/category fields; list usable on phone.
+**Acceptance:**
+- [x] Add + edit save; conditional process/category fields; list usable on phone
+- [x] Smoke: `test-wf-emp-api.ts`
+
+**Done (P4-WF-EMP):**
+- [x] Employees list + Add/Edit form (phone cards)
+- [x] Conditional process (supervisor) + maintenance category; create/edit payload parity
+- [x] Role gate `WORKFORCE_ADMIN_ROLES`; smoke: `test-wf-emp-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-CON from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-CON`
 
 **APIs:** contractors + contract-workers CRUD  
-**Tabs:** companies (`code,name,contact_person,phone`) / workers (`contractor_id,full_name,department_id,phone`); activate via PATCH.  
-**Acceptance:** Create both; edit/toggle active.
+**Tabs:** companies (`code,name,contact_person,phone`) / workers (`contractor_id,full_name,department_id,phone`); activate via PATCH.
+
+**Acceptance:**
+- [x] Create both; edit/toggle active
+- [x] Smoke: `test-wf-con-api.ts`
+
+**Done (P4-WF-CON):**
+- [x] Companies / Workers tabs; create + edit forms
+- [x] Activate/deactivate for companies and workers
+- [x] Role gate `WORKFORCE_HR_ROLES`; smoke: `test-wf-con-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-ASSIGN from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-ASSIGN`
 
 **APIs:** shift-assignments + employees + shifts  
-**Add:** `user_id, department_id, shift_id, effective_date`  
-**Acceptance:** Create; list shows emp/dept/shift/date.
+**Add:** `user_id, department_id, shift_id, effective_date`
+
+**Acceptance:**
+- [x] Create; list shows emp/dept/shift/date
+- [x] Smoke: `test-wf-assign-api.ts`
+
+**Done (P4-WF-ASSIGN):**
+- [x] Shift assignments list + create form
+- [x] Role gate `WORKFORCE_HR_ROLES`; smoke: `test-wf-assign-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-PLAN from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-PLAN` — Shift planning (**no DesktopOnlyGate**)
 
 **APIs:** `GET/POST/PATCH /workforce/ops/rosters`; `POST …/publish`; employees; shifts  
-**Must include:** Dept + week start; person×day grid; New / Save / Publish.  
-**Acceptance:** Edit → save draft → publish; reload entries. Smoke: `test-roster-publish-api.ts`.
+**Must include:** Dept + week start; person×day grid; New / Save / Publish.
+
+**Acceptance:**
+- [x] Edit → save draft → publish; reload entries
+- [x] Smoke: `test-roster-publish-api.ts`
+
+**Done (P4-WF-PLAN):**
+- [x] Shift planning without DesktopOnlyGate; person-first day grid
+- [x] New / Save draft / Publish; roster list reload
+- [x] Smoke: `test-roster-publish-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-ATT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-ATT`
 
 **APIs:** attendance GET + `POST …/bulk`; contractor-attendance  
-**Must include:** Filters date/dept/shift; per-person `present|absent|leave|half_day` + remarks; contractor present/absent counts + save.  
-**Acceptance:** Bulk save employees + contractor block persist.
+**Must include:** Filters date/dept/shift; per-person `present|absent|leave|half_day` + remarks; contractor present/absent counts + save.
+
+**Acceptance:**
+- [x] Bulk save employees + contractor block persist
+- [x] Smoke: `test-wf-att-api.ts`
+
+**Done (P4-WF-ATT):**
+- [x] Attendance filters + status chips + remarks; employee bulk save
+- [x] Contractor present/absent save + reload
+- [x] Smoke: `test-wf-att-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-HAND from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-HAND`
 
@@ -1269,11 +1317,19 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Roles:** write = `HANDOVER_WRITE_ROLES`  
 **Acceptance:** Submit appears in filtered history.
 
+**Done (P4-WF-HAND):**
+- [x] Date, department, and shift filters with submit form and filtered note history
+- [x] Route gate: `HANDOVER_WRITE_ROLES`; smoke: `test-wf-hand-api.ts`
+
 ### CHUNK `P4-WF-LEAVE`
 
 **APIs:** leave requests; approve/reject  
 **Tabs:** pending/approved/rejected/all  
 **Acceptance:** Approve/Reject transitions; remarks visible.
+
+**Done (P4-WF-LEAVE):**
+- [x] Pending/approved/rejected/all tabs, request remarks, and approve/reject actions
+- [x] Route gate: `WORKFORCE_HR_ROLES`; smoke: `test-wf-leave-api.ts`
 
 ### CHUNK `P4-WF-SKILL` (**no DesktopOnlyGate**)
 
@@ -1281,11 +1337,19 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** Add skill `code,name`; levels `basic|intermediate|advanced|expert`  
 **Acceptance:** Add skill; set level per employee×skill.
 
+**Done (P4-WF-SKILL):**
+- [x] Phone-first employee cards with per-skill SelectSheets and add-skill form
+- [x] Route gate: `WORKFORCE_HR_ROLES`; smoke: `test-wf-skill-api.ts`
+
 ### CHUNK `P4-WF-TRAIN`
 
 **APIs:** training GET/POST (PATCH if useful)  
 **Fields:** user, name, certification, issue_date, expiry_date; “Soon” if ≤30d  
 **Acceptance:** Create; expiry highlight.
+
+**Done (P4-WF-TRAIN):**
+- [x] Create training records and show expiring-within-30-days “Soon” badge
+- [x] Route gate: `WORKFORCE_HR_ROLES`; smoke: `test-wf-train-api.ts`
 
 ### CHUNK `P4-WF-PAY`
 
@@ -1293,11 +1357,19 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** Create run month/year; Process; lines: payable_days, gross, deductions, net  
 **Acceptance:** Process produces lines when salary structures exist; warn if none.
 
+**Done (P4-WF-PAY):**
+- [x] Create/process payroll runs, line-item cards, and salary-structure warning
+- [x] Route gate: `WORKFORCE_HR_ROLES`; smoke: `test-wf-pay-api.ts`
+
 ### CHUNK `P4-WF-SAL`
 
 **APIs:** salary-structures GET/POST  
 **Fields:** user_id, basic, hra, allowances, pf, esi, other_deductions, effective_from  
 **Acceptance:** Create; list shows gross/deductions.
+
+**Done (P4-WF-SAL):**
+- [x] Create salary structures and list gross/deductions
+- [x] Route gate: `WORKFORCE_HR_ROLES`; smoke: `test-wf-sal-api.ts`
 
 ### CHUNK `P4-WF-MY-ATT` / `P4-WF-MY-LEAVE` / `P4-WF-MY-PAY`
 
@@ -1306,6 +1378,41 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 | MY-ATT | `GET /workforce/me` | Current assignment + recent attendance | Self data only |
 | MY-LEAVE | leave types; `/requests/mine`; create | Apply leave_type, from/to, remarks | Pending appears in list |
 | MY-PAY | payslips/mine; HTML GET | Period, days, gross/net; View HTML | Opens HTML; empty OK |
+
+#### `P4-WF-MY-ATT`
+
+**Acceptance:**
+- [x] Current assignment + recent attendance; self data only
+- [x] Smoke: `test-wf-my-att-api.ts`
+
+**Done (P4-WF-MY-ATT):**
+- [x] My Attendance screen: assignment card + recent rows (date/status/remarks)
+- [x] Route gate `WORKER_ROLES`; smoke: `test-wf-my-att-api.ts`
+
+#### `P4-WF-MY-LEAVE`
+
+**Acceptance:**
+- [x] Apply leave_type, from/to, remarks; pending appears in mine list
+- [x] Smoke: `test-wf-my-leave-api.ts`
+
+**Done (P4-WF-MY-LEAVE):**
+- [x] My Leave screen: apply form + mine list
+- [x] Route gate `WORKER_ROLES`; smoke: `test-wf-my-leave-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-MY-PAY from docs/MOBILE_APP_MASTER_PLAN.md`
+
+#### `P4-WF-MY-PAY`
+
+**Acceptance:**
+- [x] Period, days, gross/net; View HTML opens; empty list OK
+- [x] Smoke: `test-wf-my-pay-api.ts`
+
+**Done (P4-WF-MY-PAY):**
+- [x] My Payslips screen: list + View HTML (cache + share)
+- [x] Route gate `WORKER_ROLES`; smoke: `test-wf-my-pay-api.ts`
+- [x] Plan 4 workforce self-service complete
+
+**Next:** `Implement BUILD CHUNK P5-PULSE-PLANT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1562,7 +1669,7 @@ Mark Done checklist + point Next to the following chunk ID.
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P5-PULSE-PLANT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
