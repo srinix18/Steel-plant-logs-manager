@@ -71,6 +71,9 @@ for (const route of routes) {
     '/my-runs',
     '/peel',
     '/messages',
+    '/messages/alerts',
+    '/messages/compose',
+    '/workforce',
     '/profile',
     '/admin/departments',
     '/supervisor',
@@ -81,6 +84,10 @@ for (const route of routes) {
     '/safety/sops',
     '/safety/incidents',
     '/maintenance',
+    '/maintenance/dashboard',
+    '/maintenance/work-orders',
+    '/maintenance/programs',
+    '/maintenance/programs/new',
   ]);
   if (implemented.has(hrefNorm) || implemented.has(route.href)) {
     continue;

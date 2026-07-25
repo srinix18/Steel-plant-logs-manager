@@ -1018,7 +1018,7 @@ Dept shells only — **no** manufacturing log sheets.
 
 ### CHUNK `P3-MAINT-DASH` — PM Analytics
 
-**Route:** `/(app)/maintenance/dashboard`  
+**Route:** `/(app)/maintenance/dashboard`
 **Roles:** `MAINTENANCE_PM_VIEW_ROLES`
 
 **APIs:** `GET /maintenance/pm/analytics?plant_id`; `GET /maintenance/intelligence?plant_id`; `POST /maintenance/pm/evaluate?plant_id&force?`
@@ -1026,42 +1026,67 @@ Dept shells only — **no** manufacturing log sheets.
 **Must include:** Intel KPIs (running, under PM, breakdown, waiting parts/shutdown, completed today, upcoming PM, compliance, MTBF, MTTR, downtime); analytics cards + simple bar chart; Run / Force evaluate.
 
 **Acceptance:**
-- [ ] Both intel + analytics load; evaluate shows counts message
-- [ ] Link to WO list
+- [x] Both intel + analytics load; evaluate shows counts message
+- [x] Link to WO list
+
+**Done (P3-MAINT-DASH):**
+- [x] Route gated to `MAINTENANCE_PM_VIEW_ROLES`
+- [x] Intelligence KPIs + analytics cards + horizontal WO bar chart
+- [x] Run / Force evaluate with counts message; link to work orders
+- [x] Smoke: `test-maint-dashboard-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-WO-LIST from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ### CHUNK `P3-MAINT-WO-LIST` — Work Orders
 
-**Route:** `/(app)/maintenance/work-orders`  
+**Route:** `/(app)/maintenance/work-orders`
 **APIs:** `GET /maintenance/pm/work-orders?plant_id&status?`; `POST …/{id}/transition` `{ to_state, notes? }`
 
 **Must include:** Status tabs (`all|draft|assigned|in_progress|waiting_parts|completed|closed`); WO#, title, due, tasks done/total; quick Assign / Accept / Start; open → exec.
 
 **Acceptance:**
-- [ ] Server-side status filter; Start can accept→in_progress; open execution screen
+- [x] Server-side status filter; Start can accept→in_progress; open execution screen
+- [x] Smoke: `test-maint-wo-list-api.ts`
+
+**Done (P3-MAINT-WO-LIST):**
+- [x] Route gated to `MAINTENANCE_PM_VIEW_ROLES`; folder `work-orders/` (+ `[id]` → EXEC)
+- [x] Status tabs with server-side filter; Assign / Accept / Start (assigned→accepted→in_progress)
+- [x] Card shows WO#, title, due, tasks done/total; Open → exec
+- [x] Smoke: `test-maint-wo-list-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-WO-EXEC from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ### CHUNK `P3-MAINT-WO-EXEC` — WO Execution
 
-**Route:** `/(app)/maintenance/work-orders/[id]`  
+**Route:** `/(app)/maintenance/work-orders/[id]`
 **APIs:** `GET …/work-orders/{id}`; `POST …/transition`; `POST …/tasks/{taskId}/execute` `{ status, checklist_responses?, remarks?, photos?, time_spent_min? }`
 
-**WO states:** `draft → assigned → accepted → in_progress → (waiting_shutdown|waiting_parts) → completed → verified → closed`  
+**WO states:** `draft → assigned → accepted → in_progress → (waiting_shutdown|waiting_parts) → completed → verified → closed`
 Wire **all** transitions the API allows (not only web’s subset).
 
 **Must include:** Every checklist item; Pass / Fail / N/A; remarks; photos if API accepts; complete only when no pending tasks.
 
 **Acceptance:**
-- [ ] Execute all tasks; transition to completed when done; reload persists
-- [ ] Smoke: `test-wo-exec-api.ts`
+- [x] Execute all tasks; transition to completed when done; reload persists
+- [x] Smoke: `test-wo-exec-api.ts`
+
+**Done (P3-MAINT-WO-EXEC):**
+- [x] Route gated; full `WO_ALLOWED_TRANSITIONS` action buttons
+- [x] Task checklist + Pass / Fail / N/A + remarks + optional photo URIs
+- [x] Mark completed gated until no pending tasks; reload persists
+- [x] Smoke: `test-wo-exec-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-PM-LIST from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ### CHUNK `P3-MAINT-PM-LIST` — PM Programs
 
-**Route:** `/(app)/maintenance/programs`  
+**Route:** `/(app)/maintenance/programs`
 **Roles:** `MAINTENANCE_MANAGER_ROLES`
 
 **APIs:** `GET/PATCH /maintenance/pm/programs`; `POST …/{id}/generate-work-order`; `POST /maintenance/pm/evaluate`
@@ -1069,13 +1094,22 @@ Wire **all** transitions the API allows (not only web’s subset).
 **Must include:** Table name→edit, category, priority, status, Auto WO, team; Activate draft; Generate WO; Create → wizard; evaluate.
 
 **Acceptance:**
-- [ ] Activate + Generate WO → draft WO appears in list
+- [x] Activate + Generate WO → draft WO appears in list
+- [x] Smoke: `test-maint-pm-list-api.ts`
+
+**Done (P3-MAINT-PM-LIST):**
+- [x] Route gated to `MAINTENANCE_MANAGER_ROLES`; Create/Edit → wizard (P3-MAINT-PM-WIZ)
+- [x] Program cards: name→edit, category, priority, status, Auto WO, team
+- [x] Activate draft; Generate WO; Run / Force evaluate; link to Work Orders
+- [x] Smoke: `test-maint-pm-list-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MAINT-PM-WIZ from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
 ### CHUNK `P3-MAINT-PM-WIZ` — Program Wizard (6 steps)
 
-**Routes:** `…/programs/new`, `…/programs/[id]/edit`  
+**Routes:** `…/programs/new`, `…/programs/[id]/edit`
 **Port from:** `MaintenanceProgramWizardPage.tsx`
 
 | Step | Fields | Save APIs |
@@ -1090,9 +1124,16 @@ Wire **all** transitions the API allows (not only web’s subset).
 Lookups: `GET /departments`, `GET /foundation/assets`.
 
 **Acceptance:**
-- [ ] All 6 steps on phone; ≥1 trigger + ≥1 task required to Finish new program
-- [ ] Edit existing program loads nested triggers/tasks/notifications
-- [ ] Smoke: `test-pm-wizard-api.ts`
+- [x] All 6 steps on phone; ≥1 trigger + ≥1 task required to Finish new program
+- [x] Edit existing program loads nested triggers/tasks/notifications
+- [x] Smoke: `test-pm-wizard-api.ts`
+
+**Done (P3-MAINT-PM-WIZ):**
+- [x] Routes `programs/new` + `programs/[id]/edit` gated to `MAINTENANCE_MANAGER_ROLES`
+- [x] 6-step wizard with create/edit; finish gates; nested load on edit
+- [x] Smoke: `test-pm-wizard-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MSG-INBOX from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1102,15 +1143,44 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 
 ### CHUNK `P3-MSG-INBOX` — Inbox / Sent / Detail
 
-**APIs:** `GET /messages/inbox`, `/messages/sent`, `/messages/{id}`  
-**Must include:** Subject, sender, time; detail body; attachments (image lightbox, PDF open/share).  
-**Acceptance:** Inbox vs Sent; open detail; attachments work on device.
+**Route:** `/(app)/messages`, `/(app)/messages/[id]`  
+**Port from:** `MessagesPage.tsx` (inbox/sent/detail); `api/messages.ts`  
+**Roles:** authenticated (all roles with Messages nav).
+
+**APIs:** `GET /messages/inbox`, `/messages/sent`, `/messages/{id}`; `GET /messages/attachments/{id}` (binary download)
+
+**Must include:** Subject, sender, time; detail body; attachments (image lightbox, PDF open/share).
+
+**Acceptance:**
+- [x] Inbox vs Sent; open detail; attachments work on device
+- [x] Smoke: `test-messages-inbox-api.ts`
+
+**Done (P3-MSG-INBOX):**
+- [x] Inbox / Sent tabs; list → `messages/[id]` detail
+- [x] Attachment download; image lightbox; PDF via share sheet
+- [x] Alerts button → alerts screen; Compose → compose screen
+- [x] Smoke: `test-messages-inbox-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MSG-ALERTS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P3-MSG-ALERTS` — Notifications
 
+**Route:** `/(app)/messages/alerts`  
+**Port from:** `MessagesPage.tsx` alerts tab; `utils/maintenanceAlerts.ts`  
 **APIs:** `GET /notifications`, `/notifications/unread-count`; `PATCH /notifications/{id}/read`  
-**Deep links:** maintenance → `/(app)/maintenance?issue=`; else if `run_id` → report.  
-**Acceptance:** Unread→read; deep links resolve; closed alert shows resolution when present. Drawer badge uses unread-count.
+**Deep links:** maintenance → `/(app)/maintenance?issue=`; else if `run_id` → report.
+
+**Acceptance:**
+- [x] Unread→read; deep links resolve; closed alert shows resolution when present. Drawer badge uses unread-count.
+- [x] Smoke: `test-messages-alerts-api.ts`
+
+**Done (P3-MSG-ALERTS):**
+- [x] Alerts list + detail (resolution for closed); mark read on open
+- [x] Deep-link CTA to issue queue or run report
+- [x] Drawer unread badge on Messages & Alerts
+- [x] Smoke: `test-messages-alerts-api.ts`
+
+**Next:** `Implement BUILD CHUNK P3-MSG-COMPOSE from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P3-MSG-COMPOSE` — Compose
 
@@ -1124,7 +1194,16 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 | `@DEPT_CODE` | Users in that department |
 | Mutual exclusion | `@all` clears other tokens |
 
-**Acceptance:** ≥1 recipient; @all/@DEPT; attach after create; lands on Sent. Smoke: `test-messages-compose-api.ts`.
+**Acceptance:**
+- [x] ≥1 recipient; @all/@DEPT; attach after create; lands on Sent
+- [x] Smoke: `test-messages-compose-api.ts`
+
+**Done (P3-MSG-COMPOSE):**
+- [x] Compose screen + RecipientComposer (`@all` / `@DEPT_CODE` / user typeahead)
+- [x] Send + multipart attachments (jpeg/png/pdf); navigate to Sent tab
+- [x] Smoke: `test-messages-compose-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1136,8 +1215,18 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 ### CHUNK `P4-WF-DASH`
 
 **APIs:** `GET /workforce/summary?attendance_date=`; `GET /workforce/ops/summary`  
-**Must include:** Date picker; present/absent/leave/half_day; dept breakdown; pending leave; certs expiring; latest payroll status.  
-**Acceptance:** Date reload; empty/error states; HR can open.
+**Must include:** Date picker; present/absent/leave/half_day; dept breakdown; pending leave; certs expiring; latest payroll status.
+
+**Acceptance:**
+- [x] Date reload; empty/error states; HR can open
+- [x] Smoke: `test-wf-dash-api.ts`
+
+**Done (P4-WF-DASH):**
+- [x] Workforce dashboard with date picker; attendance + ops KPIs; dept cards
+- [x] Present/absent (+ leave/half_day status weights note); pending leave; certs; payroll
+- [x] Role gate matches drawer (HR/HOD/supervisor/CEO); smoke: `test-wf-dash-api.ts`
+
+**Next:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ### CHUNK `P4-WF-EMP`
 
@@ -1473,7 +1562,7 @@ Mark Done checklist + point Next to the following chunk ID.
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P3-MAINT-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

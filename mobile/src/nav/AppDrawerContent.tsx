@@ -1,16 +1,36 @@
 import {
   DrawerContentScrollView,
+  useDrawerStatus,
   type DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { fetchUnreadCount } from '@/src/api/messages';
 import { useAuth } from '@/src/auth/AuthContext';
 import { buildDrawerNav } from '@/src/nav/buildDrawerNav';
 import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
 
 export function AppDrawerContent(props: DrawerContentComponentProps) {
   const { user, logout } = useAuth();
+  const [unread, setUnread] = useState(0);
+  const drawerStatus = useDrawerStatus();
+
+  useEffect(() => {
+    if (drawerStatus !== 'open') return;
+    let cancelled = false;
+    fetchUnreadCount()
+      .then((n) => {
+        if (!cancelled) setUnread(n);
+      })
+      .catch(() => {
+        if (!cancelled) setUnread(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [drawerStatus]);
 
   if (!user) return null;
 
@@ -46,15 +66,25 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
               </Text>
             );
           }
+          const isMessages = entry.href === '/messages' || entry.href.includes('/messages');
           return (
             <Pressable
               key={entry.href}
               style={styles.link}
               onPress={() => onNavigate(entry.href)}
               accessibilityRole="button"
-              accessibilityLabel={entry.label}
+              accessibilityLabel={
+                isMessages && unread > 0
+                  ? `${entry.label}, ${unread} unread`
+                  : entry.label
+              }
             >
               <Text style={styles.linkText}>{entry.label}</Text>
+              {isMessages && unread > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unread > 99 ? '99+' : String(unread)}</Text>
+                </View>
+              ) : null}
             </Pressable>
           );
         })}
@@ -112,14 +142,32 @@ const styles = StyleSheet.create({
   },
   link: {
     minHeight: touch.listRow,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     borderRadius: radius.button,
+    gap: spacing.sm,
   },
   linkText: {
     fontSize: 15,
     fontWeight: '500',
     color: colors.text,
+    flexShrink: 1,
+  },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   footer: {
     borderTopWidth: 1,

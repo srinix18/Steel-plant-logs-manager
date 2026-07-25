@@ -208,6 +208,105 @@ if (Test-Path .env) {
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-queue-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== maint dashboard API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-dashboard-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== maint WO list API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-wo-list-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== WO exec API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wo-exec-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== maint PM list API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-pm-list-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== PM wizard API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pm-wizard-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== messages inbox API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-inbox-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== messages alerts API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-alerts-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== messages compose API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-compose-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== workforce dashboard API (if up) ==" -ForegroundColor Cyan
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-dash-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 if (Test-Path .env) {
   Get-Content .env | ForEach-Object {

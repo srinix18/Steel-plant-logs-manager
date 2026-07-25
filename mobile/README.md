@@ -33,7 +33,12 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P2-DEPT-SHELLS** | **Done** |
 | **P2-REPORTS** | **Done** |
 
-**Next chunk:** `Implement BUILD CHUNK P3-MAINT-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
+| **P3-MSG-INBOX** | **Done** |
+| **P3-MSG-ALERTS** | **Done** |
+| **P3-MSG-COMPOSE** | **Done** — Plan 3 messages complete |
+| **P4-WF-DASH** | **Done** |
+
+**Next chunk:** `Implement BUILD CHUNK P4-WF-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 
@@ -131,7 +136,7 @@ mobile/
       shift/                 # P2-ENGINE-04 shift launcher
       my-runs/               # P3-OPS-MYRUNS — list → Edit host / Report
       profile/index.tsx      # GET/PATCH /auth/me
-      messages/              # List placeholder (P3-MSG-*)
+      messages/              # P3-MSG-* inbox/alerts/compose
       admin|pulse|workforce|…  # Role homes + module placeholders
   src/
     api/                     # fetch client, auth, processRuns, storage
