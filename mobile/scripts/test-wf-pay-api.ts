@@ -91,13 +91,29 @@ async function apiSmoke() {
     }
   }
 
-  const now = new Date();
-  // Use next month to reduce collision with existing runs
-  let month = now.getMonth() + 2;
-  let year = now.getFullYear();
-  if (month > 12) {
-    month = 1;
-    year += 1;
+  // Pick unused (month, year) within API bounds (year ≤ 2100)
+  const runsList = await request('/workforce/payroll/runs', { headers: auth });
+  const existing = new Set(
+    Array.isArray(runsList.json)
+      ? (runsList.json as { month: number; year: number }[]).map((r) => `${r.year}-${r.month}`)
+      : []
+  );
+  let month = 1;
+  let year = 2090;
+  let found = false;
+  for (let y = 2090; y <= 2100 && !found; y++) {
+    for (let m = 1; m <= 12; m++) {
+      if (!existing.has(`${y}-${m}`)) {
+        year = y;
+        month = m;
+        found = true;
+        break;
+      }
+    }
+  }
+  if (!found) {
+    console.error('wf-pay-api: no free payroll period in 2090–2100');
+    process.exit(1);
   }
 
   const created = await request('/workforce/payroll/runs', {
@@ -106,17 +122,8 @@ async function apiSmoke() {
     body: JSON.stringify({ plant_id: plantId, month, year }),
   });
   if (created.res.status !== 201 && created.res.status !== 200) {
-    // Duplicate period may 400 — try far future
-    const alt = await request('/workforce/payroll/runs', {
-      method: 'POST',
-      headers: auth,
-      body: JSON.stringify({ plant_id: plantId, month: 12, year: year + 5 }),
-    });
-    if (alt.res.status !== 201 && alt.res.status !== 200) {
-      console.error('wf-pay-api: create run failed', created.res.status, created.json, alt.json);
-      process.exit(1);
-    }
-    Object.assign(created, alt);
+    console.error('wf-pay-api: create run failed', created.res.status, created.json);
+    process.exit(1);
   }
   const run = created.json as { id: string; status: string };
 

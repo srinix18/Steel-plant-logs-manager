@@ -113,7 +113,7 @@ async function main() {
     method: 'PATCH',
     headers: auth,
     body: JSON.stringify({
-      field_values: { date: today },
+      field_values: [{ field_key: 'date', value: today }],
       section_data: [
         {
           section_key: 'production_register',

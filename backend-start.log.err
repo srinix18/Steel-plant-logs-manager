@@ -1,0 +1,1227 @@
+INFO:     Started server process [16968]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.IntegrityError: <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\workforce.py", line 111, in create_shift_assignment
+    return await service.create_shift_assignment(session, user, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\workforce_service.py", line 364, in create_shift_assignment
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+[SQL: INSERT INTO shift_assignments (id, user_id, department_id, shift_id, effective_date) VALUES ($1::UUID, $2::UUID, $3::UUID, $4::UUID, $5::DATE) RETURNING shift_assignments.created_at, shift_assignments.updated_at]
+[parameters: (UUID('fc84aa39-b3db-44dd-ae14-4b20a692d66a'), UUID('88336550-9228-4091-9c79-48a5356ed5dc'), UUID('d322b175-4b8e-465d-93db-104c457094b3'), UUID('587f5a33-dae3-4c95-935d-d2621b08250c'), datetime.date(2026, 7, 26))]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.IntegrityError: <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\workforce.py", line 111, in create_shift_assignment
+    return await service.create_shift_assignment(session, user, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\workforce_service.py", line 364, in create_shift_assignment
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_shift_assignment"
+DETAIL:  Key (user_id, department_id, shift_id, effective_date)=(88336550-9228-4091-9c79-48a5356ed5dc, d322b175-4b8e-465d-93db-104c457094b3, 587f5a33-dae3-4c95-935d-d2621b08250c, 2026-07-26) already exists.
+[SQL: INSERT INTO shift_assignments (id, user_id, department_id, shift_id, effective_date) VALUES ($1::UUID, $2::UUID, $3::UUID, $4::UUID, $5::DATE) RETURNING shift_assignments.created_at, shift_assignments.updated_at]
+[parameters: (UUID('968b7585-d349-4dde-83d9-053080df0cc2'), UUID('88336550-9228-4091-9c79-48a5356ed5dc'), UUID('d322b175-4b8e-465d-93db-104c457094b3'), UUID('587f5a33-dae3-4c95-935d-d2621b08250c'), datetime.date(2026, 7, 26))]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.StringDataRightTruncationError: value too long for type character varying(10)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.StringDataRightTruncationError'>: value too long for type character varying(10)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 154, in create_master_delay_code
+    return await masters_service.create_delay_code(session, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\masters_service.py", line 191, in create_delay_code
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.StringDataRightTruncationError'>: value too long for type character varying(10)
+[SQL: INSERT INTO delay_codes (id, plant_id, code, description, category, is_active) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::delaycodecategory, $6::BOOLEAN) RETURNING delay_codes.created_at, delay_codes.updated_at]
+[parameters: (UUID('62f27d85-3968-49f2-aed1-53460cdac374'), UUID('e0143137-b3d1-45f3-8e89-07ee3c1b980d'), 'MD-MS22UHYW', 'Mobile smoke delay', 'PROCESS', True)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.StringDataRightTruncationError: value too long for type character varying(10)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.StringDataRightTruncationError'>: value too long for type character varying(10)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 154, in create_master_delay_code
+    return await masters_service.create_delay_code(session, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\masters_service.py", line 191, in create_delay_code
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.StringDataRightTruncationError'>: value too long for type character varying(10)
+[SQL: INSERT INTO delay_codes (id, plant_id, code, description, category, is_active) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::delaycodecategory, $6::BOOLEAN) RETURNING delay_codes.created_at, delay_codes.updated_at]
+[parameters: (UUID('6e9321a1-c332-47b4-bb85-2f4b19671161'), UUID('e0143137-b3d1-45f3-8e89-07ee3c1b980d'), 'MD-MS22VIFY', 'Mobile smoke delay', 'PROCESS', True)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.InvalidTextRepresentationError: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 302, in create_foundation_corrective_action
+    return await observation_service.create_corrective_action(session, user, observation_id, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\foundation_observation_service.py", line 101, in create_corrective_action
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+[SQL: INSERT INTO corrective_actions (id, observation_id, title, description, assigned_to, assigned_by, due_date, priority, status, closure_notes, closed_at, closed_by) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::UUID, $6::UUID, $7::DATE, $8::correctiveactionpriority, $9::correctiveactionstatus, $10::VARCHAR, $11::TIMESTAMP WITH TIME ZONE, $12::UUID) RETURNING corrective_actions.created_at, corrective_actions.updated_at]
+[parameters: (UUID('88f63ab5-e1aa-42a0-a165-b7f4dafd469d'), UUID('a9b94f2d-7995-4691-b421-acecd19cb6b5'), 'CA smoke MS24F9AP', None, UUID('511ea36c-ce2e-4b21-b29d-7d4c09b329bd'), UUID('58c5cded-2b77-4fda-a076-2ca76f066844'), datetime.date(2026, 8, 2), 'MEDIUM', 'ASSIGNED', None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.InvalidTextRepresentationError: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 302, in create_foundation_corrective_action
+    return await observation_service.create_corrective_action(session, user, observation_id, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\foundation_observation_service.py", line 101, in create_corrective_action
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+[SQL: INSERT INTO corrective_actions (id, observation_id, title, description, assigned_to, assigned_by, due_date, priority, status, closure_notes, closed_at, closed_by) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::UUID, $6::UUID, $7::DATE, $8::correctiveactionpriority, $9::correctiveactionstatus, $10::VARCHAR, $11::TIMESTAMP WITH TIME ZONE, $12::UUID) RETURNING corrective_actions.created_at, corrective_actions.updated_at]
+[parameters: (UUID('0a52b398-3370-4dff-b14a-56436698c23f'), UUID('2dfc1a99-9598-48a7-bec6-52f5708cdbe7'), 'CA dbg action', None, UUID('511ea36c-ce2e-4b21-b29d-7d4c09b329bd'), UUID('58c5cded-2b77-4fda-a076-2ca76f066844'), datetime.date(2026, 8, 2), 'MEDIUM', 'ASSIGNED', None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.InvalidTextRepresentationError: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 302, in create_foundation_corrective_action
+    return await observation_service.create_corrective_action(session, user, observation_id, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\foundation_observation_service.py", line 101, in create_corrective_action
+    await session.flush()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+[SQL: INSERT INTO corrective_actions (id, observation_id, title, description, assigned_to, assigned_by, due_date, priority, status, closure_notes, closed_at, closed_by) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::UUID, $6::UUID, $7::DATE, $8::correctiveactionpriority, $9::correctiveactionstatus, $10::VARCHAR, $11::TIMESTAMP WITH TIME ZONE, $12::UUID) RETURNING corrective_actions.created_at, corrective_actions.updated_at]
+[parameters: (UUID('695364c6-62cd-494b-adee-f8df1fc5743f'), UUID('860e684d-a19d-41ac-9dea-4b18a48a6581'), 'CA ceo action', None, UUID('511ea36c-ce2e-4b21-b29d-7d4c09b329bd'), UUID('9b7d9cc9-7c9b-4114-bee8-24b1d55dd10f'), None, 'MEDIUM', 'ASSIGNED', None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 534, in _prepare_and_execute
+    self._rows = deque(await prepared_stmt.fetch(*parameters))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 176, in fetch
+    data = await self.__bind_execute(args, 0, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 267, in __bind_execute
+    data, status, _ = await self.__do_execute(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\asyncpg\prepared_stmt.py", line 256, in __do_execute
+    return await executor(protocol)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg\\protocol\\protocol.pyx", line 206, in bind_execute
+asyncpg.exceptions.InvalidTextRepresentationError: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\api\v1\foundation.py", line 302, in create_foundation_corrective_action
+    return await observation_service.create_corrective_action(session, user, observation_id, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\app\services\foundation_observation_service.py", line 101, in create_corrective_action
+    resp = FoundationCorrectiveActionResponse.model_validate(ca)
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 800, in flush
+    await greenlet_spawn(self.sync_session.flush, objects=objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4487, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 568, in execute
+    self._adapt_connection.await_(
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 546, in _prepare_and_execute
+    self._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 497, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\srini\Desktop\Log_Project\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 780, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum correctiveactionstatus: "ASSIGNED"
+[SQL: INSERT INTO corrective_actions (id, observation_id, title, description, assigned_to, assigned_by, due_date, priority, status, closure_notes, closed_at, closed_by) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::UUID, $6::UUID, $7::DATE, $8::correctiveactionpriority, $9::correctiveactionstatus, $10::VARCHAR, $11::TIMESTAMP WITH TIME ZONE, $12::UUID) RETURNING corrective_actions.created_at, corrective_actions.updated_at]
+[parameters: (UUID('33cf0f9c-6a4b-4801-bba0-418f9f9878e5'), UUID('8db7440c-407a-4fad-bf38-d61944004400'), 'CA smoke MS24I769', None, UUID('511ea36c-ce2e-4b21-b29d-7d4c09b329bd'), UUID('58c5cded-2b77-4fda-a076-2ca76f066844'), datetime.date(2026, 8, 2), 'MEDIUM', 'ASSIGNED', None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)

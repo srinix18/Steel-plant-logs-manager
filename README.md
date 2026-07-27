@@ -459,5 +459,5 @@ cd backend && .\venv\Scripts\python scripts\test_db.py
 Internal demo / development project for Chandan Steel manufacturing operations.
 
 - **Web:** production-shaped demo — use as the reference for full capability.
-- **Mobile:** Plan 1–2 complete; Plan 3 through **P3-MSG-COMPOSE**; Plan 4 complete; Plan 5 through **P5-INV**; next chunk **P5-FND-ASSETS**. Master plan **v2.2**.
+- **Mobile:** Plan 1–2 complete; Plan 3 through **P3-MSG-COMPOSE**; Plan 4 complete; Plan 5 foundation complete; finance through **P5-FIN-MAP**; next chunk **P5-FIN-CALC**. Master plan **v2.2**.
 - **Do not use seeded passwords in production.**

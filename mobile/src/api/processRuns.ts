@@ -1,11 +1,11 @@
 import { apiClient } from '@/src/api/client';
+import { fetchProcesses } from '@/src/api/lookups';
 import type {
   OperationalEvent,
   ProcessRun,
   ProcessRunDetail,
   RunRemark,
   TemplateDetail,
-  TemplateSummary,
   TemplateVersionDetail,
 } from '@/src/types/processRun';
 
@@ -24,7 +24,17 @@ export async function fetchAllRuns(params?: {
   state?: string;
   created_by?: string;
 }): Promise<ProcessRun[]> {
-  const { data } = await apiClient.get<ProcessRun[]>('/process-runs', { params });
+  const qs = new URLSearchParams();
+  if (params?.plant_id) qs.set('plant_id', params.plant_id);
+  if (params?.organisation_id) qs.set('organisation_id', params.organisation_id);
+  if (params?.department_id) qs.set('department_id', params.department_id);
+  if (params?.process_id) qs.set('process_id', params.process_id);
+  if (params?.process_code) qs.set('process_code', params.process_code);
+  if (params?.active_only != null) qs.set('active_only', String(params.active_only));
+  if (params?.state) qs.set('state', params.state);
+  if (params?.created_by) qs.set('created_by', params.created_by);
+  const q = qs.toString() ? `?${qs.toString()}` : '';
+  const { data } = await apiClient.get<ProcessRun[]>(`/process-runs${q}`);
   return data;
 }
 
@@ -33,9 +43,33 @@ export async function fetchProcessRun(runId: string): Promise<ProcessRunDetail> 
   return data;
 }
 
-export async function fetchTemplates(): Promise<TemplateSummary[]> {
-  const { data } = await apiClient.get<TemplateSummary[]>('/templates');
-  return data;
+/**
+ * GET /templates (platform admin). Falls back to process-linked templates
+ * when list is forbidden/empty — same pattern as web CostMappingBuilder.
+ */
+export async function fetchTemplates(): Promise<TemplateDetail[]> {
+  try {
+    const { data } = await apiClient.get<TemplateDetail[]>('/templates');
+    if (data.length > 0) return data;
+  } catch {
+    // Fall through when list route requires AdminUser.
+  }
+  return fetchTemplatesViaProcess();
+}
+
+async function fetchTemplatesViaProcess(): Promise<TemplateDetail[]> {
+  const processes = await fetchProcesses();
+  const withTemplate = processes.filter((p) => p.default_template_id);
+  const templates: TemplateDetail[] = [];
+  for (const proc of withTemplate) {
+    const { data } = await apiClient.get<TemplateDetail>(
+      `/templates/${proc.default_template_id}`
+    );
+    if (!templates.some((t) => t.id === data.id)) {
+      templates.push(data);
+    }
+  }
+  return templates.sort((a, b) => a.doc_no.localeCompare(b.doc_no));
 }
 
 export async function fetchTemplate(templateId: string): Promise<TemplateDetail> {

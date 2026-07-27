@@ -168,12 +168,16 @@ async function runScenario(scenario: Scenario): Promise<boolean> {
 
 /** Plant-scoped active runs + previous handover GET (does not require a note to exist). */
 async function checkActiveRunsAndHandover(): Promise<void> {
+  // `/plants/{id}/runs/active` requires SupervisorUser — not a floor worker.
   const login = await request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: 'melter@chandansteel.com', password: 'worker123' }),
+    body: JSON.stringify({
+      email: 'iaf.supervisor@chandansteel.com',
+      password: 'iaf123',
+    }),
   });
   if (!login.res.ok) {
-    console.log('skip active/handover: melter login failed');
+    console.log('skip active/handover: supervisor login failed');
     return;
   }
   const token = (login.json as { access_token: string }).access_token;

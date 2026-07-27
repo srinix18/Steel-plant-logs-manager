@@ -112,7 +112,10 @@ async function main() {
     method: 'PATCH',
     headers: auth,
     body: JSON.stringify({
-      field_values: { work_centre: workCentre, date: today },
+      field_values: [
+        { field_key: 'work_centre', value: workCentre },
+        { field_key: 'date', value: today },
+      ],
     }),
   });
   if (!patch.res.ok) {

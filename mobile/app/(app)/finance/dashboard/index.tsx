@@ -1,13 +1,13 @@
 import { Redirect } from 'expo-router';
 
 import { useAuth } from '@/src/auth/AuthContext';
-import { CEO_TIER_ROLES, hasRole } from '@/src/auth/roles';
+import { FINANCE_VIEW_ROLES, hasRole } from '@/src/auth/roles';
 import { getRoleHomeHref } from '@/src/auth/roleHome';
 import { LoadingView } from '@/src/components/ui/LoadingView';
-import { FoundationAnalyticsScreen } from '@/src/features/foundation/FoundationAnalyticsScreen';
+import { FinancePlantDashboardScreen } from '@/src/features/finance/FinancePlantDashboardScreen';
 
-/** P5-FND-AN — CEO_TIER_ROLES (includes platform admin). Write gated in screen. */
-export default function FoundationAnalyticsRoute() {
+/** P5-FIN-DASH — plant cost summary. */
+export default function FinanceDashboardRoute() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -16,9 +16,9 @@ export default function FoundationAnalyticsRoute() {
   if (!user) {
     return <Redirect href="/login" />;
   }
-  if (!hasRole(user.role, CEO_TIER_ROLES)) {
+  if (!hasRole(user.role, FINANCE_VIEW_ROLES)) {
     return <Redirect href={getRoleHomeHref(user.role)} />;
   }
 
-  return <FoundationAnalyticsScreen />;
+  return <FinancePlantDashboardScreen />;
 }

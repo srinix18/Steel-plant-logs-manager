@@ -8,6 +8,28 @@ $env:Path = "$nvmHome;$nvmLink;" + $env:Path
 
 Set-Location $PSScriptRoot\..
 
+# Prefer reachable API (localhost first, then .env LAN URL).
+$script:SmokeApiUrl = $null
+$candidates = @('http://127.0.0.1:8000/api/v1')
+if (Test-Path .env) {
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
+      $candidates += $Matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+foreach ($u in ($candidates | Select-Object -Unique)) {
+  $base = ($u -replace '/api/v1/?$','')
+  try {
+    $null = Invoke-WebRequest -Uri "$base/docs" -TimeoutSec 2 -UseBasicParsing
+    $script:SmokeApiUrl = $u.TrimEnd('/')
+    break
+  } catch {}
+}
+if (-not $script:SmokeApiUrl) { $script:SmokeApiUrl = $candidates[0] }
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+Write-Host "API URL: $($script:SmokeApiUrl)" -ForegroundColor DarkGray
+
 Write-Host "== node ==" -ForegroundColor Cyan
 & "$nvmLink\node.exe" -v
 
@@ -84,79 +106,37 @@ Write-Host "== unit: DEPT shells ==" -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== reports (unit + API if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-reports-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== profile API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-profile-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== demo logins (API if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-demo-logins.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== run host API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-run-host-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== shift launcher API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-shift-launcher-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== my runs API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-my-runs-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== supervisor issue API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-supervisor-issue-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -165,200 +145,92 @@ Write-Host "== hod overview (unit) ==" -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== safety scan API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-scan-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== safety dashboard API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-dashboard-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== safety lists API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-safety-lists-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== maint queue API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-queue-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== maint dashboard API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-dashboard-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== maint WO list API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-wo-list-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== WO exec API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wo-exec-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== maint PM list API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-maint-pm-list-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== PM wizard API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pm-wizard-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== messages inbox API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-inbox-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== messages alerts API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-alerts-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== messages compose API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-messages-compose-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce dashboard API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-dash-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce employees API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-emp-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce contractors API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-con-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce shift assignments API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-assign-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce roster publish API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-roster-publish-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce attendance API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-att-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -387,189 +259,137 @@ Write-Host "== workforce salary API ==" -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce my-attendance API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-att-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce my-leave API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-leave-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== workforce my-pay API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wf-my-pay-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== pulse plant API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-plant-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== pulse department API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-dept-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== pulse asset API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-pulse-asset-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== asset workspace API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-asset-workspace-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== energy API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-energy-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== inventory pulse API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-inventory-pulse-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== foundation assets API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-assets-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== foundation masters API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-masters-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== foundation observations API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-obs-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== foundation corrective-actions API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-ca-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== foundation documents API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-docs-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== foundation KPI API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-foundation-kpi-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== finance dashboard API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-dash-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== finance cost-sheet API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-sheet-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== finance masters API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-masters-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== finance mapping API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-map-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-iaf-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== AOD lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-aod-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== CCM lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-ccm-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== RMILL lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-rmill-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== WFURN lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wfurn-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== WDRAW lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-wdraw-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== BBAR lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-bbar-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "== GRIND lifecycle API (if up) ==" -ForegroundColor Cyan
-if (Test-Path .env) {
-  Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$') {
-      $env:EXPO_PUBLIC_API_URL = $Matches[1].Trim().Trim('"').Trim("'")
-    }
-  }
-}
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-grind-lifecycle-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

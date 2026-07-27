@@ -34,7 +34,7 @@ assert.ok(login.includes("from '@/src/components/ui/Button'"));
 assert.ok(login.includes('size="lg"'));
 
 const messages = fs.readFileSync(
-  path.join(root, 'app', '(app)', 'messages', 'index.tsx'),
+  path.join(root, 'src', 'features', 'messages', 'MessagesInboxScreen.tsx'),
   'utf8'
 );
 assert.ok(messages.includes('ListRow'));

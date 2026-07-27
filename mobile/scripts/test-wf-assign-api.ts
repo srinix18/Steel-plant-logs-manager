@@ -108,7 +108,9 @@ async function apiSmoke() {
     return;
   }
 
-  const date = new Date().toISOString().slice(0, 10);
+  const date = new Date(Date.now() + 86400000 * (14 + Math.floor(Math.random() * 40)))
+    .toISOString()
+    .slice(0, 10);
   const created = await request('/workforce/shift-assignments', {
     method: 'POST',
     headers: auth,

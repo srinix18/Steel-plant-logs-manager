@@ -57,8 +57,18 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P5-PULSE-WS** | **Done** — pulse stack through workspace |
 | **P5-ENERGY** | **Done** |
 | **P5-INV** | **Done** — energy + inventory pulse complete |
+| **P5-FND-ASSETS** | **Done** |
+| **P5-FND-MASTERS** | **Done** |
+| **P5-FND-OBS** | **Done** |
+| **P5-FND-CA** | **Done** |
+| **P5-FND-DOCS** | **Done** |
+| **P5-FND-AN** | **Done** — Plan 5 foundation complete |
+| **P5-FIN-DASH** | **Done** |
+| **P5-FIN-SHEET** | **Done** |
+| **P5-FIN-MASTERS** | **Done** |
+| **P5-FIN-MAP** | **Done** |
 
-**Next chunk:** `Implement BUILD CHUNK P5-FND-ASSETS from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next chunk:** `Implement BUILD CHUNK P5-FIN-CALC from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 

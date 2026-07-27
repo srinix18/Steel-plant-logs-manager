@@ -86,30 +86,10 @@ export async function fetchAssets(opts?: {
   return data;
 }
 
-export type FoundationAsset = {
-  id: string;
-  plant_id: string;
-  asset_no: string;
-  name: string;
-  status: string;
-  department_id?: string | null;
-  group_id?: string;
-};
-
-/** Plan / wizard lookup — `GET /foundation/assets`. */
-export async function fetchFoundationAssets(params?: {
-  plant_id?: string;
-  group_id?: string;
-  department_id?: string;
-}): Promise<FoundationAsset[]> {
-  const qs = new URLSearchParams();
-  if (params?.plant_id) qs.set('plant_id', params.plant_id);
-  if (params?.group_id) qs.set('group_id', params.group_id);
-  if (params?.department_id) qs.set('department_id', params.department_id);
-  const q = qs.toString() ? `?${qs.toString()}` : '';
-  const { data } = await apiClient.get<FoundationAsset[]>(`/foundation/assets${q}`);
-  return data;
-}
+export {
+  fetchFoundationAssets,
+  type FoundationAsset,
+} from '@/src/api/foundation';
 
 export type DelayCode = {
   id: string;

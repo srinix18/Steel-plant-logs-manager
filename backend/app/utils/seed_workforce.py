@@ -123,7 +123,7 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
                 ShiftAssignment.effective_date == effective,
             )
         )
-        if not exists.scalar_one_or_none():
+        if not exists.scalars().first():
             session.add(
                 ShiftAssignment(
                     user_id=user.id,
@@ -145,7 +145,7 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
                     ShiftHandoverNote.note_date == note_date,
                 )
             )
-            if not exists.scalar_one_or_none():
+            if not exists.scalars().first():
                 session.add(
                     ShiftHandoverNote(
                         note_date=note_date,

@@ -92,6 +92,7 @@ for (const route of routes) {
     '/pulse/department',
     '/energy',
     '/inventory-pulse',
+    '/foundation/assets',
     '/profile',
     '/admin/departments',
     '/supervisor',

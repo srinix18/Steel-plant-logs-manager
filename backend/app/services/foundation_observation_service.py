@@ -94,7 +94,6 @@ class FoundationObservationService:
             assigned_by=user.id,
             due_date=data.due_date,
             priority=data.priority,
-            status=CorrectiveActionStatus.ASSIGNED,
         )
         session.add(ca)
         obs.status = "triaged"

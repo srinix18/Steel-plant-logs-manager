@@ -1575,9 +1575,16 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 - Detail tabs **Details** (life, events, responsibilities, Assign, Edit, Log event) / **Maintenance** (`last_pm_at`, `next_pm_due_at`, `total_maintenance_cost`, timeline entries)
 
 **Acceptance:**
-- [ ] Create + edit save; detail shows events + responsibilities
-- [ ] Assign employee appears; maintenance history empty-OK
-- [ ] Smoke: `test-foundation-assets-api.ts`
+- [x] Create + edit save; detail shows events + responsibilities
+- [x] Assign employee appears; maintenance history empty-OK
+- [x] Smoke: `test-foundation-assets-api.ts`
+
+**Done (P5-FND-ASSETS):**
+- [x] Asset list + create/edit form (life unit/expected/current); Details / Maintenance tabs
+- [x] Log manual event; assign responsibility; maintenance history empty-OK
+- [x] Route gate `HOD_TIER_ROLES` (write = HOD-tier); smoke: `test-foundation-assets-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FND-MASTERS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1601,9 +1608,16 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Tabs:** grades · materials · products · customers · delay_codes · contractors (list-only).
 
 **Acceptance:**
-- [ ] Create on all writable tabs; contractors list-only
-- [ ] Tables reload after create
-- [ ] Smoke: `test-foundation-masters-api.ts`
+- [x] Create on all writable tabs; contractors list-only
+- [x] Tables reload after create
+- [x] Smoke: `test-foundation-masters-api.ts`
+
+**Done (P5-FND-MASTERS):**
+- [x] Tabs: grades · materials · products · customers · delay_codes · contractors (RO)
+- [x] Expose material `type` (alloy|scrap) and delay `category` (equipment|process)
+- [x] Route gate `HOD_TIER_ROLES`; write `CEO_TIER_ROLES`; smoke: `test-foundation-masters-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FND-OBS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1618,9 +1632,15 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** list columns title, category, severity, status, observed_at; create form; empty/error.
 
 **Acceptance:**
-- [ ] Create appears in list with status
-- [ ] Enums enforced in UI
-- [ ] Smoke: `test-foundation-obs-api.ts`
+- [x] Create appears in list with status
+- [x] Enums enforced in UI
+- [x] Smoke: `test-foundation-obs-api.ts`
+
+**Done (P5-FND-OBS):**
+- [x] List: title, category, severity, status, observed_at; create form with enum SelectSheets
+- [x] Route gate `SUPERVISOR_ROLES` ∪ `MAINTENANCE_ROLES`; smoke: `test-foundation-obs-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FND-CA from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1641,8 +1661,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **List:** title, observation_title, status, due_date, Close.
 
 **Acceptance:**
-- [ ] Create from observation; Close → status `closed`
-- [ ] Smoke: `test-foundation-ca-api.ts`
+- [x] Create from observation; Close → status `closed`
+- [x] Smoke: `test-foundation-ca-api.ts`
+
+**Done (P5-FND-CA):**
+- [x] List: title, observation_title, status, due_date, Close; create form (observation / assignee / due)
+- [x] Route gate same as OBS; smoke: `test-foundation-ca-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FND-DOCS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1660,10 +1686,16 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** list title/category/version/file_name/uploader; Upload (gated); Download opens/shares.
 
 **Acceptance:**
-- [ ] HOD/HR upload succeeds; row appears
-- [ ] Download opens/shares on device
-- [ ] Non-upload roles: list + download only
-- [ ] Smoke: `test-foundation-docs-api.ts`
+- [x] HOD/HR upload succeeds; row appears
+- [x] Download opens/shares on device
+- [x] Non-upload roles: list + download only
+- [x] Smoke: `test-foundation-docs-api.ts`
+
+**Done (P5-FND-DOCS):**
+- [x] List title/category/version/file_name/uploader; Upload (HOD∪HR); Download → share
+- [x] Route: any authenticated; smoke: `test-foundation-docs-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FND-AN from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1679,8 +1711,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **UI note:** “stored only — no auto-calculation yet” (web parity).
 
 **Acceptance:**
-- [ ] Create KPI; list shows formula; empty OK
-- [ ] Smoke: `test-foundation-kpi-api.ts`
+- [x] Create KPI; list shows formula; empty OK
+- [x] Smoke: `test-foundation-kpi-api.ts`
+
+**Done (P5-FND-AN):**
+- [x] List code/name/formula/target/frequency; create form; “stored only” note
+- [x] Route `CEO_TIER_ROLES`; write CEO-tier; smoke: `test-foundation-kpi-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-DASH from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1712,9 +1750,15 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Asset:** total_production_kg, power_cost, maintenance_cost, total_cost, cost_per_ton?.
 
 **Acceptance:**
-- [ ] Full drill plant→dept→process→cost-sheet on phone
-- [ ] Asset detail route loads when opened
-- [ ] Smoke: `test-finance-dash-api.ts`
+- [x] Full drill plant→dept→process→cost-sheet on phone
+- [x] Asset detail route loads when opened
+- [x] Smoke: `test-finance-dash-api.ts`
+
+**Done (P5-FIN-DASH):**
+- [x] Plant summary + dept/process/asset drills; process links → cost-sheet (stub until P5-FIN-SHEET)
+- [x] Route gate `FINANCE_VIEW_ROLES`; smoke: `test-finance-dash-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-SHEET from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1727,8 +1771,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** run_number, dept/process codes; calc `version`/`status`/`total_cost`; warnings; category breakdown; line items (`cost_category`, `item_name`, `quantity`+`unit`, `rate`, `amount`); Recalculate; empty “no calc yet” + Calculate for writers.
 
 **Acceptance:**
-- [ ] Compute/recalculate refreshes line items
-- [ ] Smoke: `test-finance-sheet-api.ts`
+- [x] Compute/recalculate refreshes line items
+- [x] Smoke: `test-finance-sheet-api.ts`
+
+**Done (P5-FIN-SHEET):**
+- [x] Cost sheet UI (totals, warnings, breakdown, line items); Calculate/Recalculate for writers
+- [x] Empty “no calc yet”; route `FINANCE_VIEW_ROLES`; smoke: `test-finance-sheet-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-MASTERS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1748,8 +1798,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 | maintenance | `/finance/masters/maintenance?plant_id=` | `{ plant_id, category (`equipment\|quality\|safety\|energy\|process`), default_cost }` |
 
 **Acceptance:**
-- [ ] Create per tab; tables list rates
-- [ ] Smoke: `test-finance-masters-api.ts`
+- [x] Create per tab; tables list rates
+- [x] Smoke: `test-finance-masters-api.ts`
+
+**Done (P5-FIN-MASTERS):**
+- [x] Tabs raw/power/fuel/labour/maintenance; create forms; no DesktopOnlyGate
+- [x] Route `FINANCE_MASTERS_WRITE_ROLES`; smoke: `test-finance-masters-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-MAP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1764,8 +1820,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** template version select; field picker (parity with web mapping logic); cost_category; optional label; active rules + delete; optional qty×rate preview (client-only OK).
 
 **Acceptance:**
-- [ ] Add/delete rule; context reloads
-- [ ] Smoke: `test-finance-map-api.ts`
+- [x] Add/delete rule; context reloads
+- [x] Smoke: `test-finance-map-api.ts`
+
+**Done (P5-FIN-MAP):**
+- [x] Template version select; field picker; cost_category; active rules + delete; qty×rate preview
+- [x] Route `FINANCE_MAPPING_WRITE_ROLES`; smoke: `test-finance-map-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-CALC from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -2009,7 +2071,7 @@ Mark Done checklist + point Next to the following chunk ID.
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P5-FND-ASSETS from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P5-FIN-CALC from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

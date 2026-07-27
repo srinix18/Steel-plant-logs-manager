@@ -446,3 +446,30 @@ export async function evaluatePmTriggers(options?: {
   const { data } = await apiClient.post<PmEvaluateResult>(`/maintenance/pm/evaluate${q}`);
   return data;
 }
+
+export type AssetMaintenanceHistoryEntry = {
+  id: string;
+  entry_type: 'work_order' | 'issue' | 'downtime' | 'pm_due' | string;
+  title: string;
+  status?: string | null;
+  occurred_at: string;
+  details?: Record<string, unknown>;
+};
+
+export type AssetMaintenanceHistory = {
+  asset_id: string;
+  last_pm_at?: string | null;
+  next_pm_due_at?: string | null;
+  total_maintenance_cost: number;
+  entries: AssetMaintenanceHistoryEntry[];
+};
+
+/** GET /foundation/assets/{assetId}/maintenance-history */
+export async function fetchAssetMaintenanceHistory(
+  assetId: string
+): Promise<AssetMaintenanceHistory> {
+  const { data } = await apiClient.get<AssetMaintenanceHistory>(
+    `/foundation/assets/${assetId}/maintenance-history`
+  );
+  return data;
+}
