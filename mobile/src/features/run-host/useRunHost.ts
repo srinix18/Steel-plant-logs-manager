@@ -25,6 +25,8 @@ import {
   updateProcessRun,
 } from '@/src/api/processRuns';
 import { getStoredUser } from '@/src/api/storage';
+import { enqueueDraftSave } from '@/src/offline/draftQueue';
+import { isNetworkFailure } from '@/src/offline/isNetworkFailure';
 import { buildCardSteps, type CardStep } from '@/src/features/run-host/buildCardSteps';
 import { countCardStepOptions } from '@/src/features/run-host/countCardStepOptions';
 import {
@@ -378,28 +380,36 @@ export function useRunHost(runId: string | undefined) {
       setSaving(true);
       setError(null);
       setMessage(null);
+      const calculatedKeys = sections
+        .flatMap((s) => s.fields)
+        .filter((f) => f.field_type === 'calculated')
+        .map((f) => f.name);
+      const allKeys = [...new Set([...keys, ...calculatedKeys])];
+      const payload: {
+        field_values: { field_key: string; value: string }[];
+        grade_id?: string;
+      } = {
+        field_values: allKeys.map((k) => ({
+          field_key: k,
+          value: fieldValues[k] ?? '',
+        })),
+      };
+      if (fieldValues.grade) {
+        payload.grade_id = fieldValues.grade;
+      }
       try {
-        const calculatedKeys = sections
-          .flatMap((s) => s.fields)
-          .filter((f) => f.field_type === 'calculated')
-          .map((f) => f.name);
-        const allKeys = [...new Set([...keys, ...calculatedKeys])];
-        const payload: {
-          field_values: { field_key: string; value: string }[];
-          grade_id?: string;
-        } = {
-          field_values: allKeys.map((k) => ({
-            field_key: k,
-            value: fieldValues[k] ?? '',
-          })),
-        };
-        if (fieldValues.grade) {
-          payload.grade_id = fieldValues.grade;
-        }
         await updateProcessRun(runId, payload);
         setMessage('Saved.');
         await load({ soft: true });
       } catch (e) {
+        if (isNetworkFailure(e)) {
+          // P6-OFFLINE / Q8: never silent fail — queue + visible retry.
+          await enqueueDraftSave(runId, payload, getErrorMessage(e));
+          setError(
+            'Save failed (offline/network). Draft queued — tap Retry on the banner when online.'
+          );
+          return;
+        }
         setError(getErrorMessage(e));
         throw e;
       } finally {
@@ -415,25 +425,32 @@ export function useRunHost(runId: string | undefined) {
       setSaving(true);
       setError(null);
       setMessage(null);
+      const data = sectionDataToPayload(section, sectionDataMap[section.key]);
+      const payload: {
+        section_data: { section_key: string; data: unknown }[];
+        field_values?: { field_key: string; value: string }[];
+      } = {
+        section_data: [{ section_key: section.key, data }],
+      };
+      // Persist gas rollup with blow so totals survive soft reload (P2-SMS-AOD).
+      if (section.key === 'blow_process') {
+        payload.field_values = ['o2_nm3', 'n2_nm3', 'ar_nm3'].map((k) => ({
+          field_key: k,
+          value: fieldValues[k] ?? '',
+        }));
+      }
       try {
-        const data = sectionDataToPayload(section, sectionDataMap[section.key]);
-        const payload: {
-          section_data: { section_key: string; data: unknown }[];
-          field_values?: { field_key: string; value: string }[];
-        } = {
-          section_data: [{ section_key: section.key, data }],
-        };
-        // Persist gas rollup with blow so totals survive soft reload (P2-SMS-AOD).
-        if (section.key === 'blow_process') {
-          payload.field_values = ['o2_nm3', 'n2_nm3', 'ar_nm3'].map((k) => ({
-            field_key: k,
-            value: fieldValues[k] ?? '',
-          }));
-        }
         await updateProcessRun(runId, payload);
         setMessage('Section saved.');
         await load({ soft: true });
       } catch (e) {
+        if (isNetworkFailure(e)) {
+          await enqueueDraftSave(runId, payload, getErrorMessage(e));
+          setError(
+            'Save failed (offline/network). Draft queued — tap Retry on the banner when online.'
+          );
+          return;
+        }
         setError(getErrorMessage(e));
         throw e;
       } finally {

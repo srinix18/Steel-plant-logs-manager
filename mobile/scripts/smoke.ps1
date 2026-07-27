@@ -353,6 +353,64 @@ $env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-map-api.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== finance calculations API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-calc-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== finance analytics API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-finance-an-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin home API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-home-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin organisations API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-org-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin departments API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-dept-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin sheets API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-sheets-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin activity API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-act-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== admin users API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-admin-users-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== executive home API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-exe-home-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== executive employees API (if up) ==" -ForegroundColor Cyan
+$env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-exe-emp-api.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== EAS config (P6-EAS) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-eas.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== offline draft queue (P6-OFFLINE) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-offline.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 $env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-iaf-lifecycle-api.ts

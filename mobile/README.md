@@ -67,8 +67,20 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P5-FIN-SHEET** | **Done** |
 | **P5-FIN-MASTERS** | **Done** |
 | **P5-FIN-MAP** | **Done** |
+| **P5-FIN-CALC** | **Done** |
+| **P5-FIN-AN** | **Done** — Plan 5 finance complete |
+| **P5-ADM-HOME** | **Done** |
+| **P5-ADM-ORG** | **Done** |
+| **P5-ADM-DEPT** | **Done** |
+| **P5-ADM-SHEETS** | **Done** |
+| **P5-ADM-ACT** | **Done** |
+| **P5-ADM-USERS** | **Done** — Plan 5 admin complete |
+| **P5-EXE-HOME** | **Done** |
+| **P5-EXE-EMP** | **Done** — Plan 5 complete |
+| **P6-EAS** | **Done** |
+| **P6-OFFLINE** | **Done** |
 
-**Next chunk:** `Implement BUILD CHUNK P5-FIN-CALC from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next chunk:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## Requirements
 
@@ -201,6 +213,50 @@ mobile/
 
 Details: [`docs/MOBILE_P1_08_EXIT_GATE.md`](../docs/MOBILE_P1_08_EXIT_GATE.md)
 
-## EAS
+## EAS (P6-EAS)
 
-Project id `371731a7-c9e4-4569-bc23-6161696bd8f1` in `app.json`. Skip `eas build` until a custom dev client is needed.
+Project id `371731a7-c9e4-4569-bc23-6161696bd8f1` (`app.json` / `app.config.js`). Profiles in `eas.json`:
+
+| Profile | Android artifact | `EXPO_PUBLIC_API_URL` |
+|---------|------------------|------------------------|
+| `development` | APK (dev client) | emulator default `http://10.0.2.2:8000/api/v1` |
+| `preview` | **APK** (internal) | staging HTTPS (replace placeholder in `eas.json`) |
+| `production` | **AAB** (Play) | production HTTPS (replace placeholder in `eas.json`) |
+
+### One-time setup
+
+```powershell
+cd mobile
+npm install -g eas-cli   # or: npx eas-cli
+eas login
+eas build:configure      # already linked via projectId
+```
+
+Edit `eas.json` → `build.preview.env` / `build.production.env` and set real API hosts (must include `/api/v1`).
+
+### Build installable Android binaries
+
+```powershell
+# Internal APK (sideload / QA)
+npm run eas:preview
+# or: eas build --platform android --profile preview
+
+# Play Store AAB
+npm run eas:production
+# or: eas build --platform android --profile production
+```
+
+Override API URL for a single build without editing `eas.json`:
+
+```powershell
+eas build -p android --profile preview --env EXPO_PUBLIC_API_URL=https://staging.example.com/api/v1
+```
+
+Install the APK from the EAS build page / QR, or download the artifact URL. Production AAB is for Play Console upload (`eas submit --platform android` optional).
+
+## Offline drafts (P6-OFFLINE / Q8)
+
+- Global **OfflineBanner** in the authenticated drawer (disconnect message; pending count + **Retry** when back online).
+- Run-host **Save** / section save: on network/timeout failure, PATCH payload is queued in AsyncStorage (one draft per run, fields/sections merged). Error text is always shown — never silent.
+- Queue auto-flushes when NetInfo reports connectivity again; tap **Retry** to flush manually.
+- Smoke: `npx --yes node --experimental-strip-types .\scripts\test-offline.ts`

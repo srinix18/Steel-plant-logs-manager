@@ -80,6 +80,12 @@ export async function fetchMaintenanceIssues(params?: {
   return data;
 }
 
+/** GET /maintenance/issues/open-count → `{ count }` */
+export async function fetchOpenMaintenanceCount(): Promise<number> {
+  const { data } = await apiClient.get<{ count: number }>('/maintenance/issues/open-count');
+  return data.count;
+}
+
 export async function fetchMyMaintenanceIssues(
   status?: MaintenanceIssueStatus
 ): Promise<MaintenanceIssue[]> {

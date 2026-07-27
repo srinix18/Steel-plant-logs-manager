@@ -41,12 +41,15 @@
     "test:logins": "node --experimental-strip-types ./scripts/test-demo-logins.ts",
     "gen:nav": "node --experimental-strip-types ./scripts/generate-nav-screens.ts",
     "smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke.ps1",
-    "exit-gate": "powershell -ExecutionPolicy Bypass -File ./scripts/p1-exit-gate.ps1"
+    "exit-gate": "powershell -ExecutionPolicy Bypass -File ./scripts/p1-exit-gate.ps1",
+    "eas:preview": "eas build --platform android --profile preview",
+    "eas:production": "eas build --platform android --profile production"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/drawer": "^7.13.4",
     "@react-navigation/native": "^7.1.8",
     "babel-plugin-module-resolver": "^5.0.3",

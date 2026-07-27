@@ -1,12 +1,20 @@
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 
 import { ApiError, getErrorMessage } from '@/src/api/errors';
 import { clearSession, getToken } from '@/src/api/storage';
 
 export { ApiError, getErrorMessage };
 
+const extraApiUrl =
+  typeof Constants.expoConfig?.extra?.apiUrl === 'string'
+    ? Constants.expoConfig.extra.apiUrl
+    : undefined;
+
 const API_URL =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:8000/api/v1';
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ||
+  extraApiUrl?.replace(/\/$/, '') ||
+  'http://localhost:8000/api/v1';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 

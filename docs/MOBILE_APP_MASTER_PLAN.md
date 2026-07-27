@@ -1842,8 +1842,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** optional dept + from/to dates; Bulk Compute; result counts; read-only message for non-writers.
 
 **Acceptance:**
-- [ ] Returns computed/failed/skipped counts
-- [ ] Smoke: `test-finance-calc-api.ts`
+- [x] Returns computed/failed/skipped counts
+- [x] Smoke: `test-finance-calc-api.ts`
+
+**Done (P5-FIN-CALC):**
+- [x] Optional dept + from/to; Bulk Compute; result counts; read-only for non-writers
+- [x] `POST /finance/calculations/bulk-compute`; smoke: `test-finance-calc-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-FIN-AN from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1856,8 +1862,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** groupBy control; drivers (category, amount, percentage); trends (label, total_cost, run_count) as list/bars.
 
 **Acceptance:**
-- [ ] Changing groupBy reloads trends
-- [ ] Smoke: `test-finance-an-api.ts`
+- [x] Changing groupBy reloads trends
+- [x] Smoke: `test-finance-an-api.ts`
+
+**Done (P5-FIN-AN):**
+- [x] groupBy day/department/process/asset; drivers + trend bars; `FINANCE_VIEW_ROLES`
+- [x] Smoke: `test-finance-an-api.ts` — Plan 5 finance complete
+
+**Next:** `Implement BUILD CHUNK P5-ADM-HOME from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1873,8 +1885,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** KPI cards; org hierarchy snapshot; log-sheet shortcuts → sheets; recent heats → heat/report.
 
 **Acceptance:**
-- [ ] KPI cards + recent activity without crash
-- [ ] Smoke: `test-admin-home-api.ts`
+- [x] KPI cards + recent activity without crash
+- [x] Smoke: `test-admin-home-api.ts`
+
+**Done (P5-ADM-HOME):**
+- [x] KPI cards; org hierarchy; log-sheet shortcuts; recent heats → heat/report
+- [x] Gate `PLATFORM_ADMIN_ROLES`; smoke: `test-admin-home-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-ADM-ORG from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1888,8 +1906,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Do not invent:** write CRUD (unused web components) unless product asks.
 
 **Acceptance:**
-- [ ] Select org filters hierarchy panels
-- [ ] Smoke: `test-admin-org-api.ts`
+- [x] Select org filters hierarchy panels
+- [x] Smoke: `test-admin-org-api.ts`
+
+**Done (P5-ADM-ORG):**
+- [x] Org list → plants/depts/instances panels (GET only)
+- [x] Gate `PLATFORM_ADMIN_ROLES`; smoke: `test-admin-org-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-ADM-DEPT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1902,8 +1926,15 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** org filter; rows name, code, org, plant, processes; linked log-sheet shortcuts (process-code → sheets).
 
 **Acceptance:**
-- [ ] Dept list + linked processes
-- [ ] Smoke: `test-admin-dept-api.ts`
+- [x] Dept list + linked processes
+- [x] Smoke: `test-admin-dept-api.ts`
+
+**Done (P5-ADM-DEPT):**
+- [x] Cross-org dept list + org filter; process → sheet shortcuts (`processLogSheets.ts`)
+- [x] Platform admins → `AdminDepartmentsScreen`; HOD/foundation keep `DeptBrowserScreen` (P2)
+- [x] Smoke: `test-admin-dept-api.ts` (+ `test-dept-shells.ts` still green)
+
+**Next:** `Implement BUILD CHUNK P5-ADM-SHEETS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1916,8 +1947,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** template + revision select; read-only section preview (phone-simplified OK); support `?doc=` query.
 
 **Acceptance:**
-- [ ] Select template/version renders section preview
-- [ ] Smoke: `test-admin-sheets-api.ts`
+- [x] Select template/version renders section preview
+- [x] Smoke: `test-admin-sheets-api.ts`
+
+**Done (P5-ADM-SHEETS):**
+- [x] Template + revision select; `?doc=` deep-link; read-only CardStepBody preview
+- [x] Gate `PLATFORM_ADMIN_ROLES`; smoke: `test-admin-sheets-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-ADM-ACT from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1930,8 +1967,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** filters org/dept/process/state; runs (`run_number` → report/heat, process, type, instance, state, location, started_at); observations + open CAs cards.
 
 **Acceptance:**
-- [ ] Feed loads without crash; filters narrow runs
-- [ ] Smoke: `test-admin-act-api.ts`
+- [x] Feed loads without crash; filters narrow runs
+- [x] Smoke: `test-admin-act-api.ts`
+
+**Done (P5-ADM-ACT):**
+- [x] Filters org/dept/process/state; runs → report/heat; ops observations + open CAs
+- [x] Gate `PLATFORM_ADMIN_ROLES`; smoke: `test-admin-act-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-ADM-USERS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1945,8 +1988,15 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **List columns:** full_name, email, role, organisation name.
 
 **Acceptance:**
-- [ ] List loads on phone
-- [ ] Smoke: `test-admin-users-api.ts`
+- [x] List loads on phone
+- [x] Smoke: `test-admin-users-api.ts`
+
+**Done (P5-ADM-USERS):**
+- [x] **List-only** via `GET /users` + `GET /organisations` (full_name, email, role, org name)
+- [x] Create/edit deferred to **`P5-EXE-EMP`** (`/organisations/{orgId}/users`) — no inventing user CRUD here
+- [x] Gate `PLATFORM_ADMIN_ROLES`; smoke: `test-admin-users-api.ts` — Plan 5 admin complete
+
+**Next:** `Implement BUILD CHUNK P5-EXE-HOME from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1966,8 +2016,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** metric cards + open maint count; open issues (title, category, raised_by, status, run link); recent runs.
 
 **Acceptance:**
-- [ ] CEO-tier overview + open issues load
-- [ ] Smoke: `test-exe-home-api.ts`
+- [x] CEO-tier overview + open issues load
+- [x] Smoke: `test-exe-home-api.ts`
+
+**Done (P5-EXE-HOME):**
+- [x] Metric cards + open maint count; open issues (title/category/raised_by/status/run link); recent runs → reports
+- [x] Gate `CEO_TIER_ROLES`; smoke: `test-exe-home-api.ts`
+
+**Next:** `Implement BUILD CHUNK P5-EXE-EMP from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -1983,8 +2039,14 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 **Must include:** list name/email/role/dept/process-or-category + Add/Edit forms (phone cards).
 
 **Acceptance:**
-- [ ] Add + edit save; conditional process/category fields
-- [ ] Smoke: `test-exe-emp-api.ts`
+- [x] Add + edit save; conditional process/category fields
+- [x] Smoke: `test-exe-emp-api.ts`
+
+**Done (P5-EXE-EMP):**
+- [x] List name/email/role/dept/process-or-category; Add/Edit forms with conditional process + maintenance category
+- [x] No edit for `super_admin`/`ceo`; gate `CEO_TIER_ROLES`; smoke: `test-exe-emp-api.ts` — **Plan 5 feature chunks complete**
+
+**Next:** `Implement BUILD CHUNK P6-EAS from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 
@@ -2030,7 +2092,7 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 - [ ] Energy plant metrics + asset→workspace; Inventory list + **adjust**
 - [ ] Finance drill + cost-sheet compute + masters + mapping (**no DesktopOnlyGate**) + `bulk-compute`
 - [ ] Foundation assets/masters/obs/CA/docs/KPI with named smokes
-- [ ] Admin browse (org/dept/sheets/activity/users list) + Exec home + employees CRUD
+- [x] Admin browse (org/dept/sheets/activity/users list) + Exec home + employees CRUD
 - [ ] `mobile/scripts/smoke.ps1` includes all P5 smoke scripts named in chunks
 
 ## F.6 Plan 6 — Hardening (`P6-*`)
@@ -2043,6 +2105,30 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 | `P6-PUSH` | **Optional:** Expo notifications for alerts/issues if backend push exists; else skip with note | If skipped, document “alerts via polling / open Alerts tab” |
 | `P6-DEVICE-QA` | Physical device matrix: login all `LOGINS.md` roles; one happy path per Plan 2–5 module | Checklist signed in `docs/MOBILE_P6_DEVICE_QA.md` (create when executing) |
 | `P6-SEC` | No tokens in logs; SecureStore only; HTTPS prod URL; clear session on 401 | Spot-check + logout clears store |
+
+### CHUNK `P6-EAS` — EAS Android builds
+
+**Acceptance:**
+- [x] `eas.json` with preview **APK** + production **AAB**; EAS `projectId` present
+- [x] `EXPO_PUBLIC_API_URL` per profile (staging/prod HTTPS placeholders) + documented `eas build`
+- [x] Smoke: `test-eas.ts`
+
+**Done (P6-EAS):**
+- [x] `eas.json` + `app.config.js`; README build commands (`npm run eas:preview` / `eas:production`)
+- [x] Smoke: `test-eas.ts`
+
+### CHUNK `P6-OFFLINE` — Offline banner + draft queue (Q8)
+
+**Acceptance:**
+- [x] Offline banner when disconnected; pending draft count + **Retry** when online
+- [x] Run-host field/section network failures enqueue AsyncStorage drafts (merge per run); never silent fail
+- [x] Auto-flush on reconnect + manual Retry; smoke: `test-offline.ts`
+
+**Done (P6-OFFLINE):**
+- [x] `NetworkProvider` + `OfflineBanner`; `draftQueue` / merge logic; `useRunHost` queue on network fail
+- [x] Smoke: `test-offline.ts`
+
+**Next:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ## F.7 How to order work (agent)
 
@@ -2071,7 +2157,7 @@ Mark Done checklist + point Next to the following chunk ID.
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P5-FIN-CALC from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
 
 ---
 

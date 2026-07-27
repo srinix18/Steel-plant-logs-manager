@@ -372,3 +372,61 @@ export async function createMappingRule(payload: {
 export async function deleteMappingRule(ruleId: string): Promise<void> {
   await apiClient.delete(`/finance/mappings/rules/${ruleId}`);
 }
+
+// --- Bulk calculations (P5-FIN-CALC) ---
+
+export type BulkComputeResult = {
+  computed: number;
+  failed: number;
+  skipped: number;
+};
+
+/** POST /finance/calculations/bulk-compute */
+export async function bulkComputeCosts(payload: {
+  plant_id?: string;
+  department_id?: string;
+  process_id?: string;
+  from_date?: string;
+  to_date?: string;
+}): Promise<BulkComputeResult> {
+  const { data } = await apiClient.post<BulkComputeResult>(
+    '/finance/calculations/bulk-compute',
+    payload
+  );
+  return data;
+}
+
+// --- Analytics (P5-FIN-AN) ---
+
+export type CostTrendGroupBy = 'day' | 'department' | 'process' | 'asset';
+
+export type TopCostDriver = {
+  category: CostCategory | string;
+  amount: number;
+  percentage: number;
+};
+
+export type CostTrendPoint = {
+  label: string;
+  total_cost: number;
+  run_count: number;
+};
+
+/** GET /finance/analytics/top-drivers?plant_id= */
+export async function fetchTopCostDrivers(plantId: string): Promise<TopCostDriver[]> {
+  const { data } = await apiClient.get<TopCostDriver[]>(
+    `/finance/analytics/top-drivers?plant_id=${encodeURIComponent(plantId)}`
+  );
+  return data;
+}
+
+/** GET /finance/analytics/trends?plant_id=&group_by= */
+export async function fetchCostTrends(
+  plantId: string,
+  groupBy: CostTrendGroupBy | string
+): Promise<CostTrendPoint[]> {
+  const { data } = await apiClient.get<CostTrendPoint[]>(
+    `/finance/analytics/trends?plant_id=${encodeURIComponent(plantId)}&group_by=${encodeURIComponent(groupBy)}`
+  );
+  return data;
+}

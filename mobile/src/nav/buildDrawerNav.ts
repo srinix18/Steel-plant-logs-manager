@@ -79,7 +79,7 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
       section('Administration'),
       link('Overview', '/admin', 'P5-ADM-HOME'),
       link('Organisations', '/admin/organisations', 'P5-ADM-ORG'),
-      link('Departments', '/admin/departments', 'P2-DEPT-SHELLS'),
+      link('Departments', '/admin/departments', 'P5-ADM-DEPT'),
       link('Log Sheets', '/admin/sheets', 'P5-ADM-SHEETS'),
       link('Activity', '/admin/activity', 'P5-ADM-ACT'),
       link('Users', '/admin/users', 'P5-ADM-USERS')
