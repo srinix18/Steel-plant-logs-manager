@@ -5,9 +5,12 @@ import assert from 'node:assert/strict';
 
 import {
   firstStepIndexForSection,
+  iafDesiredStateForStep,
+  iafManualTransitionsForStep,
   isBbarDailyTemplate,
   isGrindDailyTemplate,
   isIafHeatTemplate,
+  pickIafPhaseTransition,
   stateTabKey,
   transitionTabKey,
   transitionsForTab,
@@ -59,6 +62,67 @@ assert.deepEqual(
 assert.deepEqual(
   transitionsForTab(transitions, 'ferro_alloys').map((t) => t.to_state),
   ['ready_to_tap']
+);
+
+assert.equal(
+  iafDesiredStateForStep({ id: 'timing_equipment:power', sectionKey: 'timing_equipment' }),
+  'in_progress'
+);
+assert.equal(
+  iafDesiredStateForStep({ id: 'timing_equipment:tap', sectionKey: 'timing_equipment' }),
+  'ready_to_tap'
+);
+assert.equal(iafDesiredStateForStep({ id: 'chemistry:list', sectionKey: 'chemistry' }), 'refining');
+
+const avail: WorkflowTransition[] = [
+  {
+    from_state: 'in_progress',
+    to_state: 'waiting_for_sample',
+    label: 'Power On',
+    allowed_roles: [],
+  },
+  {
+    from_state: 'waiting_for_sample',
+    to_state: 'refining',
+    label: 'Record Sample',
+    allowed_roles: [],
+  },
+  {
+    from_state: 'ready_to_tap',
+    to_state: 'completed',
+    label: 'Tap Completed',
+    allowed_roles: [],
+  },
+  {
+    from_state: 'ready_to_tap',
+    to_state: 'refining',
+    label: 'Back to Refining',
+    allowed_roles: [],
+  },
+];
+
+assert.equal(pickIafPhaseTransition(avail, 'in_progress', 'refining')?.to_state, 'waiting_for_sample');
+assert.equal(pickIafPhaseTransition(avail, 'ready_to_tap', 'refining')?.to_state, 'refining');
+assert.equal(pickIafPhaseTransition(avail, 'ready_to_tap', 'ready_to_tap'), null);
+assert.equal(pickIafPhaseTransition(avail, 'ready_to_tap', 'completed'), null);
+
+assert.deepEqual(
+  iafManualTransitionsForStep(avail, {
+    id: 'electrical_power:fields',
+    sectionKey: 'electrical_power',
+  }).map((t) => t.to_state),
+  ['completed']
+);
+assert.deepEqual(
+  iafManualTransitionsForStep(avail, {
+    id: 'timing_equipment:tap',
+    sectionKey: 'timing_equipment',
+  }),
+  []
+);
+assert.deepEqual(
+  iafManualTransitionsForStep(avail, { id: 'chemistry:list', sectionKey: 'chemistry' }),
+  []
 );
 
 const steps = workflowStepsForUi('refining');

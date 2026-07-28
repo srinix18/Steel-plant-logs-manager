@@ -284,6 +284,10 @@ async def seed_all(session: AsyncSession) -> None:
         ("completed", "approved", "Approve", ["supervisor", "hod", "ceo", "plant_admin"], None, True),
         ("approved", "closed", "Close", ["supervisor", "hod", "ceo", "plant_admin"]),
         ("in_progress", "aborted", "Abort", ["supervisor", "hod", "ceo", "plant_admin"]),
+        # Reverse edges so mobile Save&Next / Back can sync phase to the open section
+        ("waiting_for_sample", "in_progress", "Back to Power On", ["worker", "supervisor"]),
+        ("refining", "waiting_for_sample", "Back to Waiting", ["worker", "supervisor"]),
+        ("ready_to_tap", "refining", "Back to Refining", ["worker", "supervisor"]),
     ]
     for t in transitions:
         session.add(

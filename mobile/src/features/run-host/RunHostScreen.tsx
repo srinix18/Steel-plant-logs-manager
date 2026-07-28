@@ -13,9 +13,15 @@ import { Screen } from '@/src/components/ui/Screen';
 import { StickyFooter } from '@/src/components/ui/StickyFooter';
 import { CardStepBody } from '@/src/features/run-host/CardStepBody';
 import { HeatWorkflowStepper } from '@/src/features/run-host/HeatWorkflowStepper';
+import {
+  DETAIL_STEP_KINDS,
+  LIST_STEP_KINDS,
+  nextCardStepIndex,
+} from '@/src/features/run-host/nextCardStepIndex';
 import { useRunHost } from '@/src/features/run-host/useRunHost';
 import { useKeepAwake } from '@/src/hooks/useKeepAwake';
 import {
+  iafManualTransitionsForStep,
   isAodLadleTemplate,
   isBbarDailyTemplate,
   isCcmCastTemplate,
@@ -24,7 +30,6 @@ import {
   isRmillShiftTemplate,
   isWireDivisionTemplate,
   transitionHint,
-  transitionsForTab,
 } from '@/src/utils/heatWorkflowUi';
 import { colors, spacing, typography } from '@/src/theme/tokens';
 
@@ -39,6 +44,8 @@ export function RunHostScreen({ runId }: Props) {
   const host = useRunHost(runId);
   const [stepIndex, setStepIndex] = useState(0);
   const [localError, setLocalError] = useState<string | null>(null);
+  /** Jump after steps rebuild (e.g. Add sample). */
+  const [pendingJumpId, setPendingJumpId] = useState<string | null>(null);
 
   const sectionKeys = useMemo(() => host.sections.map((s) => s.key), [host.sections]);
   const useGuided = isIafHeatTemplate(sectionKeys);
@@ -62,20 +69,35 @@ export function RunHostScreen({ runId }: Props) {
     host.clearSuggestedStep();
   }, [host.suggestedStepIndex, host.clearSuggestedStep]);
 
+  useEffect(() => {
+    if (!pendingJumpId) return;
+    const idx = host.steps.findIndex((s) => s.id === pendingJumpId);
+    if (idx < 0) return;
+    setStepIndex(idx);
+    setPendingJumpId(null);
+  }, [host.steps, pendingJumpId]);
+
   const step = host.steps[stepIndex];
   const section = step ? host.sections.find((s) => s.key === step.sectionKey) : undefined;
 
-  // IAF: owning-card CTAs. AOD/CCM/RMILL/Wire/BBAR/GRIND: always show. Else: last card only.
+  // IAF: only Complete tap / Approve / Abort — phase advances with Save&Next.
+  // Other templates: always-on CTAs (or last card for generic).
   const tabTransitions =
     useGuided && step
-      ? transitionsForTab(availableTransitions, step.sectionKey)
+      ? iafManualTransitionsForStep(availableTransitions, step)
       : isAod || isCcm || isRmill || isWire || isBbar || isGrind || stepIndex === host.steps.length - 1
         ? availableTransitions
         : [];
 
   function jumpToStep(stepId: string) {
     const idx = host.steps.findIndex((s) => s.id === stepId);
-    if (idx >= 0) setStepIndex(idx);
+    if (idx >= 0) {
+      setStepIndex(idx);
+      if (useGuided) {
+        const dest = host.steps[idx];
+        if (dest) void host.syncIafPhaseForStep(dest);
+      }
+    } else setPendingJumpId(stepId);
   }
 
   async function saveCurrent() {
@@ -84,7 +106,10 @@ export function RunHostScreen({ runId }: Props) {
     host.setMessage(null);
     try {
       if (step.kind === 'fields' || section.section_type === 'fields') {
-        await host.saveFields(section.fields.map((f) => f.name));
+        const names = step.fieldNames?.length
+          ? step.fieldNames
+          : section.fields.map((f) => f.name);
+        await host.saveFields(names);
       } else {
         await host.saveSection(section);
       }
@@ -94,13 +119,37 @@ export function RunHostScreen({ runId }: Props) {
     }
   }
 
+  async function moveToStep(nextIdx: number) {
+    setStepIndex(nextIdx);
+    if (useGuided) {
+      const dest = host.steps[nextIdx];
+      if (dest) await host.syncIafPhaseForStep(dest);
+    }
+  }
+
   async function goNext() {
     try {
       await saveCurrent();
-      setStepIndex((i) => Math.min(i + 1, host.steps.length - 1));
+      const next = nextCardStepIndex(host.steps, stepIndex);
+      if (next !== stepIndex) await moveToStep(next);
     } catch {
       /* error already set */
     }
+  }
+
+  async function goBack() {
+    const cur = host.steps[stepIndex];
+    if (cur && DETAIL_STEP_KINDS.has(cur.kind)) {
+      const listIdx = host.steps.findIndex(
+        (s) => s.sectionKey === cur.sectionKey && LIST_STEP_KINDS.has(s.kind)
+      );
+      if (listIdx >= 0) {
+        await moveToStep(listIdx);
+        return;
+      }
+    }
+    const prev = Math.max(stepIndex - 1, 0);
+    if (prev !== stepIndex) await moveToStep(prev);
   }
 
   if (host.loading && !host.run) {
@@ -121,6 +170,17 @@ export function RunHostScreen({ runId }: Props) {
 
   const progress = host.steps.length > 0 ? (stepIndex + 1) / host.steps.length : 0;
   const banner = localError || host.error;
+  const workflowTitle =
+    step.sectionKey === 'electrical_power'
+      ? 'Finish tap'
+      : step.sectionKey === 'remarks_signoff'
+        ? 'Sign-off'
+        : 'Actions';
+  const showDashboardExit =
+    step.sectionKey === 'furnace_status' ||
+    step.sectionKey === 'remarks_signoff' ||
+    stepIndex >= host.steps.length - 1 ||
+    ['completed', 'approved', 'closed'].includes(host.run.current_state);
 
   return (
     <Screen
@@ -135,8 +195,8 @@ export function RunHostScreen({ runId }: Props) {
               variant="secondary"
               size="lg"
               style={styles.footerBtn}
-              disabled={stepIndex === 0 || host.saving}
-              onPress={() => setStepIndex((i) => Math.max(i - 1, 0))}
+              disabled={stepIndex === 0 || host.saving || host.transitioning}
+              onPress={() => void goBack()}
             />
             <Button
               title={host.saving ? 'Saving…' : 'Save'}
@@ -150,10 +210,33 @@ export function RunHostScreen({ runId }: Props) {
               title="Next"
               size="lg"
               style={styles.footerBtn}
-              disabled={host.saving || stepIndex >= host.steps.length - 1}
+              disabled={
+                host.saving ||
+                host.transitioning ||
+                nextCardStepIndex(host.steps, stepIndex) === stepIndex
+              }
               onPress={() => void goNext()}
             />
           </View>
+          {showDashboardExit ? (
+            <Button
+              title="Back to dashboard"
+              variant="secondary"
+              size="lg"
+              fullWidth
+              disabled={host.saving || host.transitioning}
+              onPress={() => {
+                void (async () => {
+                  try {
+                    await saveCurrent();
+                  } catch {
+                    /* still allow leave */
+                  }
+                  router.replace('/(app)/home' as Href);
+                })();
+              }}
+            />
+          ) : null}
         </StickyFooter>
       }
     >
@@ -224,14 +307,20 @@ export function RunHostScreen({ runId }: Props) {
 
         {tabTransitions.length > 0 ? (
           <View style={styles.workflow}>
-            <Text style={styles.workflowTitle}>Workflow</Text>
+            <Text style={styles.workflowTitle}>{workflowTitle}</Text>
             {tabTransitions.length === 1 && transitionHint(tabTransitions[0]) ? (
               <Text style={styles.workflowHint}>{transitionHint(tabTransitions[0])}</Text>
             ) : null}
             {tabTransitions.map((t) => (
               <Button
                 key={`${t.from_state}-${t.to_state}`}
-                title={host.transitioning ? 'Working…' : t.label}
+                title={
+                  host.transitioning
+                    ? 'Working…'
+                    : step.sectionKey === 'electrical_power' && t.to_state === 'completed'
+                      ? 'Complete tap'
+                      : t.label
+                }
                 size="lg"
                 fullWidth
                 variant={t.to_state === 'aborted' ? 'danger' : 'primary'}
@@ -276,35 +365,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   headerText: { flex: 1, minWidth: 0 },
-  headerActions: { alignItems: 'flex-end', gap: spacing.xs },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   runNumber: { ...typography.title, color: colors.text },
   stepMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
-  banner: { marginTop: spacing.sm },
-  success: {
-    ...typography.caption,
-    color: colors.success,
-    fontWeight: '600',
-    marginTop: spacing.sm,
-  },
-  stepTitle: {
-    ...typography.section,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  workflow: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.brand,
-    backgroundColor: colors.brandSoft,
-  },
-  workflowTitle: { ...typography.section, color: colors.brandDark },
-  workflowHint: { ...typography.caption, color: colors.brandDark, marginBottom: spacing.xs },
-  eventsTitle: { ...typography.section, color: colors.text, marginBottom: spacing.sm },
+  banner: { marginBottom: spacing.sm },
+  success: { ...typography.caption, color: colors.success, marginBottom: spacing.sm },
+  stepTitle: { ...typography.subtitle, color: colors.text, marginBottom: spacing.md },
+  workflow: { marginTop: spacing.lg, gap: spacing.sm },
+  workflowTitle: { ...typography.subtitle, color: colors.text },
+  workflowHint: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs },
+  eventsTitle: { ...typography.subtitle, color: colors.text, marginBottom: spacing.sm },
   eventRow: { ...typography.caption, color: colors.textMuted, marginBottom: 4 },
   footerRow: { flexDirection: 'row', gap: spacing.sm },
   footerBtn: { flex: 1 },
-  empty: { ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
 });

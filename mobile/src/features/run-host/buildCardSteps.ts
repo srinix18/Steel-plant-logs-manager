@@ -31,7 +31,26 @@ export type CardStep = {
   hourKey?: string;
   /** Sample index for chemistry */
   sampleIndex?: number;
+  /**
+   * When set, only these field names are shown (IAF timing split:
+   * power-on early vs tapping late).
+   */
+  fieldNames?: string[];
 };
+
+/** IAF: fill early with the heat; tapping stays until after scrap. */
+export const IAF_POWER_ON_FIELD_NAMES = [
+  'previous_heat_tapping_time',
+  'crucible',
+  'power_on_time',
+  'transfer_ladle',
+] as const;
+
+export const IAF_TAP_FIELD_NAMES = [
+  'tapping_time',
+  'process_time',
+  'tap_to_tap_time',
+] as const;
 
 export type BuildCardStepsOptions = {
   chemistrySampleCount?: Record<string, number>;
@@ -50,15 +69,45 @@ const ROW_SECTION_TYPES = new Set(['production_log_table', 'production_register_
  * Row/sample/hour sections become list + item cards.
  * Ported from `frontend/src/components/run-wizard/buildCardSteps.ts` (P2-ENGINE-02).
  */
+function isIafSections(sections: TemplateSection[]): boolean {
+  const keys = new Set(sections.map((s) => s.key));
+  return keys.has('heat_info') && keys.has('charge_mix') && keys.has('timing_equipment');
+}
+
+function pushTapStep(steps: CardStep[], timing: TemplateSection) {
+  steps.push({
+    id: 'timing_equipment:tap',
+    kind: 'fields',
+    sectionKey: timing.key,
+    sectionTitle: timing.title,
+    label: 'Tapping',
+    fieldNames: [...IAF_TAP_FIELD_NAMES],
+  });
+}
+
 export function buildCardSteps(
   sections: TemplateSection[],
   options?: BuildCardStepsOptions
 ): CardStep[] {
   const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order);
   const steps: CardStep[] = [];
+  const splitIafTiming = isIafSections(sorted);
+  let tapInserted = false;
 
   for (const section of sorted) {
     const st = section.section_type;
+
+    if (st === 'fields' && splitIafTiming && section.key === 'timing_equipment') {
+      steps.push({
+        id: 'timing_equipment:power',
+        kind: 'fields',
+        sectionKey: section.key,
+        sectionTitle: section.title,
+        label: 'Power on & equipment',
+        fieldNames: [...IAF_POWER_ON_FIELD_NAMES],
+      });
+      continue;
+    }
 
     if (st === 'fields') {
       steps.push({
@@ -111,6 +160,14 @@ export function buildCardSteps(
           label: `${section.title} — row ${i + 1}`,
           itemIndex: i,
         });
+      }
+      // IAF: tapping card after scrap / charge mix (not with early power-on fields).
+      if (splitIafTiming && section.key === 'charge_mix' && !tapInserted) {
+        const timing = sorted.find((s) => s.key === 'timing_equipment');
+        if (timing) {
+          pushTapStep(steps, timing);
+          tapInserted = true;
+        }
       }
       continue;
     }
@@ -258,6 +315,11 @@ export function buildCardSteps(
       sectionTitle: section.title,
       label: section.title,
     });
+  }
+
+  if (splitIafTiming && !tapInserted) {
+    const timing = sorted.find((s) => s.key === 'timing_equipment');
+    if (timing) pushTapStep(steps, timing);
   }
 
   return steps;

@@ -229,7 +229,38 @@ export function buildDrawerNav(role: UserRole): DrawerNavEntry[] {
     items.push(link('Cost Analytics', '/finance/analytics', 'P5-FIN-AN'));
   }
 
-  return items;
+  return dedupeDrawerEntries(items);
+}
+
+/** Drop duplicate hrefs (e.g. Departments under Admin + Foundation) and empty sections. */
+function dedupeDrawerEntries(entries: DrawerNavEntry[]): DrawerNavEntry[] {
+  const seen = new Set<string>();
+  const deduped: DrawerNavEntry[] = [];
+  for (const entry of entries) {
+    if (entry.type === 'section') {
+      deduped.push(entry);
+      continue;
+    }
+    if (seen.has(entry.href)) continue;
+    seen.add(entry.href);
+    deduped.push(entry);
+  }
+
+  const out: DrawerNavEntry[] = [];
+  for (let i = 0; i < deduped.length; i++) {
+    const entry = deduped[i];
+    if (entry.type === 'section') {
+      let j = i + 1;
+      let found = false;
+      while (j < deduped.length && deduped[j].type !== 'section') {
+        if (deduped[j].type === 'link') found = true;
+        j += 1;
+      }
+      if (!found) continue;
+    }
+    out.push(entry);
+  }
+  return out;
 }
 
 export function drawerLinkHrefs(role: UserRole): string[] {

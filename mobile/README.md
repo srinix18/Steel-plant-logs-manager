@@ -86,6 +86,8 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 
 **Next:** Mobile master plan **complete** (Plans 1–6 + F.2–F.6 exit gates closed). Optional physical Expo Go ticks: [`docs/MOBILE_P6_DEVICE_QA.md`](../docs/MOBILE_P6_DEVICE_QA.md).
 
+**Before manager UAT:** work through [`docs/MOBILE_PRE_HANDOVER_TEST.md`](../docs/MOBILE_PRE_HANDOVER_TEST.md) (what to test per login).
+
 ## Requirements
 
 - Node **22 LTS** (or 20.19+) via nvm-windows

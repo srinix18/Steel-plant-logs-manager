@@ -170,3 +170,38 @@ async def patch_workflow_roles(session: AsyncSession) -> None:
                         changed = True
         if changed:
             transition.allowed_roles = roles
+
+
+async def patch_iaf_reverse_transitions(session: AsyncSession) -> None:
+    """Allow mobile Back to sync IAF phase to the open section."""
+    from app.db.models import WorkflowDefinition
+
+    wf = (
+        await session.execute(
+            select(WorkflowDefinition).where(WorkflowDefinition.name == "SMS Heat Workflow")
+        )
+    ).scalar_one_or_none()
+    if not wf:
+        return
+
+    existing = await session.execute(
+        select(WorkflowTransitionDef).where(WorkflowTransitionDef.definition_id == wf.id)
+    )
+    keys = {(t.from_state, t.to_state) for t in existing.scalars()}
+    roles = ["worker", "supervisor"]
+    for from_state, to_state, label in (
+        ("waiting_for_sample", "in_progress", "Back to Power On"),
+        ("refining", "waiting_for_sample", "Back to Waiting"),
+        ("ready_to_tap", "refining", "Back to Refining"),
+    ):
+        if (from_state, to_state) in keys:
+            continue
+        session.add(
+            WorkflowTransitionDef(
+                definition_id=wf.id,
+                from_state=from_state,
+                to_state=to_state,
+                label=label,
+                allowed_roles=list(roles),
+            )
+        )

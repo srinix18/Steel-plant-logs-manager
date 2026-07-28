@@ -50,12 +50,14 @@ import { gasFieldsFromBlow } from '@/src/utils/aodGasFromBlow';
 import { mergeCalculatedIntoFields } from '@/src/utils/formulaEngine';
 import {
   firstStepIndexForSection,
+  iafDesiredStateForStep,
   isBbarDailyTemplate,
   isGrindDailyTemplate,
   isIafHeatTemplate,
   isRmillShiftTemplate,
   isWdrawShiftTemplate,
   isWireDivisionTemplate,
+  pickIafPhaseTransition,
   stateTabKey,
 } from '@/src/utils/heatWorkflowUi';
 import type { BlowProcessSectionData } from '@/src/features/run-host/section-data/types';
@@ -480,6 +482,41 @@ export function useRunHost(runId: string | undefined) {
     [load, runId]
   );
 
+  /**
+   * Auto-advance (or reverse when edges exist) so backend phase matches the card
+   * the worker just opened. Never auto-completes tap / approve / abort.
+   */
+  const syncIafPhaseForStep = useCallback(
+    async (step: CardStep) => {
+      if (!runId) return;
+      const desired = iafDesiredStateForStep(step);
+      if (!desired) return;
+
+      setTransitioning(true);
+      setError(null);
+      try {
+        for (let i = 0; i < 8; i++) {
+          const detail = await fetchProcessRun(runId);
+          const available = detail.workflow?.available_transitions ?? [];
+          const pick = pickIafPhaseTransition(
+            available,
+            detail.current_state,
+            desired
+          );
+          if (!pick) break;
+          await transitionProcessRun(runId, pick.to_state);
+        }
+        await load({ soft: true });
+      } catch (e) {
+        setError(getErrorMessage(e));
+        // Don't rethrow — worker can still edit the card; phase sync is best-effort.
+      } finally {
+        setTransitioning(false);
+      }
+    },
+    [load, runId]
+  );
+
   const clearSuggestedStep = useCallback(() => setSuggestedStepIndex(null), []);
 
   return {
@@ -515,6 +552,7 @@ export function useRunHost(runId: string | undefined) {
     saveFields,
     saveSection,
     doTransition,
+    syncIafPhaseForStep,
     reload: load,
     setError,
     setMessage,

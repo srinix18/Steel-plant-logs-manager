@@ -60,7 +60,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           const isMessages = entry.href === '/messages' || entry.href.includes('/messages');
           return (
             <Pressable
-              key={entry.href}
+              key={`${entry.href}#${index}`}
               style={styles.link}
               onPress={() => onNavigate(entry.href)}
               accessibilityRole="button"

@@ -49,11 +49,15 @@ try {
   assert.ok(hrHrefs.includes('/workforce/employees'), 'hr employees');
   assert.ok(!hrHrefs.includes('/admin'), 'hr no admin');
 
-  for (const role of ['super_admin', 'worker', 'ceo', 'hr', 'maintenance'] as const) {
+  for (const role of ['super_admin', 'worker', 'ceo', 'hr', 'maintenance', 'hod'] as const) {
     const hrefs = drawerLinkHrefs(role);
     assert.ok(hrefs.includes('/profile'), `${role} profile`);
     assert.ok(hrefs.includes('/messages'), `${role} messages`);
+    assert.equal(hrefs.length, new Set(hrefs).size, `${role} drawer hrefs must be unique`);
   }
+
+  const adminDeptCount = adminHrefs.filter((h: string) => h === '/admin/departments').length;
+  assert.equal(adminDeptCount, 1, 'admin Departments link once (not Admin+Foundation dup)');
 
   const adminSections = buildDrawerNav('super_admin')
     .filter((e: { type: string }) => e.type === 'section')

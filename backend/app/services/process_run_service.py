@@ -45,6 +45,21 @@ from app.services.access_scope import (
 from app.utils.formulas import apply_calculated_fields, collect_calculated_fields
 
 
+def _optional_float(value: object) -> float | None:
+    """Parse analytics numerics; blank / invalid field values become None."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
 def _to_run_response(run: ProcessRun) -> ProcessRunResponse:
     return ProcessRunResponse(
         id=run.id,
@@ -422,7 +437,7 @@ class ProcessRunService:
             session.add(fact)
 
         fact.duration_min = duration_min
-        fact.energy_kwh = float(energy) if energy is not None else None
+        fact.energy_kwh = _optional_float(energy)
         fact.charge_kg = charge_kg
         fact.alloy_kg = alloy_kg
         fact.outcome = run.outcome.value if run.outcome else None

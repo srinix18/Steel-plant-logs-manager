@@ -19,7 +19,12 @@ from app.utils.seed_wire_drawing import seed_wire_drawing_template
 from app.utils.seed_bright_bar import seed_bright_bar_template
 from app.utils.seed_forge_grinding import seed_forge_grinding_template
 from app.utils.seed_org_roles import seed_org_role_users
-from app.utils.seed_patches import patch_eaf_to_iaf, patch_extra_steel_grades, patch_workflow_roles
+from app.utils.seed_patches import (
+    patch_eaf_to_iaf,
+    patch_extra_steel_grades,
+    patch_iaf_reverse_transitions,
+    patch_workflow_roles,
+)
 from app.utils.seed_asset_catalog import seed_asset_catalog
 from app.utils.seed_workforce import seed_workforce_demo
 from app.utils.seed_finance import seed_finance
@@ -50,6 +55,7 @@ async def lifespan(_: FastAPI):
         await patch_eaf_to_iaf(session)
         await patch_extra_steel_grades(session)
         await patch_workflow_roles(session)
+        await patch_iaf_reverse_transitions(session)
         await seed_org_role_users(session)
         await seed_workforce_demo(session)
         await seed_asset_catalog(session)

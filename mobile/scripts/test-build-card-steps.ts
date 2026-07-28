@@ -52,20 +52,23 @@ function iafSections(): TemplateSection[] {
   assert.equal(chem[1].sampleIndex, 0);
   assert.ok(chem.length >= 2, 'list + ≥1 sample');
 
-  // 5 fields + chemistry(2) + 2 material lists (0 rows) = 9
-  assert.equal(steps.length, 9, `IAF empty chemistry step count, got ${steps.length}`);
+  // 5 fields sections + chemistry(2) + 2 material lists + tap card = 10
+  assert.equal(steps.length, 10, `IAF empty chemistry step count, got ${steps.length}`);
+  assert.equal(steps.find((s) => s.id === 'timing_equipment:power')?.label, 'Power on & equipment');
+  assert.equal(steps.find((s) => s.id === 'timing_equipment:tap')?.label, 'Tapping');
   assert.deepEqual(
-    steps.map((s) => `${s.sectionKey}:${s.kind}`),
+    steps.map((s) => `${s.sectionKey}:${s.kind}:${s.id.split(':').pop()}`),
     [
-      'heat_info:fields',
-      'timing_equipment:fields',
-      'chemistry:chemistry_list',
-      'chemistry:chemistry_sample',
-      'ferro_alloys:material_list',
-      'charge_mix:material_list',
-      'electrical_power:fields',
-      'furnace_status:fields',
-      'remarks_signoff:fields',
+      'heat_info:fields:fields',
+      'timing_equipment:fields:power',
+      'chemistry:chemistry_list:list',
+      'chemistry:chemistry_sample:0',
+      'ferro_alloys:material_list:list',
+      'charge_mix:material_list:list',
+      'timing_equipment:fields:tap',
+      'electrical_power:fields:fields',
+      'furnace_status:fields:fields',
+      'remarks_signoff:fields:fields',
     ]
   );
 }
@@ -126,4 +129,4 @@ function iafSections(): TemplateSection[] {
   assert.equal(options.materialRowCount?.ferro_alloys, 0);
 }
 
-console.log('buildCardSteps: ok (IAF empty chemistry = list + ≥1 sample, total 9)');
+console.log('buildCardSteps: ok (IAF empty chemistry + tap card, total 10)');

@@ -224,13 +224,28 @@ export function CardStepBody({
 
   if (step.kind === 'fields') {
     const hasRemarks = section.fields.some((f) => f.name === 'remarks');
-    const fields = hasRemarks
+    let fields = hasRemarks
       ? section.fields.filter((f) => f.name !== 'remarks')
       : section.fields;
+    if (step.fieldNames?.length) {
+      const allow = new Set(step.fieldNames);
+      fields = fields.filter((f) => allow.has(f.name));
+    }
     return (
       <View style={styles.stack}>
         {hasRemarks ? (
           <RemarksPanel runId={ctx.runId} refreshKey={ctx.remarksRefreshKey} />
+        ) : null}
+        {step.id === 'timing_equipment:tap' ? (
+          <Text style={styles.hint}>
+            Enter tapping time here. Tap-to-tap is calculated from the previous heat.
+            Press Next to enter electrical power, then Complete tap there.
+          </Text>
+        ) : null}
+        {step.sectionKey === 'electrical_power' ? (
+          <Text style={styles.hint}>
+            Enter power readings, then press Complete tap below. You do not need to go back.
+          </Text>
         ) : null}
         <FieldsStepBody
           fields={fields}
@@ -262,7 +277,9 @@ export function CardStepBody({
     if (step.kind === 'chemistry_list') {
       return (
         <View style={styles.stack}>
-          <Text style={styles.hint}>Enter chemistry one sample at a time.</Text>
+          <Text style={styles.hint}>
+            Enter chemistry one sample at a time. Tap a sample to edit, or add another to open it.
+          </Text>
           {Array.from({ length: sampleCount }).map((_, i) => (
             <JumpRow
               key={i}
@@ -277,11 +294,18 @@ export function CardStepBody({
               size="lg"
               fullWidth
               disabled={disabled}
-              onPress={() =>
+              onPress={() => {
+                // sampleCount is at least 1 even when samples[] is empty — append beyond that.
+                const newIndex = sampleCount;
                 onSectionDataChange(section.key, {
-                  rows: rows.map((row) => ({ ...row, samples: [...row.samples, null] })),
-                })
-              }
+                  rows: rows.map((row) => {
+                    const samples = [...row.samples];
+                    while (samples.length <= newIndex) samples.push(null);
+                    return { ...row, samples };
+                  }),
+                });
+                onJumpToStep?.(`${section.key}:sample:${newIndex}`);
+              }}
             />
           ) : null}
         </View>
@@ -317,6 +341,34 @@ export function CardStepBody({
             />
           ))
         )}
+        <Button
+          title="Back to sample list"
+          variant="secondary"
+          size="lg"
+          fullWidth
+          disabled={disabled}
+          onPress={() => onJumpToStep?.(`${section.key}:list`)}
+        />
+        {sampleCount < maxSamples ? (
+          <Button
+            title="Add another sample"
+            size="lg"
+            fullWidth
+            disabled={disabled}
+            onPress={() => {
+              const currentLen = rows.reduce((m, r) => Math.max(m, r.samples.length), 0);
+              const newIndex = Math.max(currentLen, si + 1);
+              onSectionDataChange(section.key, {
+                rows: rows.map((row) => {
+                  const samples = [...row.samples];
+                  while (samples.length <= newIndex) samples.push(null);
+                  return { ...row, samples };
+                }),
+              });
+              onJumpToStep?.(`${section.key}:sample:${newIndex}`);
+            }}
+          />
+        ) : null}
       </View>
     );
   }
@@ -326,12 +378,19 @@ export function CardStepBody({
       section.key === 'charge_mix' ? ctx.scrapMaterials : ctx.alloyMaterials;
     const data =
       (sectionData[section.key] as MaterialSectionData) ?? emptyMaterialSection();
+    const emptyRow = (): MaterialSectionData['rows'][number] => ({
+      material: materials[0]?.code ?? '',
+      quantity_kg: null,
+    });
 
     if (step.kind === 'material_list') {
       return (
         <View style={styles.stack}>
+          <Text style={styles.hint}>
+            Enter one material at a time. Tap a row to edit, or add another to open it.
+          </Text>
           {data.rows.length === 0 ? (
-            <Text style={styles.hint}>No rows yet. Add a material entry.</Text>
+            <Text style={styles.hint}>No rows yet.</Text>
           ) : null}
           {data.rows.map((row, i) => {
             const name =
@@ -354,14 +413,13 @@ export function CardStepBody({
             size="lg"
             fullWidth
             disabled={disabled}
-            onPress={() =>
+            onPress={() => {
+              const newIndex = data.rows.length;
               onSectionDataChange(section.key, {
-                rows: [
-                  ...data.rows,
-                  { material: materials[0]?.code ?? '', quantity_kg: null },
-                ],
-              })
-            }
+                rows: [...data.rows, emptyRow()],
+              });
+              onJumpToStep?.(`${section.key}:row:${newIndex}`);
+            }}
           />
         </View>
       );
@@ -414,6 +472,27 @@ export function CardStepBody({
               ),
             })
           }
+        />
+        <Button
+          title="Back to list"
+          variant="secondary"
+          size="lg"
+          fullWidth
+          disabled={disabled}
+          onPress={() => onJumpToStep?.(`${section.key}:list`)}
+        />
+        <Button
+          title="Add another row"
+          size="lg"
+          fullWidth
+          disabled={disabled}
+          onPress={() => {
+            const newIndex = data.rows.length;
+            onSectionDataChange(section.key, {
+              rows: [...data.rows, emptyRow()],
+            });
+            onJumpToStep?.(`${section.key}:row:${newIndex}`);
+          }}
         />
         <Button
           title="Remove row"

@@ -146,6 +146,100 @@ export function transitionsForTab(
   return transitions.filter((t) => transitionTabKey(t) === sectionKey);
 }
 
+/** States we never auto-enter — worker must confirm (tap / approve / abort). */
+const IAF_MANUAL_TO_STATES = new Set(['completed', 'approved', 'closed', 'aborted']);
+
+/**
+ * Desired workflow state when the worker is on a given card.
+ * Power-on fields stay early; tapping card is `timing_equipment:tap`.
+ */
+export function iafDesiredStateForStep(step: {
+  id: string;
+  sectionKey: string;
+}): string | null {
+  if (step.id === 'timing_equipment:tap') return 'ready_to_tap';
+  if (step.id === 'timing_equipment:power') return 'in_progress';
+  switch (step.sectionKey) {
+    case 'heat_info':
+      return 'created';
+    case 'timing_equipment':
+      return 'in_progress';
+    case 'chemistry':
+      return 'refining';
+    case 'ferro_alloys':
+      return 'refining';
+    case 'charge_mix':
+      return 'ready_to_tap';
+    case 'electrical_power':
+    case 'furnace_status':
+      return 'ready_to_tap';
+    case 'remarks_signoff':
+      return 'completed';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pick one available transition that moves current state toward desired
+ * along the IAF step order (forward or back when reverse edges exist).
+ * Never auto-moves into completed/approved/closed/aborted.
+ */
+export function pickIafPhaseTransition(
+  available: WorkflowTransition[],
+  currentState: string,
+  desiredState: string
+): WorkflowTransition | null {
+  const curIdx = workflowStepIndex(currentState);
+  const desIdx = workflowStepIndex(desiredState);
+  if (curIdx === desIdx) return null;
+
+  const candidates = available.filter((t) => {
+    if (t.from_state !== currentState) return false;
+    if (IAF_MANUAL_TO_STATES.has(t.to_state)) return false;
+    if (t.from_state === t.to_state) return false; // skip Additional Sample
+    const toIdx = workflowStepIndex(t.to_state);
+    if (desIdx > curIdx) {
+      return toIdx > curIdx && toIdx <= desIdx;
+    }
+    return toIdx < curIdx && toIdx >= desIdx;
+  });
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    const aIdx = workflowStepIndex(a.to_state);
+    const bIdx = workflowStepIndex(b.to_state);
+    // Prefer smallest step toward desired
+    if (desIdx > curIdx) return aIdx - bIdx;
+    return bIdx - aIdx;
+  });
+  return candidates[0] ?? null;
+}
+
+/**
+ * Explicit CTAs only — auto-phase covers Start / Power on / Sample / Ready to tap.
+ * Complete tap sits on electrical (after tapping time + power readings), not on the tap-time card.
+ */
+export function iafManualTransitionsForStep(
+  transitions: WorkflowTransition[],
+  step: { id: string; sectionKey: string }
+): WorkflowTransition[] {
+  if (step.sectionKey === 'electrical_power') {
+    return transitions.filter(
+      (t) => t.from_state === 'ready_to_tap' && t.to_state === 'completed'
+    );
+  }
+  if (step.sectionKey === 'remarks_signoff') {
+    return transitions.filter((t) =>
+      ['approved', 'closed'].includes(t.to_state)
+    );
+  }
+  if (step.sectionKey === 'heat_info') {
+    return transitions.filter((t) => t.to_state === 'aborted');
+  }
+  return [];
+}
+
 /** First card-step index for a template section key (list card preferred). */
 export function firstStepIndexForSection(
   steps: { sectionKey: string; kind: string }[],
