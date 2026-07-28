@@ -411,6 +411,22 @@ Write-Host "== offline draft queue (P6-OFFLINE) ==" -ForegroundColor Cyan
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-offline.ts
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "== list virtualization (P6-PERF) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-perf.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== push policy / alerts poll (P6-PUSH) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-push.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== device QA inventory (P6-DEVICE-QA) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-device-qa.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "== security (P6-SEC) ==" -ForegroundColor Cyan
+& "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-sec.ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== IAF lifecycle API (if up) ==" -ForegroundColor Cyan
 $env:EXPO_PUBLIC_API_URL = $script:SmokeApiUrl
 & "$nvmLink\node.exe" --experimental-strip-types .\scripts\test-iaf-lifecycle-api.ts

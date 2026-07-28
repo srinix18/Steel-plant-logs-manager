@@ -17,7 +17,7 @@ import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
-import { Screen } from '@/src/components/ui/Screen';
+import { VirtualList } from '@/src/components/ui/VirtualList';
 import { EmployeeFormPanel } from '@/src/features/workforce/EmployeeFormPanel';
 import type { Department } from '@/src/types/platform';
 import type { User } from '@/src/types/user';
@@ -25,6 +25,7 @@ import { colors, spacing, typography } from '@/src/theme/tokens';
 
 /**
  * P4-WF-EMP — Employees list + add/edit (port of WorkforceEmployeesPage).
+ * FlatList virtualization (P6-PERF).
  */
 export function WorkforceEmployeesScreen() {
   const { user } = useAuth();
@@ -97,63 +98,69 @@ export function WorkforceEmployeesScreen() {
   }
 
   return (
-    <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
-      <Text style={styles.title}>Employees</Text>
-      <Text style={styles.sub}>
-        Permanent employee master — linked to log sheet user pickers.
-      </Text>
+    <VirtualList
+      data={employees}
+      keyExtractor={(u) => u.id}
+      refreshing={refreshing}
+      onRefresh={() => void load(true)}
+      header={
+        <>
+          <Text style={styles.title}>Employees</Text>
+          <Text style={styles.sub}>
+            Permanent employee master — linked to log sheet user pickers.
+          </Text>
 
-      <Button
-        title="Add employee"
-        size="lg"
-        style={styles.addBtn}
-        onPress={() => {
-          setEditing(null);
-          setShowForm(true);
-        }}
-      />
+          <Button
+            title="Add employee"
+            size="lg"
+            style={styles.addBtn}
+            onPress={() => {
+              setEditing(null);
+              setShowForm(true);
+            }}
+          />
 
-      {error ? (
-        <View style={styles.banner}>
-          <ErrorBanner message={error} />
-        </View>
-      ) : null}
-
-      {employees.length === 0 && !error ? (
-        <EmptyState title="No employees yet." description="Tap Add employee to create one." />
-      ) : (
-        employees.map((u) => (
-          <Card key={u.id} style={styles.card}>
-            <View style={styles.rowTop}>
-              <View style={styles.titles}>
-                <Text style={styles.name}>{u.full_name}</Text>
-                <Text style={styles.meta}>{u.employee_uid ?? u.email}</Text>
-              </View>
-              <Badge
-                label={(u.employment_status ?? 'active').replace(/_/g, ' ')}
-                tone={
-                  (u.employment_status ?? 'active') === 'active' ? 'success' : 'neutral'
-                }
-              />
+          {error ? (
+            <View style={styles.banner}>
+              <ErrorBanner message={error} />
             </View>
-            <Text style={styles.line}>Dept: {deptName(u.department_id)}</Text>
-            <Text style={styles.line}>
-              {u.designation ?? '—'} · {u.role.replace(/_/g, ' ')}
-            </Text>
-            <Button
-              title="Edit"
-              variant="secondary"
-              size="sm"
-              style={styles.editBtn}
-              onPress={() => {
-                setEditing(u);
-                setShowForm(true);
-              }}
+          ) : null}
+        </>
+      }
+      empty={
+        !error ? (
+          <EmptyState title="No employees yet." description="Tap Add employee to create one." />
+        ) : null
+      }
+      renderItem={({ item: u }) => (
+        <Card style={styles.card}>
+          <View style={styles.rowTop}>
+            <View style={styles.titles}>
+              <Text style={styles.name}>{u.full_name}</Text>
+              <Text style={styles.meta}>{u.employee_uid ?? u.email}</Text>
+            </View>
+            <Badge
+              label={(u.employment_status ?? 'active').replace(/_/g, ' ')}
+              tone={(u.employment_status ?? 'active') === 'active' ? 'success' : 'neutral'}
             />
-          </Card>
-        ))
+          </View>
+          <Text style={styles.line}>Dept: {deptName(u.department_id)}</Text>
+          <Text style={styles.line}>
+            {u.designation ?? '—'} · {u.role.replace(/_/g, ' ')}
+          </Text>
+          <Button
+            title="Edit"
+            variant="secondary"
+            size="sm"
+            style={styles.editBtn}
+            onPress={() => {
+              setEditing(u);
+              setShowForm(true);
+            }}
+          />
+        </Card>
       )}
-    </Screen>
+    />
   );
 }
 

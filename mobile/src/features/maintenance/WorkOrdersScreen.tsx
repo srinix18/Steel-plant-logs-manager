@@ -18,7 +18,7 @@ import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
-import { Screen } from '@/src/components/ui/Screen';
+import { VirtualList } from '@/src/components/ui/VirtualList';
 import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
 
 const STATUS_TABS: { key: MaintenanceWorkOrderStatus | 'all'; label: string }[] = [
@@ -46,6 +46,7 @@ function taskProgress(wo: MaintenanceWorkOrder): string {
 
 /**
  * P3-MAINT-WO-LIST — Work Orders (port of web WorkOrdersPage).
+ * FlatList virtualization (P6-PERF).
  */
 export function WorkOrdersScreen() {
   const { user } = useAuth();
@@ -133,98 +134,102 @@ export function WorkOrdersScreen() {
   }
 
   return (
-    <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
-      <Text style={styles.title}>Work Orders</Text>
-      <Text style={styles.sub}>PM and corrective maintenance work order queue.</Text>
+    <VirtualList
+      data={orders}
+      keyExtractor={(wo) => wo.id}
+      refreshing={refreshing}
+      onRefresh={() => void load(true)}
+      header={
+        <>
+          <Text style={styles.title}>Work Orders</Text>
+          <Text style={styles.sub}>PM and corrective maintenance work order queue.</Text>
 
-      {error ? (
-        <View style={styles.banner}>
-          <ErrorBanner message={error} />
-        </View>
-      ) : null}
+          {error ? (
+            <View style={styles.banner}>
+              <ErrorBanner message={error} />
+            </View>
+          ) : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabs}
-        style={styles.tabsScroll}
-      >
-        {STATUS_TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <Pressable
-              key={t.key}
-              style={[styles.tab, active && styles.tabActive]}
-              onPress={() => setTab(t.key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            >
-              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabs}
+            style={styles.tabsScroll}
+          >
+            {STATUS_TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <Pressable
+                  key={t.key}
+                  style={[styles.tab, active && styles.tabActive]}
+                  onPress={() => setTab(t.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </>
+      }
+      empty={<EmptyState title="No work orders" description="No work orders match this filter." />}
+      renderItem={({ item: wo }) => {
+        const busy = busyId === wo.id;
+        const statusLabel =
+          WO_STATUS_LABELS[wo.status as MaintenanceWorkOrderStatus] ?? wo.status;
+        return (
+          <Card style={styles.card}>
+            <Pressable onPress={() => openExec(wo.id)} accessibilityRole="button">
+              <View style={styles.rowTop}>
+                <Text style={styles.woNumber}>{wo.wo_number}</Text>
+                <Badge label={statusLabel} tone={statusTone(wo.status)} />
+              </View>
+              <Text style={styles.woTitle}>{wo.title}</Text>
+              <Text style={styles.meta}>
+                Due {wo.due_at ? new Date(wo.due_at).toLocaleDateString() : '—'}
+                {' · '}
+                Tasks {taskProgress(wo)}
+              </Text>
             </Pressable>
-          );
-        })}
-      </ScrollView>
 
-      {orders.length === 0 ? (
-        <EmptyState title="No work orders" description="No work orders match this filter." />
-      ) : (
-        orders.map((wo) => {
-          const busy = busyId === wo.id;
-          const statusLabel =
-            WO_STATUS_LABELS[wo.status as MaintenanceWorkOrderStatus] ?? wo.status;
-          return (
-            <Card key={wo.id} style={styles.card}>
-              <Pressable onPress={() => openExec(wo.id)} accessibilityRole="button">
-                <View style={styles.rowTop}>
-                  <Text style={styles.woNumber}>{wo.wo_number}</Text>
-                  <Badge label={statusLabel} tone={statusTone(wo.status)} />
-                </View>
-                <Text style={styles.woTitle}>{wo.title}</Text>
-                <Text style={styles.meta}>
-                  Due {wo.due_at ? new Date(wo.due_at).toLocaleDateString() : '—'}
-                  {' · '}
-                  Tasks {taskProgress(wo)}
-                </Text>
-              </Pressable>
-
-              <View style={styles.actions}>
-                {wo.status === 'draft' ? (
-                  <Button
-                    title="Assign"
-                    size="sm"
-                    disabled={busy}
-                    onPress={() => void handleTransition(wo.id, 'assigned')}
-                  />
-                ) : null}
-                {wo.status === 'assigned' ? (
-                  <Button
-                    title="Accept"
-                    variant="secondary"
-                    size="sm"
-                    disabled={busy}
-                    onPress={() => void handleTransition(wo.id, 'accepted')}
-                  />
-                ) : null}
-                {wo.status === 'accepted' || wo.status === 'assigned' ? (
-                  <Button
-                    title="Start"
-                    size="sm"
-                    disabled={busy}
-                    onPress={() => void handleStart(wo)}
-                  />
-                ) : null}
+            <View style={styles.actions}>
+              {wo.status === 'draft' ? (
                 <Button
-                  title="Open"
+                  title="Assign"
+                  size="sm"
+                  disabled={busy}
+                  onPress={() => void handleTransition(wo.id, 'assigned')}
+                />
+              ) : null}
+              {wo.status === 'assigned' ? (
+                <Button
+                  title="Accept"
                   variant="secondary"
                   size="sm"
-                  onPress={() => openExec(wo.id)}
+                  disabled={busy}
+                  onPress={() => void handleTransition(wo.id, 'accepted')}
                 />
-              </View>
-            </Card>
-          );
-        })
-      )}
-    </Screen>
+              ) : null}
+              {wo.status === 'accepted' || wo.status === 'assigned' ? (
+                <Button
+                  title="Start"
+                  size="sm"
+                  disabled={busy}
+                  onPress={() => void handleStart(wo)}
+                />
+              ) : null}
+              <Button
+                title="Open"
+                variant="secondary"
+                size="sm"
+                onPress={() => openExec(wo.id)}
+              />
+            </View>
+          </Card>
+        );
+      }}
+    />
   );
 }
 

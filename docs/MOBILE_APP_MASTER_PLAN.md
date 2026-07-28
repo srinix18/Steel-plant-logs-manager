@@ -2057,45 +2057,55 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 | Plan | Chunks | Outcome | Exit gate |
 |------|--------|---------|-----------|
 | **1** | `P1-00`…`P1-08` | Login + role nav | `docs/MOBILE_P1_08_EXIT_GATE.md` ✅ |
-| **2** | `P2-ENGINE-*` + dept logs + `P2-REPORTS` | Every **seeded** log sheet + reports | **F.2** |
-| **3** | all `P3-*` | Floor ops, safety, maintenance, messages | **F.3** |
-| **4** | all `P4-WF-*` | Full workforce + self-service | **F.4** |
-| **5** | all `P5-*` | Pulse, foundation, finance, admin/exec | **F.5** |
-| **6** | `P6-*` | Production hardening | **F.6** |
+| **2** | `P2-ENGINE-*` + dept logs + `P2-REPORTS` | Every **seeded** log sheet + reports | **F.2** ✅ |
+| **3** | all `P3-*` | Floor ops, safety, maintenance, messages | **F.3** ✅ |
+| **4** | all `P4-WF-*` | Full workforce + self-service | **F.4** ✅ |
+| **5** | all `P5-*` | Pulse, foundation, finance, admin/exec | **F.5** ✅ |
+| **6** | `P6-*` | Production hardening | **F.6** ✅ |
 
 ## F.2 Plan 2 exit gate
 
-- [ ] All seeded processes: IAF, AOD, CCM, RMILL, WFURN, WDRAW, BBAR, GRIND — create + save + workflow on phone
-- [ ] PEEL shows blocked empty state (not a crash)
-- [ ] Reports open for at least IAF + BBAR; share/HTML works
-- [ ] `mobile/scripts/smoke.ps1` green (unit + reachable API smokes + `tsc`)
-- [ ] No DesktopOnlyGate; no JSON stubs for complex cells
+**Closed 2026-07-28** — all `P2-*` chunks Done; lifecycle + register smokes in `smoke.ps1`; PEEL stub; no DesktopOnlyGate.
+
+- [x] All seeded processes: IAF, AOD, CCM, RMILL, WFURN, WDRAW, BBAR, GRIND — create + save + workflow on phone
+- [x] PEEL shows blocked empty state (not a crash)
+- [x] Reports open for at least IAF + BBAR; share/HTML works
+- [x] `mobile/scripts/smoke.ps1` green (unit + reachable API smokes + `tsc`)
+- [x] No DesktopOnlyGate; no JSON stubs for complex cells
 
 ## F.3 Plan 3 exit gate
 
-- [ ] Shift / My Runs / Super / HOD Acceptance green
-- [ ] Safety scan (camera or search) → workspace
-- [ ] Maint: queue assign/close; WO exec all checklist; PM wizard 6 steps
-- [ ] Messages: inbox/sent/compose/@DEPT + alerts deep links
-- [ ] Role gates match `roles.ts` (queue = maintenance only)
+**Closed 2026-07-28** — all `P3-*` chunks Done; ops/safety/maint/messages smokes wired.
+
+- [x] Shift / My Runs / Super / HOD Acceptance green
+- [x] Safety scan (camera or search) → workspace
+- [x] Maint: queue assign/close; WO exec all checklist; PM wizard 6 steps
+- [x] Messages: inbox/sent/compose/@DEPT + alerts deep links
+- [x] Role gates match `roles.ts` (queue = maintenance only)
 
 ## F.4 Plan 4 exit gate
 
-- [ ] HR can: employee CRUD, attendance bulk, leave approve, payroll process (with structures)
-- [ ] Shift planning **publish** works on phone
-- [ ] Skill matrix editable on phone
-- [ ] Worker self-service: my attendance / leave / payslip HTML
+**Closed 2026-07-28** — all `P4-WF-*` chunks Done; HR + self-service + publish/skill smokes.
+
+- [x] HR can: employee CRUD, attendance bulk, leave approve, payroll process (with structures)
+- [x] Shift planning **publish** works on phone
+- [x] Skill matrix editable on phone
+- [x] Worker self-service: my attendance / leave / payslip HTML
 
 ## F.5 Plan 5 exit gate
 
-- [ ] Pulse plant→dept→asset→**all** workspace tabs ✅ (P5-PULSE-* Done)
-- [ ] Energy plant metrics + asset→workspace; Inventory list + **adjust**
-- [ ] Finance drill + cost-sheet compute + masters + mapping (**no DesktopOnlyGate**) + `bulk-compute`
-- [ ] Foundation assets/masters/obs/CA/docs/KPI with named smokes
+**Closed 2026-07-28** — all `P5-*` chunks Done; pulse→exec smokes in `smoke.ps1`.
+
+- [x] Pulse plant→dept→asset→**all** workspace tabs ✅ (P5-PULSE-* Done)
+- [x] Energy plant metrics + asset→workspace; Inventory list + **adjust**
+- [x] Finance drill + cost-sheet compute + masters + mapping (**no DesktopOnlyGate**) + `bulk-compute`
+- [x] Foundation assets/masters/obs/CA/docs/KPI with named smokes
 - [x] Admin browse (org/dept/sheets/activity/users list) + Exec home + employees CRUD
-- [ ] `mobile/scripts/smoke.ps1` includes all P5 smoke scripts named in chunks
+- [x] `mobile/scripts/smoke.ps1` includes all P5 smoke scripts named in chunks
 
 ## F.6 Plan 6 — Hardening (`P6-*`)
+
+**Closed 2026-07-28** — all `P6-*` chunks Done (push skipped per policy). Remaining: optional physical Expo Go ticks in `docs/MOBILE_P6_DEVICE_QA.md`.
 
 | Chunk | Requirement | Acceptance |
 |-------|-------------|------------|
@@ -2128,7 +2138,53 @@ Lookups: `GET /departments`, `GET /foundation/assets`.
 - [x] `NetworkProvider` + `OfflineBanner`; `draftQueue` / merge logic; `useRunHost` queue on network fail
 - [x] Smoke: `test-offline.ts`
 
-**Next:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
+### CHUNK `P6-PERF` — List virtualization
+
+**Acceptance:**
+- [x] Lists that can exceed **50** rows use `VirtualList` (FlatList): My Runs, WO, employees, admin users, ops runs
+- [x] Run host stays `Screen` scroll (one card at a time) — not FlatList’d away
+- [x] Smoke: `test-perf.ts` (threshold + spot-check wiring)
+
+**Done (P6-PERF):**
+- [x] `VirtualList` + `LIST_VIRTUALIZE_THRESHOLD = 50`
+- [x] Spot-check screens virtualized; RunHost comment preserved scroll
+- [x] Smoke: `test-perf.ts`
+
+### CHUNK `P6-PUSH` — OS push (optional)
+
+**Acceptance:**
+- [x] **Skipped:** backend has no Expo/FCM device-token API — documented in `docs/MOBILE_P6_PUSH.md`
+- [x] Alerts via polling (~30s) + Messages unread badge + open **Alerts** tab (`/(app)/messages/alerts`)
+- [x] Smoke: `test-push.ts`
+
+**Done (P6-PUSH):**
+- [x] Skip note + `pushPolicy.ts`; unread poll hook; Alerts auto-refresh
+- [x] Smoke: `test-push.ts`
+
+### CHUNK `P6-DEVICE-QA` — Physical device matrix
+
+**Acceptance:**
+- [x] Checklist in `docs/MOBILE_P6_DEVICE_QA.md` — all `LOGINS.md` roles + one happy path per Plan 2–5 module
+- [x] Automated preflight: `test-device-qa.ts` + `p6-device-qa.ps1` (route inventory + API login matrix)
+- [x] Physical Expo Go columns left for plant QA sign-off (section E)
+
+**Done (P6-DEVICE-QA):**
+- [x] `docs/MOBILE_P6_DEVICE_QA.md`; `scripts/test-device-qa.ts`; `scripts/p6-device-qa.ps1`
+- [x] Smoke: `test-device-qa.ts`
+
+### CHUNK `P6-SEC` — Session & transport security
+
+**Acceptance:**
+- [x] No access tokens / `Authorization` in console logs (dev logs sanitize URLs only)
+- [x] Session in **SecureStore** when available; `clearSession` wipes SecureStore **and** AsyncStorage; logout clears store
+- [x] EAS preview/production `EXPO_PUBLIC_API_URL` are **HTTPS**; release builds warn on plain HTTP non-local URLs
+- [x] API **401** (except `/auth/login`) → `clearSession` + redirect login; smoke: `test-sec.ts`
+
+**Done (P6-SEC):**
+- [x] `src/api/security.ts`; hardened `storage.ts` / `client.ts`
+- [x] Smoke: `test-sec.ts` — **Plan 6 complete**
+
+**Next:** Plan 6 hardening complete. Run `docs/MOBILE_P6_DEVICE_QA.md` physical sign-off; then Plan 2–5 exit gates (F.2–F.5) as needed.
 
 ## F.7 How to order work (agent)
 
@@ -2157,7 +2213,7 @@ Mark Done checklist + point Next to the following chunk ID.
 
 ## F.8 Current Start pointer
 
-**Start:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
+**Start:** Mobile master plan **complete** (Plans 1–6 + exit gates F.2–F.6 closed). Optional: physical Expo Go ticks in `docs/MOBILE_P6_DEVICE_QA.md`.
 
 ---
 

@@ -36,9 +36,9 @@ import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
-import { Screen } from '@/src/components/ui/Screen';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { TextField } from '@/src/components/ui/TextField';
+import { VirtualList } from '@/src/components/ui/VirtualList';
 import {
   canSubmitMaintenanceIssue,
   filterSupervisorRuns,
@@ -56,6 +56,7 @@ type Props = {
 
 /**
  * P3-OPS-SUPER — Operations Activity (port of web SupervisorMonitor).
+ * FlatList for production runs (P6-PERF).
  */
 export function SupervisorMonitorScreen({
   title = 'Operations Activity',
@@ -202,62 +203,74 @@ export function SupervisorMonitorScreen({
   }
 
   return (
-    <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.sub}>{subtitle}</Text>
+    <>
+      <VirtualList
+        data={filteredRuns}
+        keyExtractor={(run) => run.id}
+        refreshing={refreshing}
+        onRefresh={() => void load(true)}
+        header={
+          <>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.sub}>{subtitle}</Text>
 
-      {error ? (
-        <View style={styles.banner}>
-          <ErrorBanner message={error} />
-        </View>
-      ) : null}
+            {error ? (
+              <View style={styles.banner}>
+                <ErrorBanner message={error} />
+              </View>
+            ) : null}
 
-      <Button
-        title="Raise maintenance issue"
-        size="lg"
-        fullWidth
-        onPress={() => {
-          resetMaintForm();
-          setShowMaintModal(true);
-        }}
-        style={styles.raiseBtn}
-      />
+            <Button
+              title="Raise maintenance issue"
+              size="lg"
+              fullWidth
+              onPress={() => {
+                resetMaintForm();
+                setShowMaintModal(true);
+              }}
+              style={styles.raiseBtn}
+            />
 
-      <View style={styles.filters}>
-        <View style={styles.filterCol}>
-          <SelectSheet
-            label="Process"
-            placeholder="All"
-            options={[
-              { label: 'All', value: '' },
-              ...processes.map((p) => ({ label: p.code, value: p.code })),
-            ]}
-            value={processFilter}
-            onChange={setProcessFilter}
+            <View style={styles.filters}>
+              <View style={styles.filterCol}>
+                <SelectSheet
+                  label="Process"
+                  placeholder="All"
+                  options={[
+                    { label: 'All', value: '' },
+                    ...processes.map((p) => ({ label: p.code, value: p.code })),
+                  ]}
+                  value={processFilter}
+                  onChange={setProcessFilter}
+                />
+              </View>
+              <View style={styles.filterCol}>
+                <SelectSheet
+                  label="State"
+                  placeholder="All"
+                  options={[
+                    { label: 'All', value: '' },
+                    ...states.map((s) => ({ label: s.replace(/_/g, ' '), value: s })),
+                  ]}
+                  value={stateFilter}
+                  onChange={setStateFilter}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.section}>Production runs</Text>
+          </>
+        }
+        empty={
+          <EmptyState
+            title="No runs in your scope"
+            description="Try clearing filters or start a run from Shift."
           />
-        </View>
-        <View style={styles.filterCol}>
-          <SelectSheet
-            label="State"
-            placeholder="All"
-            options={[
-              { label: 'All', value: '' },
-              ...states.map((s) => ({ label: s.replace(/_/g, ' '), value: s })),
-            ]}
-            value={stateFilter}
-            onChange={setStateFilter}
-          />
-        </View>
-      </View>
-
-      <Text style={styles.section}>Production runs</Text>
-      {filteredRuns.length === 0 ? (
-        <EmptyState title="No runs in your scope" description="Try clearing filters or start a run from Shift." />
-      ) : (
-        filteredRuns.map((run) => {
+        }
+        renderItem={({ item: run }) => {
           const meta = metaFor(run);
           return (
-            <Card key={run.id} style={styles.card}>
+            <Card style={styles.card}>
               <Pressable
                 onPress={() => router.push(`/(app)/reports/${run.id}` as Href)}
                 accessibilityRole="link"
@@ -280,37 +293,38 @@ export function SupervisorMonitorScreen({
               </View>
             </Card>
           );
-        })
-      )}
-
-      {openMaintIssues.length > 0 ? (
-        <>
-          <Text style={[styles.section, styles.issuesTitle]}>
-            Open maintenance issues ({openMaintIssues.length})
-          </Text>
-          {openMaintIssues.slice(0, 8).map((issue) => (
-            <Card key={issue.id} style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.textCol}>
-                  <Text style={styles.issueTitle}>{issue.title}</Text>
-                  <Text style={styles.meta}>
-                    {issue.category} · {issue.raised_by_user?.full_name ?? '—'}
-                  </Text>
-                </View>
-                <Badge label={issue.status.replace(/_/g, ' ')} tone="neutral" />
-              </View>
-              {issue.run_id ? (
-                <Button
-                  title="View run report"
-                  variant="ghost"
-                  size="sm"
-                  onPress={() => router.push(`/(app)/reports/${issue.run_id}` as Href)}
-                />
-              ) : null}
-            </Card>
-          ))}
-        </>
-      ) : null}
+        }}
+        footer={
+          openMaintIssues.length > 0 ? (
+            <>
+              <Text style={[styles.section, styles.issuesTitle]}>
+                Open maintenance issues ({openMaintIssues.length})
+              </Text>
+              {openMaintIssues.slice(0, 8).map((issue) => (
+                <Card key={issue.id} style={styles.card}>
+                  <View style={styles.row}>
+                    <View style={styles.textCol}>
+                      <Text style={styles.issueTitle}>{issue.title}</Text>
+                      <Text style={styles.meta}>
+                        {issue.category} · {issue.raised_by_user?.full_name ?? '—'}
+                      </Text>
+                    </View>
+                    <Badge label={issue.status.replace(/_/g, ' ')} tone="neutral" />
+                  </View>
+                  {issue.run_id ? (
+                    <Button
+                      title="View run report"
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => router.push(`/(app)/reports/${issue.run_id}` as Href)}
+                    />
+                  ) : null}
+                </Card>
+              ))}
+            </>
+          ) : null
+        }
+      />
 
       <Modal
         visible={showMaintModal}
@@ -407,7 +421,7 @@ export function SupervisorMonitorScreen({
           </SafeAreaView>
         </View>
       </Modal>
-    </Screen>
+    </>
   );
 }
 

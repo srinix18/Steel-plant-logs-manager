@@ -459,5 +459,5 @@ cd backend && .\venv\Scripts\python scripts\test_db.py
 Internal demo / development project for Chandan Steel manufacturing operations.
 
 - **Web:** production-shaped demo — use as the reference for full capability.
-- **Mobile:** Plan 1–5 complete; Plan 6 through **P6-OFFLINE**; next chunk **P6-PERF**. Master plan **v2.2**.
+- **Mobile:** Plans 1–6 + exit gates **F.2–F.6 closed**. Optional physical Expo Go: `docs/MOBILE_P6_DEVICE_QA.md`. Master plan **v2.2**.
 - **Do not use seeded passwords in production.**

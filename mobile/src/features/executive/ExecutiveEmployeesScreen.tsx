@@ -24,6 +24,7 @@ import { LoadingView } from '@/src/components/ui/LoadingView';
 import { Screen } from '@/src/components/ui/Screen';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { TextField } from '@/src/components/ui/TextField';
+import { VirtualList } from '@/src/components/ui/VirtualList';
 import type { Department, Plant, Process } from '@/src/types/platform';
 import type { User, UserRole } from '@/src/types/user';
 import { colors, spacing, typography } from '@/src/theme/tokens';
@@ -244,23 +245,21 @@ export function ExecutiveEmployeesScreen() {
     return <LoadingView message="Loading employees…" />;
   }
 
-  return (
-    <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
-      <View style={styles.header}>
-        <View style={styles.flex}>
-          <Text style={styles.title}>Employees</Text>
-          <Text style={styles.subtitle}>
-            Assign HoD, supervisor, worker, or maintenance crew in your organisation.
-          </Text>
+  // Form uses Screen scroll; employee roster uses FlatList (P6-PERF).
+  if (showForm) {
+    return (
+      <Screen scroll>
+        <View style={styles.header}>
+          <View style={styles.flex}>
+            <Text style={styles.title}>Employees</Text>
+            <Text style={styles.subtitle}>
+              Assign HoD, supervisor, worker, or maintenance crew in your organisation.
+            </Text>
+          </View>
         </View>
-        {!showForm ? (
-          <Button title="Add" onPress={openCreate} size="sm" />
-        ) : null}
-      </View>
 
-      {error ? <ErrorBanner message={error} /> : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
-      {showForm ? (
         <Card style={styles.formCard}>
           <Text style={styles.formTitle}>{editing ? 'Edit employee' : 'Add employee'}</Text>
           {!editing ? (
@@ -339,40 +338,55 @@ export function ExecutiveEmployeesScreen() {
             />
           </View>
         </Card>
-      ) : null}
+      </Screen>
+    );
+  }
 
-      {!showForm && employees.length === 0 ? (
-        <EmptyState title="No employees yet." description="Tap Add to create one." />
-      ) : null}
-
-      {!showForm ? (
-        <View style={styles.list}>
-          {employees.map((u) => {
-            const canEdit = u.role !== 'super_admin' && u.role !== 'ceo';
-            const processOrCat =
-              u.role === 'supervisor'
-                ? processName(u.process_id)
-                : u.role === 'maintenance'
-                  ? (u.maintenance_division ?? '—').replace(/^./, (c) => c.toUpperCase())
-                  : '—';
-            return (
-              <Card key={u.id} style={styles.row}>
-                <Text style={styles.rowTitle}>{u.full_name}</Text>
-                <Text style={styles.rowMeta}>{u.email}</Text>
-                <Text style={styles.rowMeta}>Role: {u.role.replace(/_/g, ' ')}</Text>
-                <Text style={styles.rowMeta}>Dept: {deptName(u.department_id)}</Text>
-                <Text style={styles.rowMeta}>Process / category: {processOrCat}</Text>
-                {canEdit ? (
-                  <Pressable onPress={() => void openEdit(u)} accessibilityRole="button">
-                    <Text style={styles.link}>Edit</Text>
-                  </Pressable>
-                ) : null}
-              </Card>
-            );
-          })}
-        </View>
-      ) : null}
-    </Screen>
+  return (
+    <VirtualList
+      data={employees}
+      keyExtractor={(u) => u.id}
+      refreshing={refreshing}
+      onRefresh={() => void load(true)}
+      header={
+        <>
+          <View style={styles.header}>
+            <View style={styles.flex}>
+              <Text style={styles.title}>Employees</Text>
+              <Text style={styles.subtitle}>
+                Assign HoD, supervisor, worker, or maintenance crew in your organisation.
+              </Text>
+            </View>
+            <Button title="Add" onPress={openCreate} size="sm" />
+          </View>
+          {error ? <ErrorBanner message={error} /> : null}
+        </>
+      }
+      empty={<EmptyState title="No employees yet." description="Tap Add to create one." />}
+      renderItem={({ item: u }) => {
+        const canEdit = u.role !== 'super_admin' && u.role !== 'ceo';
+        const processOrCat =
+          u.role === 'supervisor'
+            ? processName(u.process_id)
+            : u.role === 'maintenance'
+              ? (u.maintenance_division ?? '—').replace(/^./, (c) => c.toUpperCase())
+              : '—';
+        return (
+          <Card style={styles.row}>
+            <Text style={styles.rowTitle}>{u.full_name}</Text>
+            <Text style={styles.rowMeta}>{u.email}</Text>
+            <Text style={styles.rowMeta}>Role: {u.role.replace(/_/g, ' ')}</Text>
+            <Text style={styles.rowMeta}>Dept: {deptName(u.department_id)}</Text>
+            <Text style={styles.rowMeta}>Process / category: {processOrCat}</Text>
+            {canEdit ? (
+              <Pressable onPress={() => void openEdit(u)} accessibilityRole="button">
+                <Text style={styles.link}>Edit</Text>
+              </Pressable>
+            ) : null}
+          </Card>
+        );
+      }}
+    />
   );
 }
 
@@ -391,7 +405,7 @@ const styles = StyleSheet.create({
   formActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   formBtn: { flex: 1 },
   list: { gap: spacing.sm, marginBottom: spacing.md },
-  row: { gap: spacing.xs },
+  row: { gap: spacing.xs, marginBottom: spacing.sm },
   rowTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
   rowMeta: { ...typography.caption, color: colors.textMuted },
   link: { ...typography.caption, color: colors.brand, fontWeight: '600', marginTop: spacing.xs },

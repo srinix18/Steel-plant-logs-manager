@@ -15,6 +15,7 @@ let backendPromise: Promise<StorageBackend> | null = null;
  * Prefer SecureStore on native when the Expo Go / native module is healthy.
  * Fall back to AsyncStorage on web or when SecureStore methods are missing
  * (avoids: ExpoSecureStore.default.deleteValueWithKeyAsync is not a function).
+ * P6-SEC: session secrets use SecureStore when available; clearSession wipes both.
  */
 async function resolveBackend(): Promise<StorageBackend> {
   if (Platform.OS === 'web') return 'async';
@@ -35,11 +36,25 @@ function getBackend(): Promise<StorageBackend> {
   return backendPromise;
 }
 
+/** Test / diagnostics — never log returned secrets. */
+export async function getSessionStorageBackend(): Promise<StorageBackend> {
+  return getBackend();
+}
+
 async function getItem(key: string): Promise<string | null> {
   const backend = await getBackend();
   if (backend === 'secure') {
     try {
-      return await SecureStore.getItemAsync(key);
+      const fromSecure = await SecureStore.getItemAsync(key);
+      if (fromSecure != null) return fromSecure;
+      // Migrate leftover AsyncStorage copy (older builds) into SecureStore.
+      const legacy = await AsyncStorage.getItem(key);
+      if (legacy != null) {
+        await SecureStore.setItemAsync(key, legacy);
+        await AsyncStorage.removeItem(key);
+        return legacy;
+      }
+      return null;
     } catch {
       backendPromise = Promise.resolve('async');
       return AsyncStorage.getItem(key);
@@ -53,6 +68,8 @@ async function setItem(key: string, value: string): Promise<void> {
   if (backend === 'secure') {
     try {
       await SecureStore.setItemAsync(key, value);
+      // P6-SEC: do not leave a plaintext AsyncStorage twin.
+      await AsyncStorage.removeItem(key);
       return;
     } catch {
       backendPromise = Promise.resolve('async');
@@ -66,7 +83,6 @@ async function deleteItem(key: string): Promise<void> {
   if (backend === 'secure') {
     try {
       await SecureStore.deleteItemAsync(key);
-      return;
     } catch {
       backendPromise = Promise.resolve('async');
     }
@@ -96,7 +112,14 @@ export async function setStoredUser(user: User): Promise<void> {
   await setItem(USER_KEY, JSON.stringify(user));
 }
 
+/**
+ * Logout / 401 — wipe SecureStore and AsyncStorage for session keys
+ * so a fallback backend cannot resurrect a cleared token.
+ */
 export async function clearSession(): Promise<void> {
-  // Never throw — boot / logout must survive broken SecureStore.
-  await Promise.allSettled([deleteItem(TOKEN_KEY), deleteItem(USER_KEY)]);
+  await Promise.allSettled([
+    SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => undefined),
+    SecureStore.deleteItemAsync(USER_KEY).catch(() => undefined),
+    AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]),
+  ]);
 }

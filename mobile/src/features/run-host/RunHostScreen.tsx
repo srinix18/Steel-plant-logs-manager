@@ -35,6 +35,7 @@ type Props = {
 export function RunHostScreen({ runId }: Props) {
   useKeepAwake();
 
+  // P6-PERF: keep Screen scroll — one card step at a time (do not FlatList the sheet).
   const host = useRunHost(runId);
   const [stepIndex, setStepIndex] = useState(0);
   const [localError, setLocalError] = useState<string | null>(null);

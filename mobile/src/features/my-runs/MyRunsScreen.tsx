@@ -10,7 +10,7 @@ import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
-import { Screen } from '@/src/components/ui/Screen';
+import { VirtualList } from '@/src/components/ui/VirtualList';
 import {
   formatMyRunStartedAt,
   isMyRunEditable,
@@ -20,6 +20,7 @@ import { colors, spacing, typography } from '@/src/theme/tokens';
 
 /**
  * P3-OPS-MYRUNS — My Runs (port of web MyRunsPage).
+ * FlatList virtualization (P6-PERF — IAF / heats spot-check).
  */
 export function MyRunsScreen() {
   const [runs, setRuns] = useState<ProcessRun[]>([]);
@@ -50,64 +51,72 @@ export function MyRunsScreen() {
   }
 
   return (
-    <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
-      <Text style={styles.title}>My Runs</Text>
-      <Text style={styles.sub}>
-        Heats and logs you started. Edit continues the log sheet; Report opens the read-only view.
-      </Text>
-
-      {error ? (
-        <View style={styles.banner}>
-          <ErrorBanner message={error} />
-        </View>
-      ) : null}
-
-      {runs.length === 0 && !error ? (
-        <EmptyState
-          title="No runs yet"
-          description="You have not started any runs yet. Use Shift Dashboard to start a heat or daily register."
-          actionLabel="Open Shift Dashboard"
-          onAction={() => router.push('/(app)/shift' as Href)}
-        />
-      ) : (
-        runs.map((run) => {
-          const canEdit = isMyRunEditable(run.current_state);
-          return (
-            <Card key={run.id} style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.textCol}>
-                  <Text style={styles.runNo}>{run.run_number}</Text>
-                  <Text style={styles.meta}>
-                    {run.run_type} · Started {formatMyRunStartedAt(run)}
-                  </Text>
-                </View>
-                <Badge
-                  label={run.current_state.replace(/_/g, ' ')}
-                  tone={canEdit ? 'brand' : 'neutral'}
-                />
+    <VirtualList
+      data={runs}
+      keyExtractor={(run) => run.id}
+      refreshing={refreshing}
+      onRefresh={() => void load(true)}
+      header={
+        <>
+          <Text style={styles.title}>My Runs</Text>
+          <Text style={styles.sub}>
+            Heats and logs you started. Edit continues the log sheet; Report opens the read-only
+            view.
+          </Text>
+          {error ? (
+            <View style={styles.banner}>
+              <ErrorBanner message={error} />
+            </View>
+          ) : null}
+        </>
+      }
+      empty={
+        !error ? (
+          <EmptyState
+            title="No runs yet"
+            description="You have not started any runs yet. Use Shift Dashboard to start a heat or daily register."
+            actionLabel="Open Shift Dashboard"
+            onAction={() => router.push('/(app)/shift' as Href)}
+          />
+        ) : null
+      }
+      renderItem={({ item: run }) => {
+        const canEdit = isMyRunEditable(run.current_state);
+        return (
+          <Card style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.textCol}>
+                <Text style={styles.runNo}>{run.run_number}</Text>
+                <Text style={styles.meta}>
+                  {run.run_type} · Started {formatMyRunStartedAt(run)}
+                </Text>
               </View>
-              <View style={styles.actions}>
-                {canEdit ? (
-                  <Button
-                    title="Edit"
-                    variant="secondary"
-                    size="lg"
-                    style={styles.actionBtn}
-                    onPress={() => router.push(`/(app)/heat/${run.id}` as Href)}
-                  />
-                ) : null}
+              <Badge
+                label={run.current_state.replace(/_/g, ' ')}
+                tone={canEdit ? 'brand' : 'neutral'}
+              />
+            </View>
+            <View style={styles.actions}>
+              {canEdit ? (
                 <Button
-                  title="Report"
+                  title="Edit"
+                  variant="secondary"
                   size="lg"
                   style={styles.actionBtn}
-                  onPress={() => router.push(`/(app)/reports/${run.id}` as Href)}
+                  onPress={() => router.push(`/(app)/heat/${run.id}` as Href)}
                 />
-              </View>
-            </Card>
-          );
-        })
-      )}
-    </Screen>
+              ) : null}
+              <Button
+                title="Report"
+                size="lg"
+                style={styles.actionBtn}
+                onPress={() => router.push(`/(app)/reports/${run.id}` as Href)}
+              />
+            </View>
+          </Card>
+        );
+      }}
+    />
   );
 }
 

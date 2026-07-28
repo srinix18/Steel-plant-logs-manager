@@ -79,8 +79,12 @@ Full-parity phone app for Manufacturing Operations Intelligence (Chandan Steel).
 | **P5-EXE-EMP** | **Done** — Plan 5 complete |
 | **P6-EAS** | **Done** |
 | **P6-OFFLINE** | **Done** |
+| **P6-PERF** | **Done** |
+| **P6-PUSH** | **Skipped** (no backend push — alerts via polling / Alerts tab) |
+| **P6-DEVICE-QA** | **Done** (checklist + automated preflight; physical Expo Go sign-off pending in doc) |
+| **P6-SEC** | **Done** — Plan 6 complete |
 
-**Next chunk:** `Implement BUILD CHUNK P6-PERF from docs/MOBILE_APP_MASTER_PLAN.md`
+**Next:** Mobile master plan **complete** (Plans 1–6 + F.2–F.6 exit gates closed). Optional physical Expo Go ticks: [`docs/MOBILE_P6_DEVICE_QA.md`](../docs/MOBILE_P6_DEVICE_QA.md).
 
 ## Requirements
 
@@ -260,3 +264,34 @@ Install the APK from the EAS build page / QR, or download the artifact URL. Prod
 - Run-host **Save** / section save: on network/timeout failure, PATCH payload is queued in AsyncStorage (one draft per run, fields/sections merged). Error text is always shown — never silent.
 - Queue auto-flushes when NetInfo reports connectivity again; tap **Retry** to flush manually.
 - Smoke: `npx --yes node --experimental-strip-types .\scripts\test-offline.ts`
+
+## List performance (P6-PERF)
+
+- Use `VirtualList` (`FlatList`) for queues that can exceed **50** rows: My Runs, Work Orders, Workforce/Executive employees, Admin users, Operations Activity runs.
+- Run host keeps `Screen` scroll with **one card step** at a time — do not virtualize the sheet into a giant FlatList.
+- Smoke: `.\scripts\test-perf.ts` (also in `smoke.ps1`).
+
+## Push / alerts (P6-PUSH) — skipped
+
+OS push is **not** enabled: the API has no Expo/FCM device-token endpoint. Details: [`docs/MOBILE_P6_PUSH.md`](../docs/MOBILE_P6_PUSH.md).
+
+**Instead:** open **Messages → Alerts** (`/(app)/messages/alerts`). Unread badge + Alerts list poll ~every 30s (`GET /notifications/unread-count` / `GET /notifications`). Smoke: `.\scripts\test-push.ts`.
+
+## Device QA (P6-DEVICE-QA)
+
+Checklist: [`docs/MOBILE_P6_DEVICE_QA.md`](../docs/MOBILE_P6_DEVICE_QA.md) — all `LOGINS.md` accounts + Plan 2–5 happy paths.
+
+```powershell
+cd mobile
+.\scripts\p6-device-qa.ps1   # route inventory + API login matrix
+```
+
+Tick **Phone** columns on a physical Expo Go device before production release.
+
+## Security (P6-SEC)
+
+- Session token / user JSON: **SecureStore** on native (AsyncStorage only if SecureStore unavailable / web).
+- `clearSession` (logout + non-login **401**) wipes SecureStore **and** AsyncStorage keys.
+- Dev API logs: method + sanitized URL only — never `Authorization` / `access_token`.
+- EAS preview/production profiles use **HTTPS** `EXPO_PUBLIC_API_URL`; release builds warn on plain HTTP (non-LAN).
+- Smoke: `.\scripts\test-sec.ts` (in `smoke.ps1`).

@@ -2,6 +2,10 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 
 import { ApiError, getErrorMessage } from '@/src/api/errors';
+import {
+  assertProductionApiUrl,
+  sanitizeUrlForLog,
+} from '@/src/api/security';
 import { clearSession, getToken } from '@/src/api/storage';
 
 export { ApiError, getErrorMessage };
@@ -18,10 +22,13 @@ const API_URL =
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+assertProductionApiUrl(API_URL);
+
 if (typeof __DEV__ !== 'undefined' && __DEV__) {
   // Helps diagnose phone → LAN: this must be your Wi‑Fi IP, never localhost.
+  // Never log tokens / Authorization (P6-SEC).
   // eslint-disable-next-line no-console
-  console.log(`[moi-api] base URL = ${API_URL}`);
+  console.log(`[moi-api] base URL = ${sanitizeUrlForLog(API_URL)}`);
 }
 
 /** Called by AuthProvider so 401 also clears in-memory user. */
@@ -37,9 +44,9 @@ export function getApiBaseUrl(): string {
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
-async function handleUnauthorized(url: string) {
+async function handleUnauthorized(path: string) {
   // Wrong password on login is also 401 — do not clear/redirect in that case.
-  if (url.includes('/auth/login')) return;
+  if (path.includes('/auth/login')) return;
   await clearSession();
   onUnauthorized?.();
   router.replace('/login');
@@ -57,8 +64,9 @@ async function request<T>(
   const url = `${API_URL}${path}`;
 
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // Method + sanitized URL only — never Authorization or body (P6-SEC).
     // eslint-disable-next-line no-console
-    console.log(`[moi-api] ${method} ${url}`);
+    console.log(`[moi-api] ${method} ${sanitizeUrlForLog(url)}`);
   }
 
   try {

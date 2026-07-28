@@ -12,3 +12,8 @@ export { SegmentedTabs } from '@/src/components/ui/SegmentedTabs';
 export { SelectSheet } from '@/src/components/ui/SelectSheet';
 export { StickyFooter } from '@/src/components/ui/StickyFooter';
 export { TextField } from '@/src/components/ui/TextField';
+export {
+  LIST_VIRTUALIZE_THRESHOLD,
+  shouldVirtualizeList,
+} from '@/src/components/ui/virtualListConfig';
+export { VirtualList } from '@/src/components/ui/VirtualList';

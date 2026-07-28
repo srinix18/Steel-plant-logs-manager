@@ -17,6 +17,7 @@ import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
 import { Screen } from '@/src/components/ui/Screen';
+import { ALERTS_POLL_INTERVAL_MS } from '@/src/notifications/pushPolicy';
 import {
   isMaintenanceAlert,
   maintenanceAlertSubtitle,
@@ -27,6 +28,7 @@ import { colors, radius, spacing, typography } from '@/src/theme/tokens';
 
 /**
  * P3-MSG-ALERTS — System notifications (port of MessagesPage alerts tab).
+ * P6-PUSH: no OS push — poll list ~30s; open Alerts tab for full inbox.
  */
 export function MessagesAlertsScreen() {
   const { user } = useAuth();
@@ -52,6 +54,12 @@ export function MessagesAlertsScreen() {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // P6-PUSH skip path: poll instead of Expo OS notifications.
+  useEffect(() => {
+    const id = setInterval(() => void load(true), ALERTS_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [load]);
 
   const openAlert = async (alert: AppNotification) => {
@@ -87,7 +95,10 @@ export function MessagesAlertsScreen() {
         <Text style={styles.back}>← Messages</Text>
       </Pressable>
       <Text style={styles.title}>Alerts</Text>
-      <Text style={styles.sub}>System notifications. Tap to mark read and open related work.</Text>
+      <Text style={styles.sub}>
+        System notifications (in-app). No OS push yet — this list and the Messages badge refresh
+        about every 30s. Pull to refresh anytime.
+      </Text>
 
       {error ? (
         <View style={styles.banner}>

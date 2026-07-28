@@ -4,33 +4,24 @@ import {
   type DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { fetchUnreadCount } from '@/src/api/messages';
 import { useAuth } from '@/src/auth/AuthContext';
+import { useUnreadNotificationPoll } from '@/src/hooks/useUnreadNotificationPoll';
 import { buildDrawerNav } from '@/src/nav/buildDrawerNav';
 import { colors, radius, spacing, touch, typography } from '@/src/theme/tokens';
 
 export function AppDrawerContent(props: DrawerContentComponentProps) {
   const { user, logout } = useAuth();
-  const [unread, setUnread] = useState(0);
   const drawerStatus = useDrawerStatus();
+  const { unread, refresh } = useUnreadNotificationPoll(Boolean(user));
 
+  // Immediate refresh when the drawer opens (in addition to ~30s poll).
   useEffect(() => {
-    if (drawerStatus !== 'open') return;
-    let cancelled = false;
-    fetchUnreadCount()
-      .then((n) => {
-        if (!cancelled) setUnread(n);
-      })
-      .catch(() => {
-        if (!cancelled) setUnread(0);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [drawerStatus]);
+    if (drawerStatus !== 'open' || !user) return;
+    refresh();
+  }, [drawerStatus, user, refresh]);
 
   if (!user) return null;
 
