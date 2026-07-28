@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE_WITH_STAGING_API_HOST/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://moi-api-woif.onrender.com/api/v1"
       }
     },
     "production": {
@@ -28,7 +28,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE_WITH_PROD_API_HOST/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://moi-api-woif.onrender.com/api/v1"
       }
     }
   },
