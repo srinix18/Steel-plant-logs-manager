@@ -996,7 +996,37 @@ _PHASE5_PATCHES = (
 )
 
 
+async def ensure_required_pg_enums(conn: AsyncConnection) -> None:
+    """Create PG enums that use create_type=False (needed on empty Render DBs)."""
+    from app.models.enums import ProcessRunOutcome, ProcessRunType
+
+    for name, enum_cls in (
+        ("processruntype", ProcessRunType),
+        ("processrunoutcome", ProcessRunOutcome),
+    ):
+        labels: list[str] = []
+        seen: set[str] = set()
+        for member in enum_cls:
+            for label in (member.value, member.name):
+                if label not in seen:
+                    seen.add(label)
+                    labels.append(label)
+        quoted = ", ".join(f"'{label}'" for label in labels)
+        await _safe_execute(
+            conn,
+            f"""
+            DO $$ BEGIN
+                CREATE TYPE {name} AS ENUM ({quoted});
+            EXCEPTION
+                WHEN duplicate_object THEN NULL;
+            END $$;
+            """,
+        )
+
+
 async def apply_schema_patches(conn: AsyncConnection) -> None:
+    await ensure_required_pg_enums(conn)
+
     for value in _USERROLE_VALUES:
         await _safe_execute(conn, f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{value}'")
 
