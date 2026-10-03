@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.moi import LoginRequest, LoginResponse, UserBrief, UserProfile, UserProfileUpdate, UserResponse
+from app.services.login_throttle import client_ip
 from app.services.platform_services import AuthService
 
 router = APIRouter()
@@ -11,8 +12,8 @@ auth_service = AuthService()
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(data: LoginRequest, session: DbSession):
-    return await auth_service.login(session, data)
+async def login(data: LoginRequest, request: Request, session: DbSession):
+    return await auth_service.login(session, data, ip=client_ip(request))
 
 
 @router.get("/me", response_model=UserProfile)

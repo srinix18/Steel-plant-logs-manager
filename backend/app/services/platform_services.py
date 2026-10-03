@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.services import login_throttle
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.models import Template, TemplateSection, TemplateVersion, TemplateVersionAudit, User, Department, Plant
 from app.models.enums import TemplateVersionStatus
@@ -34,11 +35,15 @@ from app.services.access_scope import (
 
 
 class AuthService:
-    async def login(self, session: AsyncSession, data: LoginRequest) -> LoginResponse:
+    async def login(self, session: AsyncSession, data: LoginRequest, ip: str | None = None) -> LoginResponse:
+        email_key = data.email.strip().lower()
+        await login_throttle.assert_not_locked(email_key, ip)
         result = await session.execute(select(User).where(User.email == data.email))
         user = result.scalar_one_or_none()
         if not user or not verify_password(data.password, user.hashed_password):
+            await login_throttle.record_failure(email_key, ip)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        await login_throttle.clear_failures(email_key)
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
         token = create_access_token(str(user.id), {"role": user.role.value})

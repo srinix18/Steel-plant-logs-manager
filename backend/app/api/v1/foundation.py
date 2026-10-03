@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from app.services.storage import file_response
 
 from app.api.deps import CeoUser, CurrentUser, DbSession
 from app.schemas.foundation import (
@@ -352,8 +352,8 @@ async def upload_document(
 @router.get("/foundation/documents/{doc_id}/download")
 async def download_document(doc_id: UUID, session: DbSession, user: CurrentUser):
     assert_can_view_documents(user)
-    doc, path = await document_service.get_document_path(session, doc_id)
-    return FileResponse(path, filename=doc.file_name, media_type=doc.mime_type)
+    doc, data = await document_service.get_document_file(session, doc_id, user)
+    return file_response(data, doc.mime_type, doc.file_name)
 
 
 # --- Approvals ---

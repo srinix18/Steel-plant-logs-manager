@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, File, UploadFile
-from fastapi.responses import FileResponse
+from app.services.storage import file_response
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.moi import MessageAttachmentResponse, MessageCreate, MessageResponse, NotificationResponse, UserProfile
@@ -46,8 +46,8 @@ async def upload_attachment(
 
 @router.get("/messages/attachments/{attachment_id}")
 async def download_attachment(attachment_id: UUID, session: DbSession, user: CurrentUser):
-    path, mime_type, file_name = await message_service.get_attachment(session, user, attachment_id)
-    return FileResponse(path, media_type=mime_type, filename=file_name)
+    data, mime_type, file_name = await message_service.get_attachment(session, user, attachment_id)
+    return file_response(data, mime_type, file_name)
 
 
 @router.get("/notifications", response_model=list[NotificationResponse])

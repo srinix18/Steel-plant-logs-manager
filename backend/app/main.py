@@ -23,6 +23,7 @@ from app.utils.seed_patches import (
     patch_eaf_to_iaf,
     patch_extra_steel_grades,
     patch_iaf_reverse_transitions,
+    patch_signoff_requires_approval,
     patch_workflow_roles,
 )
 from app.utils.seed_asset_catalog import seed_asset_catalog
@@ -56,6 +57,7 @@ async def lifespan(_: FastAPI):
         await patch_extra_steel_grades(session)
         await patch_workflow_roles(session)
         await patch_iaf_reverse_transitions(session)
+        await patch_signoff_requires_approval(session)
         await seed_org_role_users(session)
         await seed_workforce_demo(session)
         await seed_asset_catalog(session)

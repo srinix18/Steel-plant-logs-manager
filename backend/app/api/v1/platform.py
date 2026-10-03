@@ -5,7 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CeoUser, CurrentUser, DbSession, PlatformAdminUser
-from app.services.access_scope import apply_department_list_scope, apply_process_list_scope, assert_can_access_process
+from app.services.access_scope import (
+    apply_department_list_scope,
+    apply_process_list_scope,
+    assert_can_access_process,
+    is_platform_admin,
+)
 from app.db.models import (
     Asset,
     AssetGroup,
@@ -66,7 +71,10 @@ async def lookup_users(session: DbSession, user: CurrentUser, ids: str = ""):
             continue
     if not id_list:
         return []
-    result = await session.execute(select(User).where(User.id.in_(id_list), User.is_active.is_(True)))
+    query = select(User).where(User.id.in_(id_list), User.is_active.is_(True))
+    if not is_platform_admin(user):
+        query = query.where(User.organisation_id == user.organisation_id)
+    result = await session.execute(query)
     return [UserProfile.model_validate(u) for u in result.scalars()]
 
 
@@ -78,6 +86,11 @@ async def list_plants(session: DbSession, _: CurrentUser):
 
 @router.get("/plants/{plant_id}/users", response_model=list[UserProfile])
 async def plant_users(plant_id: UUID, session: DbSession, user: CurrentUser):
+    plant = await session.get(Plant, plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if not is_platform_admin(user) and plant.organisation_id != user.organisation_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     result = await session.execute(
         select(User).where(User.plant_id == plant_id, User.is_active.is_(True)).order_by(User.full_name)
     )

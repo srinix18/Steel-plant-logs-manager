@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     SEED_ADMIN_PASSWORD: str = "admin123"
     SEED_ADMIN_NAME: str = "System Admin"
     UPLOAD_DIR: str = "uploads"
+    # Set S3_BUCKET to store files in S3 instead of local disk (see app/services/storage.py).
+    S3_BUCKET: str = ""
+    S3_PREFIX: str = ""
+    S3_REGION: str = ""
+    S3_ENDPOINT_URL: str = ""
+    LOGIN_MAX_FAILURES_PER_ACCOUNT: int = 5
+    LOGIN_MAX_FAILURES_PER_IP: int = 30
+    LOGIN_LOCKOUT_MINUTES: int = 15
 
     @property
     def cors_origins_list(self) -> list[str]:

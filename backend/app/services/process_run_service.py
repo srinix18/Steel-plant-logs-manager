@@ -20,6 +20,7 @@ from app.db.models import (
     TemplateSection,
     TemplateVersion,
     WorkflowDefinition,
+    WorkflowState,
 )
 from app.db.models import User
 from app.models.enums import TemplateVersionStatus, UserRole, ValueSource
@@ -97,8 +98,23 @@ class ProcessRunService:
             .join(Plant, Department.plant_id == Plant.id)
         )
 
-    async def _assert_run_access(self, session: AsyncSession, run: ProcessRun, user: User) -> None:
-        await assert_run_access(session, run, user)
+    async def _assert_run_access(
+        self, session: AsyncSession, run: ProcessRun, user: User, *, write: bool = False
+    ) -> None:
+        await assert_run_access(session, run, user, write=write)
+
+    async def _assert_run_editable(self, session: AsyncSession, run: ProcessRun) -> None:
+        state = (
+            await session.execute(
+                select(WorkflowState).where(
+                    WorkflowState.definition_id == run.workflow_definition_id,
+                    WorkflowState.key == run.current_state,
+                )
+            )
+        ).scalar_one_or_none()
+        # Approved = signed off; only remarks may be added from here on.
+        if run.current_state == "approved" or (state and state.is_terminal):
+            raise HTTPException(status_code=409, detail=f"Run is {run.current_state} and can no longer be edited")
 
     async def _load_template_field_meta(
         self, session: AsyncSession, version_id: UUID
@@ -178,7 +194,8 @@ class ProcessRunService:
         user: User,
         data: ProcessRunCreate,
     ) -> ProcessRunDetailResponse:
-        instance = await session.get(ProcessInstance, instance_id)
+        # Row lock serialises concurrent creates on this instance so run numbers stay unique.
+        instance = await session.get(ProcessInstance, instance_id, with_for_update=True)
         if not instance:
             raise HTTPException(status_code=404, detail="Process instance not found")
 
@@ -305,7 +322,8 @@ class ProcessRunService:
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
 
-        await self._assert_run_access(session, run, user)
+        await self._assert_run_access(session, run, user, write=True)
+        await self._assert_run_editable(session, run)
 
         if data.metadata is not None:
             run.metadata_ = data.metadata

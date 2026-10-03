@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, File, Query, UploadFile
-from fastapi.responses import FileResponse
+from app.services.storage import file_response
 
 from app.api.deps import CurrentUser, DbSession, SupervisorUser
 from app.schemas.moi import (
@@ -15,6 +15,7 @@ from app.schemas.moi import (
     TransitionRequest,
     WorkflowTransitionLogResponse,
 )
+from app.services.access_scope import assert_run_access
 from app.services.process_run_service import ProcessRunService
 from app.services.run_remark_service import RunRemarkService
 from app.services.workflow_service import WorkflowService
@@ -113,6 +114,7 @@ async def transition_run(run_id: UUID, data: TransitionRequest, session: DbSessi
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Process run not found")
+    await assert_run_access(session, run, user, write=True)
     await workflow_service.execute_transition(session, run, user, data)
     if data.to_state in ("completed", "closed", "approved"):
         await _increment_heat_counter_on_asset(session, run)
@@ -127,10 +129,16 @@ async def transition_run(run_id: UUID, data: TransitionRequest, session: DbSessi
 
 
 @router.get("/process-runs/{run_id}/transitions/history", response_model=list[WorkflowTransitionLogResponse])
-async def transition_history(run_id: UUID, session: DbSession, _: CurrentUser):
+async def transition_history(run_id: UUID, session: DbSession, user: CurrentUser):
+    from fastapi import HTTPException
     from sqlalchemy import select
 
-    from app.db.models import WorkflowTransitionLog
+    from app.db.models import ProcessRun, WorkflowTransitionLog
+
+    run = await session.get(ProcessRun, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Process run not found")
+    await assert_run_access(session, run, user)
 
     result = await session.execute(
         select(WorkflowTransitionLog)
@@ -179,5 +187,5 @@ async def upload_remark_attachment(
 
 @router.get("/attachments/{attachment_id}")
 async def get_attachment(attachment_id: UUID, session: DbSession, user: CurrentUser):
-    path, mime_type, filename = await remark_service.get_attachment(session, attachment_id, user)
-    return FileResponse(path, media_type=mime_type, filename=filename)
+    data, mime_type, filename = await remark_service.get_attachment(session, attachment_id, user)
+    return file_response(data, mime_type, filename)

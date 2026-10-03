@@ -1,14 +1,19 @@
-from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.db.models import DepartmentDocument, User
+from app.db.models import DepartmentDocument, Plant, User
 from app.schemas.foundation import DocumentResponse, DocumentUploadMeta
-from app.services.access_scope import is_ceo_tier, is_hod_tier, is_platform_admin, is_hr
+from app.services.access_scope import (
+    apply_document_department_scope,
+    is_ceo_tier,
+    is_hod_tier,
+    is_hr,
+    is_platform_admin,
+)
+from app.services.storage import get_storage, make_key
 
 
 class DocumentService:
@@ -55,11 +60,8 @@ class DocumentService:
         data = await file.read()
         if not data:
             raise HTTPException(status_code=400, detail="Empty file")
-        upload_root = Path(settings.UPLOAD_DIR) / "documents"
-        upload_root.mkdir(parents=True, exist_ok=True)
-        storage_name = f"{uuid4()}_{file.filename}"
-        storage_path = upload_root / storage_name
-        storage_path.write_bytes(data)
+        storage_key = make_key("documents", file.filename, "document")
+        await get_storage().put(storage_key, data, file.content_type)
 
         doc = DepartmentDocument(
             plant_id=meta.plant_id,
@@ -67,8 +69,8 @@ class DocumentService:
             category=meta.category.value,
             title=meta.title,
             version=meta.version,
-            file_name=file.filename or storage_name,
-            storage_path=str(storage_path),
+            file_name=file.filename or storage_key.rsplit("/", 1)[-1],
+            storage_path=storage_key,
             mime_type=file.content_type or "application/octet-stream",
             size_bytes=len(data),
             uploaded_by=user.id,
@@ -79,8 +81,19 @@ class DocumentService:
         item.uploader_name = user.full_name
         return item
 
-    async def get_document_path(self, session: AsyncSession, doc_id: UUID) -> tuple[DepartmentDocument, Path]:
+    async def get_document_file(
+        self, session: AsyncSession, doc_id: UUID, user: User
+    ) -> tuple[DepartmentDocument, bytes]:
         doc = await session.get(DepartmentDocument, doc_id)
         if not doc or not doc.is_active:
             raise HTTPException(status_code=404, detail="Document not found")
-        return doc, Path(doc.storage_path)
+        visible = await session.execute(
+            apply_document_department_scope(select(DepartmentDocument.id), user).where(DepartmentDocument.id == doc_id)
+        )
+        if visible.scalar_one_or_none() is None:
+            raise HTTPException(status_code=403, detail="Access denied")
+        if not is_platform_admin(user):
+            plant = await session.get(Plant, doc.plant_id) if doc.plant_id else None
+            if plant and plant.organisation_id != user.organisation_id:
+                raise HTTPException(status_code=403, detail="Access denied")
+        return doc, await get_storage().get(doc.storage_path)

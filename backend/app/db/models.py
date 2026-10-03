@@ -1619,3 +1619,16 @@ class SopDocument(Base):
     version: Mapped[str] = mapped_column(String(32), default="1.0")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LoginAttempt(Base):
+    """Failed logins, for brute-force lockout. Rows older than a day are pruned."""
+
+    __tablename__ = "login_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )

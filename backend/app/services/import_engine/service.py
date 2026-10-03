@@ -12,19 +12,22 @@ from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.models import ImportJob, ImportJobRow, User
 from app.models.enums import ImportJobStatus, ImportRowStatus
 from app.services.access_scope import assert_import_access
 from app.services.import_engine import parser
-from app.services.import_engine.registry import get_module, list_modules
+from app.services.storage import get_storage
+from app.services.import_engine.registry import get_module as _registry_get_module, list_modules
+
+
+def get_module(module_key: str) -> dict[str, Any]:
+    try:
+        return _registry_get_module(module_key)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Unknown import module: {module_key}")
 
 
 class ImportEngineService:
-    def _upload_root(self) -> Path:
-        root = Path(settings.UPLOAD_DIR)
-        root.mkdir(parents=True, exist_ok=True)
-        return root
 
     def list_module_keys(self) -> list[str]:
         return list_modules()
@@ -51,11 +54,8 @@ class ImportEngineService:
         if ext not in (".xlsx", ".xls"):
             raise HTTPException(status_code=400, detail="Only .xlsx files are supported")
 
-        file_id = uuid.uuid4()
-        rel_path = f"imports/{file_id}{ext}"
-        full_path = self._upload_root() / rel_path
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        full_path.write_bytes(content)
+        rel_path = f"imports/{uuid.uuid4()}{ext}"
+        await get_storage().put(rel_path, content, file.content_type)
 
         job = ImportJob(
             module_key=module_key,
@@ -76,11 +76,8 @@ class ImportEngineService:
             raise HTTPException(status_code=404, detail="Import job not found")
         return job
 
-    def _read_file(self, job: ImportJob) -> bytes:
-        path = self._upload_root() / job.storage_path
-        if not path.exists():
-            raise HTTPException(status_code=404, detail="Import file not found on disk")
-        return path.read_bytes()
+    async def _read_file(self, job: ImportJob) -> bytes:
+        return await get_storage().get(job.storage_path)
 
     @staticmethod
     def _job_dict(job: ImportJob) -> dict[str, Any]:
@@ -117,7 +114,7 @@ class ImportEngineService:
     async def preview(self, session: AsyncSession, actor: User, job_id: UUID) -> dict[str, Any]:
         job = await self._load_job(session, job_id, actor)
         mod = get_module(job.module_key)
-        content = self._read_file(job)
+        content = await self._read_file(job)
         rows = parser.parse_xlsx(content)
 
         existing = await session.execute(

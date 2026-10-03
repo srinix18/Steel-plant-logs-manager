@@ -1,6 +1,3 @@
-import re
-import uuid
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
@@ -8,11 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.config import settings
 from app.db.models import Department, Plant, ProcessRun, RunFieldValue, RunRemark, RunRemarkAttachment, User
 from app.models.enums import RemarkAuthorRole, ValueSource
 from app.schemas.moi import RunRemarkAttachmentResponse, RunRemarkCreate, RunRemarkResponse
 from app.services.access_scope import assert_run_access, is_supervisor_tier
+from app.services.storage import get_storage, make_key
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
 MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
@@ -74,7 +71,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await assert_run_access(session, run, user)
+        await assert_run_access(session, run, user, write=True)
 
         if run.current_state in ("closed", "aborted"):
             raise HTTPException(status_code=400, detail="Cannot add remarks to a closed run")
@@ -116,7 +113,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await assert_run_access(session, run, user)
+        await assert_run_access(session, run, user, write=True)
 
         if run.current_state not in ("completed", "approved", "closed"):
             raise HTTPException(status_code=400, detail="Supervisor replies are allowed after heat completion")
@@ -145,7 +142,7 @@ class RunRemarkService:
         run = await session.get(ProcessRun, run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Process run not found")
-        await assert_run_access(session, run, user)
+        await assert_run_access(session, run, user, write=True)
 
         remark = await session.get(RunRemark, remark_id)
         if not remark or remark.run_id != run_id:
@@ -161,17 +158,13 @@ class RunRemarkService:
         if len(data) > MAX_ATTACHMENT_BYTES:
             raise HTTPException(status_code=400, detail="File exceeds 5 MB limit")
 
-        upload_root = Path(settings.UPLOAD_DIR)
-        upload_root.mkdir(parents=True, exist_ok=True)
-        safe_name = re.sub(r"[^\w.\-]", "_", file.filename or "image")
-        storage_name = f"{uuid.uuid4().hex}_{safe_name}"
-        storage_path = upload_root / storage_name
-        storage_path.write_bytes(data)
+        storage_key = make_key("remarks", file.filename, "image")
+        await get_storage().put(storage_key, data, content_type)
 
         attachment = RunRemarkAttachment(
             remark_id=remark_id,
-            file_name=file.filename or safe_name,
-            storage_path=str(storage_path),
+            file_name=file.filename or storage_key.rsplit("/", 1)[-1],
+            storage_path=storage_key,
             mime_type=content_type,
             size_bytes=len(data),
             uploaded_by=user.id,
@@ -182,7 +175,7 @@ class RunRemarkService:
 
     async def get_attachment(
         self, session: AsyncSession, attachment_id: UUID, user: User
-    ) -> tuple[Path, str, str]:
+    ) -> tuple[bytes, str, str]:
         result = await session.execute(
             select(RunRemarkAttachment)
             .where(RunRemarkAttachment.id == attachment_id)
@@ -197,7 +190,5 @@ class RunRemarkService:
             raise HTTPException(status_code=404, detail="Process run not found")
         await assert_run_access(session, run, user)
 
-        path = Path(attachment.storage_path)
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail="File missing on server")
-        return path, attachment.mime_type, attachment.file_name
+        data = await get_storage().get(attachment.storage_path)
+        return data, attachment.mime_type, attachment.file_name

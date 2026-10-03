@@ -16,7 +16,7 @@ from app.db.models import (
 from app.db.models import User
 from app.models.enums import UserRole
 from app.schemas.moi import TransitionRequest, WorkflowStatusResponse, WorkflowTransitionDefResponse
-from app.services.access_scope import role_key
+from app.services.access_scope import is_platform_admin, role_key
 
 
 def _role_key(role) -> str:
@@ -49,11 +49,19 @@ class WorkflowService:
         self, session: AsyncSession, run: ProcessRun, user: User
     ) -> WorkflowStatusResponse:
         definition = await self.get_definition(session, run.workflow_definition_id)
-        available = [
-            WorkflowTransitionDefResponse.model_validate(t)
+        candidates = [
+            t
             for t in definition.transitions
             if t.from_state == run.current_state and _role_allowed(user.role, t.allowed_roles or [])
         ]
+        if is_platform_admin(user):
+            candidates = []
+        elif any(t.requires_approval for t in candidates):
+            try:
+                await self._assert_independent_approver(session, run, user)
+            except HTTPException:
+                candidates = [t for t in candidates if not t.requires_approval]
+        available = [WorkflowTransitionDefResponse.model_validate(t) for t in candidates]
         return WorkflowStatusResponse(
             current_state=run.current_state,
             available_transitions=available,
@@ -83,6 +91,9 @@ class WorkflowService:
         if not _role_allowed(user.role, transition.allowed_roles or []):
             raise HTTPException(status_code=403, detail="Role not permitted for this transition")
 
+        if transition.requires_approval:
+            await self._assert_independent_approver(session, run, user)
+
         target_state = next((s for s in definition.states if s.key == data.to_state), None)
         if not target_state:
             raise HTTPException(status_code=400, detail="Target state not defined")
@@ -109,6 +120,21 @@ class WorkflowService:
 
         await session.flush()
         return run
+
+    async def _assert_independent_approver(self, session: AsyncSession, run: ProcessRun, user: User) -> None:
+        """Sign-off must come from someone other than whoever created or completed the run."""
+        if run.created_by == user.id:
+            raise HTTPException(status_code=403, detail="You cannot sign off a run you created")
+        last = (
+            await session.execute(
+                select(WorkflowTransitionLog)
+                .where(WorkflowTransitionLog.run_id == run.id, WorkflowTransitionLog.to_state == run.current_state)
+                .order_by(WorkflowTransitionLog.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if last and last.actor_id == user.id:
+            raise HTTPException(status_code=403, detail="You cannot sign off a run you completed")
 
     async def try_auto_transition(
         self, session: AsyncSession, run: ProcessRun, event_type: str, user: User | None

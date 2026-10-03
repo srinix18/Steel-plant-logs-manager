@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.pulse import InventoryAdjustRequest, InventoryItemResponse
+from app.services.access_scope import assert_inventory_adjust, assert_inventory_view
 from app.services.inventory_pulse_service import InventoryPulseService
 
 router = APIRouter()
@@ -12,6 +13,7 @@ inventory_service = InventoryPulseService()
 
 @router.get("/inventory-pulse/{plant_id}", response_model=list[InventoryItemResponse])
 async def inventory_pulse(plant_id: UUID, session: DbSession, user: CurrentUser):
+    await assert_inventory_view(session, user, plant_id)
     rows = await inventory_service.list_snapshots(session, plant_id)
     return [
         InventoryItemResponse(
@@ -37,6 +39,7 @@ async def inventory_pulse(plant_id: UUID, session: DbSession, user: CurrentUser)
 async def adjust_inventory(
     plant_id: UUID, data: InventoryAdjustRequest, session: DbSession, user: CurrentUser
 ):
+    await assert_inventory_adjust(session, user, plant_id)
     snap = await inventory_service.adjust(
         session,
         plant_id,

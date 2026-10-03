@@ -172,6 +172,18 @@ async def patch_workflow_roles(session: AsyncSession) -> None:
             transition.allowed_roles = roles
 
 
+async def patch_signoff_requires_approval(session: AsyncSession) -> None:
+    """Sign-off steps (out of `completed`) need a second person, for every logbook."""
+    result = await session.execute(
+        select(WorkflowTransitionDef).where(
+            WorkflowTransitionDef.from_state == "completed",
+            WorkflowTransitionDef.requires_approval.is_not(True),
+        )
+    )
+    for transition in result.scalars():
+        transition.requires_approval = True
+
+
 async def patch_iaf_reverse_transitions(session: AsyncSession) -> None:
     """Allow mobile Back to sync IAF phase to the open section."""
     from app.db.models import WorkflowDefinition

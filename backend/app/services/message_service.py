@@ -1,7 +1,4 @@
-import re
-import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
@@ -9,7 +6,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.config import settings
 from app.db.models import Message, MessageAttachment, MessageRecipient, MaintenanceIssue, User, UserNotification
 from app.models.enums import UserRole
 from app.schemas.moi import MessageAttachmentResponse, MessageCreate, MessageResponse, NotificationResponse
@@ -21,6 +17,7 @@ from app.services.access_scope import (
     is_platform_admin,
     list_eligible_recipients,
 )
+from app.services.storage import get_storage, make_key
 
 ALLOWED_MIME = {"image/jpeg", "image/png", "application/pdf"}
 MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
@@ -302,17 +299,13 @@ class MessageService:
         if len(data) > MAX_ATTACHMENT_BYTES:
             raise HTTPException(status_code=400, detail="File exceeds 5 MB limit")
 
-        upload_root = Path(settings.UPLOAD_DIR)
-        upload_root.mkdir(parents=True, exist_ok=True)
-        safe_name = re.sub(r"[^\w.\-]", "_", file.filename or "file")
-        storage_name = f"{uuid.uuid4().hex}_{safe_name}"
-        storage_path = upload_root / storage_name
-        storage_path.write_bytes(data)
+        storage_key = make_key("messages", file.filename)
+        await get_storage().put(storage_key, data, content_type)
 
         attachment = MessageAttachment(
             message_id=message_id,
-            file_name=file.filename or safe_name,
-            storage_path=str(storage_path),
+            file_name=file.filename or storage_key.rsplit("/", 1)[-1],
+            storage_path=storage_key,
             mime_type=content_type,
             size_bytes=len(data),
             uploaded_by=user.id,
@@ -323,7 +316,7 @@ class MessageService:
 
     async def get_attachment(
         self, session: AsyncSession, user: User, attachment_id: UUID
-    ) -> tuple[Path, str, str]:
+    ) -> tuple[bytes, str, str]:
         result = await session.execute(
             select(MessageAttachment)
             .where(MessageAttachment.id == attachment_id)
@@ -344,7 +337,5 @@ class MessageService:
         if not is_sender and not recipient.scalar_one_or_none() and not is_platform_admin(user):
             raise HTTPException(status_code=403, detail="Access denied")
 
-        path = Path(attachment.storage_path)
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail="File missing on server")
-        return path, attachment.mime_type, attachment.file_name
+        data = await get_storage().get(attachment.storage_path)
+        return data, attachment.mime_type, attachment.file_name

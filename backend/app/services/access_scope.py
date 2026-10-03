@@ -193,6 +193,8 @@ def apply_run_query_scope(query: Select, user: User) -> Select:
         if user.process_id:
             query = query.where(ProcessRun.process_id == user.process_id)
         return query
+    if is_hr(user) or is_maintenance(user):
+        return query.where(ProcessRun.id.is_(None))
     return query
 
 
@@ -232,6 +234,8 @@ async def assert_can_access_process(session: AsyncSession, user: User, process: 
 
 
 async def assert_can_create_run(session: AsyncSession, instance: ProcessInstance, user: User) -> None:
+    if is_platform_admin(user):
+        raise HTTPException(status_code=403, detail="Platform admins have read-only access to logbooks")
     process = await session.get(Process, instance.process_id)
     if not process:
         raise HTTPException(status_code=404, detail="Process not found")
@@ -264,7 +268,25 @@ def apply_process_list_scope(query: Select, user: User) -> Select:
     return query.where(Process.id.is_(None))
 
 
-async def assert_run_access(session: AsyncSession, run: ProcessRun, user: User) -> None:
+async def assert_run_access(
+    session: AsyncSession, run: ProcessRun, user: User, *, write: bool = False
+) -> None:
+    if is_maintenance(user):
+        # Read-only, and only for runs linked to an issue in the user's division.
+        if not write:
+            issues = await session.execute(select(MaintenanceIssue).where(MaintenanceIssue.run_id == run.id))
+            for issue in issues.scalars():
+                try:
+                    await assert_maintenance_issue_access(session, issue, user)
+                    return
+                except HTTPException:
+                    continue
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Platform admins oversee logbooks; plant roles fill and sign them off.
+    if is_platform_admin(user) and write:
+        raise HTTPException(status_code=403, detail="Platform admins have read-only access to logbooks")
+
     if is_platform_admin(user) or is_ceo_tier(user):
         if is_ceo_tier(user) and not is_platform_admin(user) and user.organisation_id:
             process = await session.get(Process, run.process_id)
@@ -306,6 +328,8 @@ async def assert_run_access(session: AsyncSession, run: ProcessRun, user: User) 
         if run.created_by != user.id:
             raise HTTPException(status_code=403, detail="Access denied")
         return
+
+    raise HTTPException(status_code=403, detail="Access denied")
 
 
 async def list_eligible_recipients(session: AsyncSession, sender: User) -> list[User]:
@@ -585,6 +609,15 @@ def assert_finance_access(user: User) -> None:
         raise HTTPException(status_code=403, detail="Finance access not permitted")
 
 
+# Purchase prices / labour rates are commercially sensitive: managers only.
+FINANCE_MASTERS_VIEW_ROLES = CEO_TIER_ROLES | HOD_ROLES
+
+
+def assert_finance_masters_view(user: User) -> None:
+    if user.role not in FINANCE_MASTERS_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Not permitted to view cost masters")
+
+
 def assert_finance_masters_write(user: User) -> None:
     if not can_write_finance_masters(user):
         raise HTTPException(status_code=403, detail="Not permitted to manage cost masters")
@@ -652,3 +685,35 @@ def can_run_imports(user: User) -> bool:
 def assert_import_access(user: User) -> None:
     if not can_run_imports(user):
         raise HTTPException(status_code=403, detail="Import access not permitted")
+
+
+async def assert_plant_in_scope(session: AsyncSession, user: User, plant_id: UUID) -> Plant:
+    plant = await session.get(Plant, plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if not is_platform_admin(user) and plant.organisation_id != user.organisation_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return plant
+
+
+ENERGY_VIEW_ROLES = SUPERVISOR_TIER_ROLES | MAINTENANCE_ROLES
+INVENTORY_VIEW_ROLES = HOD_TIER_ROLES
+INVENTORY_ADJUST_ROLES = CEO_TIER_ROLES | {UserRole.PLANT_ADMIN}
+
+
+async def assert_energy_view(session: AsyncSession, user: User, plant_id: UUID) -> None:
+    if user.role not in ENERGY_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Energy dashboard not permitted")
+    await assert_plant_in_scope(session, user, plant_id)
+
+
+async def assert_inventory_view(session: AsyncSession, user: User, plant_id: UUID) -> None:
+    if user.role not in INVENTORY_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Inventory pulse not permitted")
+    await assert_plant_in_scope(session, user, plant_id)
+
+
+async def assert_inventory_adjust(session: AsyncSession, user: User, plant_id: UUID) -> None:
+    if user.role not in INVENTORY_ADJUST_ROLES:
+        raise HTTPException(status_code=403, detail="Inventory adjustment not permitted")
+    await assert_plant_in_scope(session, user, plant_id)

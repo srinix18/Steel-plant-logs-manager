@@ -69,9 +69,11 @@ from app.schemas.finance import (
 )
 from app.services.access_scope import (
     assert_finance_access,
+    assert_finance_masters_view,
     assert_finance_mapping_write,
     assert_finance_masters_write,
     apply_finance_run_scope,
+    is_platform_admin,
 )
 
 
@@ -135,13 +137,21 @@ def _scoped_cost_base(user: User):
 
 
 class FinanceService:
+    @staticmethod
+    def _org_plant_scope(q, plant_col, user: User):
+        if is_platform_admin(user):
+            return q
+        return q.where(plant_col.in_(select(Plant.id).where(Plant.organisation_id == user.organisation_id)))
+
     # --- Raw material rates ---
 
     async def list_raw_material_rates(
         self, session: AsyncSession, user: User, organisation_id: Optional[UUID] = None
     ) -> list[RawMaterialCostRateResponse]:
-        assert_finance_access(user)
+        assert_finance_masters_view(user)
         q = select(RawMaterialCostRate).options(selectinload(RawMaterialCostRate.material))
+        if not is_platform_admin(user):
+            q = q.where(RawMaterialCostRate.organisation_id == user.organisation_id)
         if organisation_id:
             q = q.where(RawMaterialCostRate.organisation_id == organisation_id)
         result = await session.execute(q.order_by(RawMaterialCostRate.effective_from.desc()))
@@ -190,8 +200,8 @@ class FinanceService:
     async def list_power_rates(
         self, session: AsyncSession, user: User, plant_id: Optional[UUID] = None
     ) -> list[PowerCostRateResponse]:
-        assert_finance_access(user)
-        q = select(PowerCostRate)
+        assert_finance_masters_view(user)
+        q = self._org_plant_scope(select(PowerCostRate), PowerCostRate.plant_id, user)
         if plant_id:
             q = q.where(PowerCostRate.plant_id == plant_id)
         result = await session.execute(q.order_by(PowerCostRate.effective_from.desc()))
@@ -223,8 +233,8 @@ class FinanceService:
     async def list_fuel_rates(
         self, session: AsyncSession, user: User, plant_id: Optional[UUID] = None
     ) -> list[FuelCostRateResponse]:
-        assert_finance_access(user)
-        q = select(FuelCostRate)
+        assert_finance_masters_view(user)
+        q = self._org_plant_scope(select(FuelCostRate), FuelCostRate.plant_id, user)
         if plant_id:
             q = q.where(FuelCostRate.plant_id == plant_id)
         result = await session.execute(q.order_by(FuelCostRate.fuel_name))
@@ -256,8 +266,8 @@ class FinanceService:
     async def list_labour_rates(
         self, session: AsyncSession, user: User, plant_id: Optional[UUID] = None
     ) -> list[LabourCostRateResponse]:
-        assert_finance_access(user)
-        q = select(LabourCostRate)
+        assert_finance_masters_view(user)
+        q = self._org_plant_scope(select(LabourCostRate), LabourCostRate.plant_id, user)
         if plant_id:
             q = q.where(LabourCostRate.plant_id == plant_id)
         result = await session.execute(q.order_by(LabourCostRate.role_label))
@@ -289,8 +299,8 @@ class FinanceService:
     async def list_maintenance_rates(
         self, session: AsyncSession, user: User, plant_id: Optional[UUID] = None
     ) -> list[MaintenanceCostRateResponse]:
-        assert_finance_access(user)
-        q = select(MaintenanceCostRate)
+        assert_finance_masters_view(user)
+        q = self._org_plant_scope(select(MaintenanceCostRate), MaintenanceCostRate.plant_id, user)
         if plant_id:
             q = q.where(MaintenanceCostRate.plant_id == plant_id)
         result = await session.execute(q.order_by(MaintenanceCostRate.category))

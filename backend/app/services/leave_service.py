@@ -17,7 +17,13 @@ from app.schemas.workforce_ops import (
     LeaveTypeResponse,
     LeaveTypeUpdate,
 )
-from app.services.access_scope import assert_workforce_manage, is_hr, is_platform_admin
+from app.services.access_scope import (
+    assert_workforce_manage,
+    is_ceo_tier,
+    is_hod_tier,
+    is_hr,
+    is_platform_admin,
+)
 
 
 class LeaveService:
@@ -87,10 +93,14 @@ class LeaveService:
             .join(LeaveType, LeaveRequest.leave_type_id == LeaveType.id)
             .where(User.organisation_id == self._org_id(actor))
         )
+        if is_platform_admin(actor) or is_hr(actor) or is_ceo_tier(actor):
+            pass
+        elif is_hod_tier(actor) and actor.department_id:
+            query = query.where(User.department_id == actor.department_id)
+        else:
+            query = query.where(LeaveRequest.user_id == actor.id)
         if user_id:
             query = query.where(LeaveRequest.user_id == user_id)
-        elif not (is_platform_admin(actor) or is_hr(actor)):
-            query = query.where(LeaveRequest.user_id == actor.id)
         if status:
             query = query.where(LeaveRequest.status == status)
         result = await session.execute(query.order_by(LeaveRequest.created_at.desc()))
@@ -119,6 +129,14 @@ class LeaveService:
         await session.flush()
         return self._leave_response(req, actor.full_name, lt.name)
 
+    @staticmethod
+    def _assert_can_decide(actor: User, requester: User) -> None:
+        if actor.id == requester.id:
+            raise HTTPException(status_code=403, detail="You cannot decide your own leave request")
+        assert_workforce_manage(actor)
+        if not (is_platform_admin(actor) or is_hr(actor)) and actor.department_id != requester.department_id:
+            raise HTTPException(status_code=403, detail="Leave requests outside your department")
+
     async def approve_request(
         self, session: AsyncSession, actor: User, request_id: UUID, data: LeaveRequestDecision
     ) -> LeaveRequestResponse:
@@ -129,6 +147,7 @@ class LeaveService:
         user = await session.get(User, req.user_id)
         if not user or user.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Leave request not found")
+        self._assert_can_decide(actor, user)
         if req.status != LeaveRequestStatus.PENDING.value:
             raise HTTPException(status_code=400, detail="Request already decided")
 
@@ -154,6 +173,7 @@ class LeaveService:
         user = await session.get(User, req.user_id)
         if not user or user.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Leave request not found")
+        self._assert_can_decide(actor, user)
         if req.status != LeaveRequestStatus.PENDING.value:
             raise HTTPException(status_code=400, detail="Request already decided")
 
