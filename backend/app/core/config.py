@@ -1,5 +1,8 @@
 from pathlib import Path
 
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
@@ -34,6 +37,26 @@ class Settings(BaseSettings):
     LOGIN_MAX_FAILURES_PER_ACCOUNT: int = 5
     LOGIN_MAX_FAILURES_PER_IP: int = 30
     LOGIN_LOCKOUT_MINUTES: int = 15
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _normalise_database_url(cls, value: str) -> str:
+        """Accept URLs exactly as Neon / Render / Supabase print them.
+
+        ``postgres://`` / ``postgresql://`` -> ``postgresql+asyncpg://``; libpq-only
+        params (``sslmode``, ``channel_binding``) -> asyncpg's ``ssl``.
+        """
+        value = value.strip()
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                value = "postgresql+asyncpg://" + value[len(prefix):]
+        parts = urlsplit(value)
+        params = dict(parse_qsl(parts.query))
+        sslmode = params.pop("sslmode", None)
+        params.pop("channel_binding", None)
+        if sslmode and sslmode != "disable" and "ssl" not in params:
+            params["ssl"] = "require"
+        return urlunsplit(parts._replace(query=urlencode(params)))
 
     @property
     def cors_origins_list(self) -> list[str]:
