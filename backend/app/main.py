@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from contextlib import asynccontextmanager
 
@@ -32,13 +33,24 @@ from app.utils.seed_finance import seed_finance
 from app.utils.seed_phase4 import seed_phase4
 from app.utils.seed_phase5 import seed_phase5
 from app.services.import_engine.bootstrap import bootstrap_import_handlers
+from app.services.storage import get_storage
 from app.services.masters_service import MastersService
 from sqlalchemy import select
+from sqlalchemy.engine import make_url
 from app.db.models import Organisation
+
+
+logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    db_url = make_url(settings.DATABASE_URL)
+    logger.info(
+        "Database: host=%s port=%s db=%s user=%s ssl=%s storage=%s",
+        db_url.host, db_url.port, db_url.database, db_url.username,
+        db_url.query.get("ssl", "default"), get_storage().name,
+    )
     bootstrap_import_handlers()
     await init_db()
     async with async_session_factory() as session:
