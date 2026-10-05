@@ -2,12 +2,13 @@ import asyncio
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from app.core.security import decode_access_token
-from app.db.models import OperationalEvent, ProcessRun
+from app.db.models import OperationalEvent, Plant, ProcessRun, User
 from app.db.session import async_session_factory
+from app.services.access_scope import assert_run_access, is_platform_admin
 
 router = APIRouter()
 
@@ -35,11 +36,43 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+async def _user_from_payload(session, payload) -> User | None:
+    try:
+        return await session.get(User, UUID(payload["sub"]))
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+async def _may_watch_plant(payload, plant_id: UUID) -> bool:
+    async with async_session_factory() as session:
+        user = await _user_from_payload(session, payload)
+        plant = await session.get(Plant, plant_id)
+        if not user or not user.is_active or not plant:
+            return False
+        return is_platform_admin(user) or plant.organisation_id == user.organisation_id
+
+
+async def _may_watch_run(payload, run_id: UUID) -> bool:
+    async with async_session_factory() as session:
+        user = await _user_from_payload(session, payload)
+        run = await session.get(ProcessRun, run_id)
+        if not user or not user.is_active or not run:
+            return False
+        try:
+            await assert_run_access(session, run, user)
+        except HTTPException:
+            return False
+        return True
+
+
 @router.websocket("/ws/plants/{plant_id}/runs")
 async def plant_runs_ws(websocket: WebSocket, plant_id: UUID, token: str):
     payload = decode_access_token(token)
     if not payload:
         await websocket.close(code=4001)
+        return
+    if not await _may_watch_plant(payload, plant_id):
+        await websocket.close(code=4003)
         return
     channel = f"plant:{plant_id}"
     await manager.connect(channel, websocket)
@@ -55,6 +88,9 @@ async def run_events_ws(websocket: WebSocket, run_id: UUID, token: str):
     payload = decode_access_token(token)
     if not payload:
         await websocket.close(code=4001)
+        return
+    if not await _may_watch_run(payload, run_id):
+        await websocket.close(code=4003)
         return
     channel = f"run:{run_id}"
     await manager.connect(channel, websocket)

@@ -2,6 +2,8 @@ import { router, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAuth } from '@/src/auth/AuthContext';
+import { hasRole, PLATFORM_ADMIN_ROLES } from '@/src/auth/roles';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
@@ -37,11 +39,17 @@ type Props = {
   runId: string;
 };
 
+/** Mirrors backend `_assert_run_editable`: approved or terminal runs accept no field edits. */
+const LOCKED_RUN_STATES = new Set(['approved', 'closed', 'aborted']);
+
 export function RunHostScreen({ runId }: Props) {
   useKeepAwake();
 
   // P6-PERF: keep Screen scroll — one card step at a time (do not FlatList the sheet).
   const host = useRunHost(runId);
+  const { user } = useAuth();
+  // Super Admin may inspect a log sheet but the server refuses every change.
+  const viewOnly = !!user && hasRole(user.role, PLATFORM_ADMIN_ROLES);
   const [stepIndex, setStepIndex] = useState(0);
   const [localError, setLocalError] = useState<string | null>(null);
   /** Jump after steps rebuild (e.g. Add sample). */
@@ -82,12 +90,13 @@ export function RunHostScreen({ runId }: Props) {
 
   // IAF: only Complete tap / Approve / Abort — phase advances with Save&Next.
   // Other templates: always-on CTAs (or last card for generic).
-  const tabTransitions =
+  const guidedOrAlwaysOn =
     useGuided && step
       ? iafManualTransitionsForStep(availableTransitions, step)
       : isAod || isCcm || isRmill || isWire || isBbar || isGrind || stepIndex === host.steps.length - 1
         ? availableTransitions
         : [];
+  const tabTransitions = viewOnly ? [] : guidedOrAlwaysOn;
 
   function jumpToStep(stepId: string) {
     const idx = host.steps.findIndex((s) => s.id === stepId);
@@ -101,7 +110,9 @@ export function RunHostScreen({ runId }: Props) {
   }
 
   async function saveCurrent() {
-    if (!section || !step) return;
+    if (!section || !step || viewOnly) return;
+    // Server rejects edits once approved/closed/aborted (409); saving first would block Close.
+    if (host.run && LOCKED_RUN_STATES.has(host.run.current_state)) return;
     setLocalError(null);
     host.setMessage(null);
     try {
@@ -198,14 +209,16 @@ export function RunHostScreen({ runId }: Props) {
               disabled={stepIndex === 0 || host.saving || host.transitioning}
               onPress={() => void goBack()}
             />
-            <Button
-              title={host.saving ? 'Saving…' : 'Save'}
-              variant="secondary"
-              size="lg"
-              style={styles.footerBtn}
-              loading={host.saving}
-              onPress={() => void saveCurrent()}
-            />
+            {viewOnly ? null : (
+              <Button
+                title={host.saving ? 'Saving…' : 'Save'}
+                variant="secondary"
+                size="lg"
+                style={styles.footerBtn}
+                loading={host.saving}
+                onPress={() => void saveCurrent()}
+              />
+            )}
             <Button
               title="Next"
               size="lg"
@@ -270,6 +283,9 @@ export function RunHostScreen({ runId }: Props) {
         </View>
       ) : null}
       {host.message ? <Text style={styles.success}>{host.message}</Text> : null}
+      {viewOnly ? (
+        <Text style={styles.success}>Read-only: Super Admin can view this log sheet but not change it.</Text>
+      ) : null}
 
       <Card>
         <Text style={styles.stepTitle}>{step.label}</Text>

@@ -33,9 +33,17 @@ class DocumentService:
         )
         if plant_id:
             query = query.where(DepartmentDocument.plant_id == plant_id)
+        if not is_platform_admin(user):
+            # Never leave the user's own organisation.
+            query = query.where(
+                DepartmentDocument.plant_id.in_(
+                    select(Plant.id).where(Plant.organisation_id == user.organisation_id)
+                )
+            )
         if department_id:
             query = query.where(DepartmentDocument.department_id == department_id)
-        elif not (is_platform_admin(user) or is_ceo_tier(user) or is_hr(user)):
+        if not (is_platform_admin(user) or is_ceo_tier(user) or is_hr(user)):
+            # Everyone else sees only their own department, even if another one is requested.
             if user.department_id:
                 query = query.where(DepartmentDocument.department_id == user.department_id)
             else:

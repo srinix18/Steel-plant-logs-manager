@@ -30,6 +30,7 @@ import {
 } from '@/src/api/lookups';
 import { fetchAllRuns } from '@/src/api/processRuns';
 import { useAuth } from '@/src/auth/AuthContext';
+import { hasRole, SUPERVISOR_ONLY_ROLES } from '@/src/auth/roles';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
@@ -220,16 +221,18 @@ export function SupervisorMonitorScreen({
               </View>
             ) : null}
 
-            <Button
-              title="Raise maintenance issue"
-              size="lg"
-              fullWidth
-              onPress={() => {
-                resetMaintForm();
-                setShowMaintModal(true);
-              }}
-              style={styles.raiseBtn}
-            />
+            {user && hasRole(user.role, SUPERVISOR_ONLY_ROLES) ? (
+              <Button
+                title="Raise maintenance issue"
+                size="lg"
+                fullWidth
+                onPress={() => {
+                  resetMaintForm();
+                  setShowMaintModal(true);
+                }}
+                style={styles.raiseBtn}
+              />
+            ) : null}
 
             <View style={styles.filters}>
               <View style={styles.filterCol}>

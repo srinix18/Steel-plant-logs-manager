@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser, DbSession, SupervisorUser
 from app.schemas.moi import (
@@ -13,6 +13,8 @@ from app.schemas.moi import (
     OperationalEventResponse,
     TelemetryBindingResponse,
 )
+from app.db.models import ProcessRun
+from app.services.access_scope import assert_run_access
 from app.services.operations_service import EventService, ObservationService
 
 router = APIRouter()
@@ -21,12 +23,12 @@ observation_service = ObservationService()
 
 
 @router.post("/integrations/events", response_model=list[OperationalEventResponse])
-async def ingest_events(events: list[OperationalEventCreate], session: DbSession, user: CurrentUser):
+async def ingest_events(events: list[OperationalEventCreate], session: DbSession, user: SupervisorUser):
     return await event_service.ingest_events(session, events, user)
 
 
 @router.post("/integrations/lims/results", response_model=list[OperationalEventResponse])
-async def lims_webhook(events: list[OperationalEventCreate], session: DbSession, user: CurrentUser):
+async def lims_webhook(events: list[OperationalEventCreate], session: DbSession, user: SupervisorUser):
     for e in events:
         e.source = __import__("app.models.enums", fromlist=["EventSource"]).EventSource.LIMS
     return await event_service.ingest_events(session, events, user)
@@ -38,7 +40,11 @@ async def list_bindings(session: DbSession, _: CurrentUser, asset_id: UUID | Non
 
 
 @router.get("/process-runs/{run_id}/events", response_model=list[OperationalEventResponse])
-async def run_events(run_id: UUID, session: DbSession, _: CurrentUser):
+async def run_events(run_id: UUID, session: DbSession, user: CurrentUser):
+    run = await session.get(ProcessRun, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Process run not found")
+    await assert_run_access(session, run, user)
     return await event_service.list_run_events(session, run_id)
 
 

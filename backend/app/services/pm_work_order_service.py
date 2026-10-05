@@ -294,6 +294,11 @@ class PmWorkOrderService:
                 status_code=400,
                 detail=f"Cannot transition from {wo.status} to {to_state}",
             )
+        if to_state == "completed" and any(t.status == "pending" for t in wo.tasks):
+            raise HTTPException(
+                status_code=400,
+                detail="Complete every task (Pass, Fail or N/A) before marking the work order completed",
+            )
         await self._record_transition(session, wo, wo.status, to_state, actor.id, data.notes)
         await session.flush()
         return self._wo_response(await self._load_wo(session, actor, wo_id))

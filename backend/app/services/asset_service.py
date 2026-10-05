@@ -107,6 +107,11 @@ class AssetService:
         return _asset_response(asset)
 
     async def create_asset(self, session: AsyncSession, data: AssetAdminCreate) -> AssetAdminResponse:
+        duplicate = await session.execute(
+            select(Asset.id).where(Asset.plant_id == data.plant_id, Asset.asset_no == data.asset_no)
+        )
+        if duplicate.first():
+            raise HTTPException(status_code=409, detail=f"Asset No '{data.asset_no}' already exists in this plant")
         asset = Asset(
             plant_id=data.plant_id,
             group_id=data.group_id,

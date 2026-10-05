@@ -11,6 +11,7 @@ import {
   type WorkforceEmployeeUpdatePayload,
 } from '@/src/api/workforce';
 import { useAuth } from '@/src/auth/AuthContext';
+import { CEO_TIER_ROLES, hasRole, WORKFORCE_HR_ROLES } from '@/src/auth/roles';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
@@ -30,6 +31,10 @@ import { colors, spacing, typography } from '@/src/theme/tokens';
 export function WorkforceEmployeesScreen() {
   const { user } = useAuth();
   const orgId = user?.organisation_id ?? '';
+  // The server lets only HR, CEO and admin create or edit employees; a HoD gets a read-only list.
+  const canEditEmployees = user
+    ? hasRole(user.role, [...WORKFORCE_HR_ROLES, ...CEO_TIER_ROLES])
+    : false;
   const [employees, setEmployees] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,17 +113,20 @@ export function WorkforceEmployeesScreen() {
           <Text style={styles.title}>Employees</Text>
           <Text style={styles.sub}>
             Permanent employee master — linked to log sheet user pickers.
+            {canEditEmployees ? '' : ' View only — HR adds and edits employees.'}
           </Text>
 
-          <Button
-            title="Add employee"
-            size="lg"
-            style={styles.addBtn}
-            onPress={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-          />
+          {canEditEmployees ? (
+            <Button
+              title="Add employee"
+              size="lg"
+              style={styles.addBtn}
+              onPress={() => {
+                setEditing(null);
+                setShowForm(true);
+              }}
+            />
+          ) : null}
 
           {error ? (
             <View style={styles.banner}>
@@ -129,7 +137,10 @@ export function WorkforceEmployeesScreen() {
       }
       empty={
         !error ? (
-          <EmptyState title="No employees yet." description="Tap Add employee to create one." />
+          <EmptyState
+            title="No employees yet."
+            description={canEditEmployees ? 'Tap Add employee to create one.' : 'HR can add employees.'}
+          />
         ) : null
       }
       renderItem={({ item: u }) => (
@@ -148,16 +159,18 @@ export function WorkforceEmployeesScreen() {
           <Text style={styles.line}>
             {u.designation ?? '—'} · {u.role.replace(/_/g, ' ')}
           </Text>
-          <Button
-            title="Edit"
-            variant="secondary"
-            size="sm"
-            style={styles.editBtn}
-            onPress={() => {
-              setEditing(u);
-              setShowForm(true);
-            }}
-          />
+          {canEditEmployees ? (
+            <Button
+              title="Edit"
+              variant="secondary"
+              size="sm"
+              style={styles.editBtn}
+              onPress={() => {
+                setEditing(u);
+                setShowForm(true);
+              }}
+            />
+          ) : null}
         </Card>
       )}
     />

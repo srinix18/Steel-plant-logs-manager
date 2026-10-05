@@ -1,0 +1,48 @@
+# EAS Build upload rules. When this file exists, EAS ignores every .gitignore,
+# and on Windows eas-cli never applied nested ones (mobile/.gitignore) anyway.
+# Only mobile/ is needed to build the app.
+
+# Everything outside the mobile app
+/backend/
+/frontend/
+/docs/
+/scripts/
+/.cursor/
+*.apk
+*.aab
+*.log
+*.md
+
+# Secrets
+.env
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Dependencies (EAS runs npm ci itself)
+node_modules/
+
+# Generated native folders: EAS runs prebuild. A local copy carries
+# Windows paths in android/build/generated/autolinking and breaks Gradle.
+/mobile/android/
+/mobile/ios/
+
+# Expo / Metro / build output
+.expo/
+dist/
+web-build/
+dist-smoke/
+.kotlin/
+.metro-health-check*
+*.tsbuildinfo
+*.orig.*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

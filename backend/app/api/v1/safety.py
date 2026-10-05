@@ -4,6 +4,13 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser, DbSession
+from app.services.access_scope import (
+    MAINTENANCE_ROLES,
+    SUPERVISOR_TIER_ROLES,
+    WORKER_ROLES,
+    assert_plant_in_scope,
+    user_has_role,
+)
 from app.schemas.pulse import (
     SafetyDashboardResponse,
     SafetyIncidentCreate,
@@ -15,15 +22,22 @@ from app.utils.chandan_org import get_chandan_plant
 router = APIRouter()
 safety_service = SafetyService()
 
+# Anyone working on the floor may report an incident; only supervisors and above, or the
+# maintenance crew, record inspections. HR and other roles have no safety write access.
+INCIDENT_REPORTERS = SUPERVISOR_TIER_ROLES | MAINTENANCE_ROLES | WORKER_ROLES
+INSPECTORS = SUPERVISOR_TIER_ROLES | MAINTENANCE_ROLES
+
 
 @router.get("/safety/dashboard/{plant_id}", response_model=SafetyDashboardResponse)
 async def safety_dashboard(plant_id: UUID, session: DbSession, user: CurrentUser):
+    await assert_plant_in_scope(session, user, plant_id)
     data = await safety_service.dashboard(session, plant_id)
     return SafetyDashboardResponse(**data)
 
 
 @router.get("/safety/inspections/{plant_id}")
 async def list_inspections(plant_id: UUID, session: DbSession, user: CurrentUser):
+    await assert_plant_in_scope(session, user, plant_id)
     rows = await safety_service.list_inspections(session, plant_id)
     return [
         {
@@ -43,6 +57,9 @@ async def list_inspections(plant_id: UUID, session: DbSession, user: CurrentUser
 async def create_inspection(
     plant_id: UUID, data: SafetyInspectionCreate, session: DbSession, user: CurrentUser
 ):
+    await assert_plant_in_scope(session, user, plant_id)
+    if not user_has_role(user, INSPECTORS):
+        raise HTTPException(status_code=403, detail="Not permitted to record inspections")
     insp = await safety_service.create_inspection(
         session,
         plant_id,
@@ -58,6 +75,7 @@ async def create_inspection(
 
 @router.get("/safety/incidents/{plant_id}")
 async def list_incidents(plant_id: UUID, session: DbSession, user: CurrentUser):
+    await assert_plant_in_scope(session, user, plant_id)
     rows = await safety_service.list_incidents(session, plant_id)
     return [
         {
@@ -75,6 +93,9 @@ async def list_incidents(plant_id: UUID, session: DbSession, user: CurrentUser):
 async def create_incident(
     plant_id: UUID, data: SafetyIncidentCreate, session: DbSession, user: CurrentUser
 ):
+    await assert_plant_in_scope(session, user, plant_id)
+    if not user_has_role(user, INCIDENT_REPORTERS):
+        raise HTTPException(status_code=403, detail="Not permitted to report incidents")
     inc = await safety_service.create_incident(
         session,
         plant_id,
@@ -91,6 +112,7 @@ async def create_incident(
 
 @router.get("/safety/sops/{plant_id}")
 async def list_sops(plant_id: UUID, session: DbSession, user: CurrentUser, asset_id: UUID | None = None):
+    await assert_plant_in_scope(session, user, plant_id)
     rows = await safety_service.list_sops(session, plant_id, asset_id)
     return [{"id": str(s.id), "title": s.title, "category": s.category, "version": s.version} for s in rows]
 

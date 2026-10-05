@@ -46,6 +46,7 @@ from app.schemas.foundation import (
 )
 from app.services.access_scope import (
     assert_can_manage_assets,
+    assert_plant_in_scope,
     assert_can_manage_masters,
     assert_can_view_documents,
     assert_can_view_foundation,
@@ -59,6 +60,12 @@ from app.services.masters_service import MastersService
 from app.models.enums import DocumentCategory
 
 router = APIRouter()
+
+
+def _assert_hod_owns_department(user, department_id) -> None:
+    """A HoD manages assets of their own department only; CEO tier and admins manage any."""
+    if user.role.value in ("hod", "plant_admin") and department_id != user.department_id:
+        raise HTTPException(status_code=403, detail="HoDs can manage assets of their own department only")
 masters_service = MastersService()
 asset_service = AssetService()
 document_service = DocumentService()
@@ -203,12 +210,19 @@ async def get_foundation_asset(asset_id: UUID, session: DbSession, user: Current
 @router.post("/foundation/assets", response_model=AssetAdminResponse, status_code=201)
 async def create_foundation_asset(data: AssetAdminCreate, session: DbSession, user: CurrentUser):
     assert_can_manage_assets(user)
+    await assert_plant_in_scope(session, user, data.plant_id)
+    _assert_hod_owns_department(user, data.department_id)
     return await asset_service.create_asset(session, data)
 
 
 @router.patch("/foundation/assets/{asset_id}", response_model=AssetAdminResponse)
 async def update_foundation_asset(asset_id: UUID, data: AssetAdminUpdate, session: DbSession, user: CurrentUser):
     assert_can_manage_assets(user)
+    current = await asset_service.get_asset(session, asset_id)
+    await assert_plant_in_scope(session, user, current.plant_id)
+    _assert_hod_owns_department(user, current.department_id)
+    if data.department_id is not None:
+        _assert_hod_owns_department(user, data.department_id)
     return await asset_service.update_asset(session, asset_id, data)
 
 
@@ -339,6 +353,12 @@ async def upload_document(
     assert_can_view_documents(user)
     if not (is_hod_tier(user) or user.role.value in ("super_admin", "admin", "ceo", "org_admin", "hr")):
         raise HTTPException(status_code=403, detail="Only HoD or above can upload documents")
+    await assert_plant_in_scope(session, user, plant_id)
+    if (
+        user.role.value in ("hod", "plant_admin")
+        and user.department_id != department_id
+    ):
+        raise HTTPException(status_code=403, detail="HoDs can upload documents only for their own department")
     meta = DocumentUploadMeta(
         plant_id=plant_id,
         department_id=department_id,

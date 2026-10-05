@@ -90,8 +90,9 @@ export function parseStaticMaterialSection(
   return buildStaticMaterialSection(config);
 }
 
-export function staticMaterialToPayload(data: StaticMaterialSectionData): MaterialRow[] {
-  return data.rows.filter((r) => r.quantity_kg != null);
+/** Backend `section_data[].data` must be an object — a bare array is rejected with 422. */
+export function staticMaterialToPayload(data: StaticMaterialSectionData): StaticMaterialSectionData {
+  return { rows: data.rows.filter((r) => r.quantity_kg != null) };
 }
 
 export function getBlowProcessConfig(section: TemplateSection) {

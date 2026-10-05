@@ -103,6 +103,9 @@ async def _issue_in_department(session: AsyncSession, issue: MaintenanceIssue, d
 def apply_maintenance_issue_scope(query: Select, user: User) -> Select:
     if is_platform_admin(user):
         return query
+    if is_hr(user):
+        # HR has no maintenance screen; do not fall through to the plant-wide default below.
+        return query.where(False)
     if is_maintenance(user) and user.maintenance_division:
         query = query.where(pg_category_matches_division(MaintenanceIssue.category, user.maintenance_division))
         if user.organisation_id:
@@ -125,6 +128,8 @@ def apply_maintenance_issue_scope(query: Select, user: User) -> Select:
 async def assert_maintenance_issue_access(session: AsyncSession, issue: MaintenanceIssue, user: User) -> None:
     if is_platform_admin(user):
         return
+    if is_hr(user):
+        raise HTTPException(status_code=403, detail="Access denied")
     if is_maintenance(user):
         if not categories_equal(issue.category, user.maintenance_division):
             raise HTTPException(status_code=403, detail="Access denied")
