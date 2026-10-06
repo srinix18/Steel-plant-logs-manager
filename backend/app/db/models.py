@@ -1632,3 +1632,14 @@ class LoginAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
+
+
+class DemoSeedState(Base):
+    """Which phases of the demo-activity seed have finished, so a restart resumes instead of repeating."""
+
+    __tablename__ = "demo_seed_state"
+
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     SEED_ADMIN_EMAIL: str = "admin@logbook.app"
     SEED_ADMIN_PASSWORD: str = "admin123"
     SEED_ADMIN_NAME: str = "System Admin"
+    # Fill an empty plant with two weeks of believable history (runs, leave, payroll, ...) once,
+    # in the background after startup. Set to false for a clean production database.
+    SEED_DEMO_ACTIVITY: bool = True
     UPLOAD_DIR: str = "uploads"
     # Set S3_BUCKET to store files in S3 instead of local disk (see app/services/storage.py).
     S3_BUCKET: str = ""

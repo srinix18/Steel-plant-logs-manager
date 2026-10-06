@@ -18,6 +18,7 @@ TEST_DATABASE_URL = os.environ.get(
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
+os.environ.setdefault("SEED_DEMO_ACTIVITY", "false")  # tests start from a clean seed, not demo history
 
 
 def _reset_schema() -> None:

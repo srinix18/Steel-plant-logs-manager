@@ -44,7 +44,7 @@ logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(fastapi_app: FastAPI):
     db_url = make_url(settings.DATABASE_URL)
     logger.info(
         "Database: host=%s port=%s db=%s user=%s ssl=%s storage=%s",
@@ -104,9 +104,18 @@ async def lifespan(_: FastAPI):
 
     refresh_task = asyncio.create_task(_pulse_refresh_loop())
 
+    demo_task = None
+    if settings.SEED_DEMO_ACTIVITY:
+        from app.utils.seed_demo_activity import seed_demo_activity_in_background
+
+        # Background: the server accepts requests immediately; history fills in over the next minute or two.
+        demo_task = asyncio.create_task(seed_demo_activity_in_background(fastapi_app))
+
     yield
 
     refresh_task.cancel()
+    if demo_task:
+        demo_task.cancel()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
