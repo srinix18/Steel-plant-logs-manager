@@ -791,10 +791,17 @@ class Demo:
         by_dept: dict[str, list[tuple[str, str]]] = {}
         for (dept, shift), users in groups.items():
             by_dept.setdefault(dept, []).extend((u, shift) for u in users)
+        existing = {(x["department_id"], x["period_start"]) for x in (await self.ok("hr", "GET", "/workforce/ops/rosters") or [])}
         for week, publish in ((monday, True), (monday + timedelta(days=7), False)):
             for dept, members in by_dept.items():
+                if (dept, week.isoformat()) in existing:
+                    continue  # an interrupted earlier start already made it
                 entries = []
+                seen: set[str] = set()
                 for i, (uid, shift) in enumerate(members):
+                    if uid in seen:
+                        continue  # a person with more than one assignment appears once in the roster
+                    seen.add(uid)
                     rotate = list(self.shifts)
                     # next week the shifts rotate by one, as a real roster would
                     code = next(c for c, s in self.shifts.items() if s["id"] == shift)
@@ -1068,7 +1075,12 @@ class Demo:
             if await session.get(DemoSeedState, name):
                 log.info("demo seed: phase %s already done", name)
                 return
-        await fn()
+        try:
+            await fn()
+        except Exception:  # leave the phase unmarked so the next start retries it; later phases still run
+            log.exception("demo seed: phase %s failed", name)
+            self.failures += 1
+            return
         async with async_session_factory() as session:
             session.add(DemoSeedState(name=name))
             await session.commit()
