@@ -55,6 +55,7 @@ ACCOUNTS: dict[str, tuple[str, str]] = {
     "hod_sms": ("hod@chandansteel.com", "hod123"),
     "sup_iaf": ("iaf.supervisor@chandansteel.com", "iaf123"),
     "sup_aod": ("aod.supervisor@chandansteel.com", "aod123"),
+    "legacy_sup": ("supervisor@chandansteel.com", "supervisor123"),
     "sup_ccm": ("ccm.supervisor@chandansteel.com", "ccm123"),
     "worker_sms": ("melter@chandansteel.com", "worker123"),
     "hod_rolling": ("hod.rolling@chandansteel.com", "hod123"),
@@ -97,13 +98,14 @@ RUN_PLAN: list[tuple[str, int, str, str]] = [
     ("IAF", 8, "A", "closed"), ("IAF", 7, "B", "closed"), ("IAF", 7, "C", "closed"),
     ("IAF", 5, "A", "closed"), ("IAF", 5, "B", "closed"), ("IAF", 4, "A", "closed"),
     ("IAF", 3, "C", "closed"), ("IAF", 2, "A", "closed"), ("IAF", 2, "B", "aborted"),
-    ("IAF", 1, "A", "approved"), ("IAF", 1, "B", "completed"),
+    ("IAF", 1, "A", "approved"), ("IAF", 1, "B", "completed"), ("IAF", 1, "C", "completed"),
     ("AOD", 7, "B", "closed"), ("AOD", 5, "B", "closed"), ("AOD", 4, "A", "closed"),
-    ("AOD", 2, "A", "closed"), ("AOD", 1, "A", "approved"),
+    ("AOD", 2, "A", "closed"), ("AOD", 1, "A", "approved"), ("AOD", 1, "B", "completed"),
     ("CCM", 7, "B", "closed"), ("CCM", 5, "B", "closed"), ("CCM", 3, "C", "closed"),
     ("CCM", 2, "A", "closed"), ("CCM", 1, "B", "completed"),
     ("RMILL", 6, "A", "closed"), ("RMILL", 5, "B", "closed"), ("RMILL", 3, "A", "closed"),
     ("RMILL", 2, "B", "closed"), ("RMILL", 1, "A", "approved"),
+    ("RMILL", 1, "B", "completed"),
     ("WFURN", 6, "A", "closed"), ("WFURN", 4, "B", "closed"), ("WFURN", 2, "A", "closed"),
     ("WFURN", 1, "B", "completed"),
     ("WDRAW", 5, "B", "closed"), ("WDRAW", 3, "A", "closed"), ("WDRAW", 1, "A", "approved"),
@@ -126,6 +128,28 @@ OPERATORS_NOTES = [
 ]
 
 HOURLY_REMARKS = ["", "", "", "Roll change", "", "Billet size change", "", ""]
+
+
+def _simple_pdf(title: str, body: str) -> bytes:
+    """A one-page PDF with a title and a paragraph, enough to open in any viewer."""
+    esc = lambda s: s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    stream = f"BT /F1 20 Tf 72 740 Td ({esc(title)}) Tj ET\nBT /F1 12 Tf 72 700 Td ({esc(body)}) Tj ET\nBT /F1 10 Tf 72 660 Td (Chandan Steel - controlled document, version 1.0) Tj ET"
+    objs = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        f"<< /Length {len(stream)} >>\nstream\n{stream}\nendstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = "%PDF-1.4\n"
+    offsets = []
+    for i, o in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += f"{i} 0 obj\n{o}\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(objs) + 1}\n0000000000 65535 f \n" + "".join(f"{off:010d} 00000 n \n" for off in offsets)
+    out += f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n"
+    return out.encode("latin-1", "replace")
 
 
 def _weekdays_back(count: int, end: date) -> list[date]:
@@ -514,6 +538,10 @@ class Demo:
     # -------------------------------------------------------------- run lifecycle
     async def _make_run(self, process: str, days_ago: int, shift: str, final: str, seq: int) -> None:
         run_type, worker_key, sup_key, prefix = PROCESS_PLAN[process]
+        # Sheets left at "completed" were started by the shift in-charge, so each supervisor's My Runs has something in it.
+        operator_key = worker_key
+        if final == "completed":
+            worker_key = "legacy_sup" if (process == "IAF" and shift == "C") else sup_key
         instances = self.instances.get(process) or []
         if not instances or shift not in self.shifts:
             return
@@ -540,10 +568,10 @@ class Demo:
         if not tv:
             return
         times = self._times(d, shift, seq % 3)
-        dept_people = self._people(process, worker_key, sup_key)
+        dept_people = self._people(process, operator_key, sup_key)
         ctx: dict[str, Any] = {
             "date": d, "shift": shift, "heat_no": heat_no, "grade_id": grade["id"], "grade_code": grade["code"],
-            "people": dept_people, "signer": self.me[worker_key]["full_name"], "times": times, "seq": idx,
+            "people": dept_people, "signer": self.me[operator_key]["full_name"], "times": times, "seq": idx,
             "supervisor_id": self._user_id(sup_key), "charge": self._charge(grade["code"]),
         }
         # How much of the sheet exists depends on how far the run got.
@@ -609,7 +637,7 @@ class Demo:
             if status >= 400:
                 break
             reached.append(st)
-            if st == "completed" and reply_to:
+            if st == "completed" and reply_to and worker_key not in (sup_key, "legacy_sup"):
                 await self.call(sup_key, "POST", f"/process-runs/{rid}/remarks/{reply_to}/reply", json={"body": self.rng.choice(["Noted.", "OK, keep me posted.", "Thanks, logged."])})
             if st == "completed" and final != "completed" and self.rng.random() < 0.3:
                 await self.call(sup_key, "POST", f"/process-runs/{rid}/remarks", json={"body": self.rng.choice([
@@ -712,6 +740,24 @@ class Demo:
     # ------------------------------------------------------------------- the rest
     async def make_workforce(self) -> None:
         r = self.rng
+        # Everyone who works in a department gets a shift and a salary, so every login has attendance and a payslip.
+        assignments = await self.ok("hr", "GET", "/workforce/shift-assignments") or []
+        assigned = {a["user_id"] for a in assignments}
+        structures = {s["user_id"] for s in (await self.ok("hr", "GET", "/workforce/payroll/salary-structures") or [])}
+        pay = {"hod": (48000, 15000, 4000), "supervisor": (32000, 10000, 3000), "worker": (22000, 7000, 1500)}
+        for who in ACCOUNTS:
+            me = self.me.get(who) or {}
+            uid, dept = me.get("id"), me.get("department_id")
+            if not uid or not dept or me.get("role") not in pay:
+                continue
+            if uid not in assigned:
+                shift = self.shifts["A" if me["role"] != "worker" else ["A", "B"][len(assigned) % 2]]["id"]
+                await self.call("hr", "POST", "/workforce/shift-assignments", json={"user_id": uid, "department_id": dept, "shift_id": shift, "effective_date": (self.today - timedelta(days=45)).isoformat()})
+                assigned.add(uid)
+            if uid not in structures:
+                basic, hra, allow = pay[me["role"]]
+                await self.call("hr", "POST", "/workforce/payroll/salary-structures", json={"user_id": uid, "basic": basic, "hra": hra, "allowances": allow, "pf": round(basic * 0.12), "esi": 500, "other_deductions": 200, "effective_from": "2024-01-01"})
+                structures.add(uid)
         assignments = await self.ok("hr", "GET", "/workforce/shift-assignments") or []
         groups: dict[tuple[str, str], list[str]] = {}
         for a in assignments:
@@ -739,6 +785,26 @@ class Demo:
             for d in days:
                 await self.call("hr", "POST", "/workforce/contractor-attendance", json={"attendance_date": d.isoformat(), "contractor_id": contractor_id, "department_id": dept, "shift_id": shift_a, "workers_present": r.randint(3, 6), "workers_absent": r.randint(0, 2)})
         log.info("demo seed: attendance recorded")
+
+        # Shift rosters: this week (published) and next week (draft) for every department.
+        monday = self.today - timedelta(days=self.today.weekday())
+        by_dept: dict[str, list[tuple[str, str]]] = {}
+        for (dept, shift), users in groups.items():
+            by_dept.setdefault(dept, []).extend((u, shift) for u in users)
+        for week, publish in ((monday, True), (monday + timedelta(days=7), False)):
+            for dept, members in by_dept.items():
+                entries = []
+                for i, (uid, shift) in enumerate(members):
+                    rotate = list(self.shifts)
+                    # next week the shifts rotate by one, as a real roster would
+                    code = next(c for c, s in self.shifts.items() if s["id"] == shift)
+                    if not publish:
+                        code = rotate[(rotate.index(code) + 1) % len(rotate)] if code in rotate else code
+                    for day in range(6):
+                        entries.append({"user_id": uid, "shift_id": self.shifts[code]["id"], "roster_date": (week + timedelta(days=day)).isoformat()})
+                roster = await self.ok("hr", "POST", "/workforce/ops/rosters", json={"department_id": dept, "period_start": week.isoformat(), "period_end": (week + timedelta(days=5)).isoformat(), "period_type": "weekly", "entries": entries})
+                if roster and publish:
+                    await self.call("hr", "POST", f"/workforce/ops/rosters/{roster['id']}/publish")
 
         # Payroll for the previous month (uses the attendance just recorded)
         run = await self.ok("hr", "POST", "/workforce/payroll/runs", json={"plant_id": self.plant_id, "month": last_prev.month, "year": last_prev.year})
@@ -850,6 +916,9 @@ class Demo:
             ("hod_sms", "process", "medium", "Tap-to-tap time above target on night shift", "Average 112 min vs 100 target over the last week.", "sup_iaf"),
             ("sup_rolling", "equipment", "high", "Recurring pusher jams", "Three jams in a week; check alignment.", "sup_rolling"),
             ("hod_wire", "energy", "low", "Annealing furnace idle burn", "Furnace kept hot between coils.", "sup_wire"),
+            ("hod_bbd", "quality", "medium", "Scratches on peeled 20 mm bars", "Light scratches seen after peeling on two lots.", "sup_bbd"),
+            ("hod_forge", "safety", "medium", "Weak dust extraction at work centre 2", "Collector suction below normal during grinding.", "sup_forge"),
+            ("hod_rolling", "process", "low", "Billet heating uneven at furnace exit", "Cold ends seen on three billets.", "sup_rolling"),
         ]
         for i, (who, cat, sev, title, desc, assignee) in enumerate(obs):
             dept = self.me[who]["department_id"]
@@ -878,12 +947,55 @@ class Demo:
             ("sup_iaf", ["hod_sms"], False, "Crucible reline request", "IAF-2 crucible is at 38 heats. Requesting a reline slot on Friday."),
             ("worker_sms", ["sup_iaf"], False, "Uniform request", "Need a new set of safety shoes, size 9."),
             ("hr", ["worker_rolling", "worker_wire", "worker_bbd"], False, "Payslips available", "Last month's payslips are now available under My Payslips."),
+            ("legacy_sup", ["hod_sms"], False, "Scrap stock", "Scrap yard has two days of 304 left; please plan the next purchase."),
+            ("admin", None, True, "Welcome to MOI", "Your plant's logbook is live. Use Messages for anything the whole team should see."),
+            ("hod_rolling", ["sup_rolling", "worker_rolling"], False, "Roll change on Saturday", "Roll change is planned for the Saturday night shift. Please prepare the roll shop."),
+            ("sup_rolling", ["hod_rolling"], False, "Pusher alignment", "Pusher aligned after the morning jam. Watching it for the next two shifts."),
+            ("worker_rolling", ["sup_rolling"], False, "Gloves stock", "Gloves are running low at the mill pulpit."),
+            ("hod_wire", ["sup_wire", "worker_wire"], False, "Die set change", "Die set for 3.2 mm arrives Tuesday. Plan the changeover."),
+            ("sup_wire", ["worker_wire"], False, "Annealing profile", "Please follow the revised annealing profile from today's shift."),
+            ("worker_wire", ["sup_wire"], False, "Lubricant stock", "Soap powder will finish by tomorrow evening."),
+            ("hod_bbd", ["sup_bbd", "worker_bbd"], False, "Dispatch plan", "Tata dispatch is on Thursday. Keep the packing material ready."),
+            ("sup_bbd", ["hod_bbd"], False, "Peeling queue", "Two orders are waiting for the peeling machine."),
+            ("worker_bbd", ["sup_bbd"], False, "Straightener noise", "Straightener roller makes a rubbing sound at speed."),
+            ("hod_forge", ["sup_forge", "worker_forge"], False, "Wheel change schedule", "Grinding wheels are changed every Monday. Please log it."),
+            ("sup_forge", ["hod_forge"], False, "Dust collector", "Dust collector suction is weak at centre 2; maintenance informed."),
+            ("worker_forge", ["sup_forge"], False, "Ear plugs", "Need a fresh box of ear plugs."),
+            ("sup_aod", ["hod_sms"], False, "Argon bank", "Argon bank changeover done; 40 bar on the new bank."),
+            ("sup_ccm", ["hod_sms"], False, "Tundish plan", "Tundish T-2 preheated for tomorrow's first cast."),
+            ("maint_equipment", ["hr"], False, "IAF-2 flow switch replaced", "Flow switch replaced on IAF-2; the trip has not returned since."),
+            ("maint_process", ["hr"], False, "Flow meter calibration", "Argon flow meter calibrated; certificate in documents."),
+            ("maint_quality", ["hr"], False, "Casting powder", "New casting powder batch checked; use from the next cast."),
+            ("maint_safety", ["hr"], False, "Fire audit", "Fire extinguisher audit is due this month. Please keep access clear."),
+            ("maint_energy", ["hr"], False, "Power factor", "Capacitor bank step 3 repaired; power factor back above 0.95."),
         ]
         for who, to, broadcast, subject, body in msgs:
             payload: dict[str, Any] = {"subject": subject, "body": body, "recipient_ids": [self._user_id(t) for t in (to or [])], "is_broadcast": broadcast}
             sent = await self.ok(who, "POST", "/messages", json=payload)
             if sent:
                 self.msg_ids.append(sent["id"])
+
+    async def make_documents(self) -> None:
+        """Two controlled documents per department, uploaded by that department's HoD."""
+        catalog = {
+            "hod_sms": [("sop", "Induction furnace operating SOP", "Charging, melting, sampling and tapping steps for the induction furnaces."),
+                        ("safety_procedure", "Hot metal handling safety", "Protective equipment, ladle checks and spill response.")],
+            "hod_rolling": [("work_instruction", "Roll change work instruction", "Steps and checks for a safe roll change."),
+                            ("maintenance_manual", "Rolling mill lubrication chart", "Greasing points and intervals for every stand.")],
+            "hod_wire": [("sop", "Wire drawing die change SOP", "Die set removal, fitting and first-coil checks."),
+                         ("quality_document", "Annealing temperature profiles", "Approved profiles by grade and coil size.")],
+            "hod_bbd": [("work_instruction", "Peeling and straightening instruction", "Setup, speeds and surface checks for bright bar."),
+                        ("quality_document", "Bright bar inspection checklist", "Dimension, straightness and surface finish checks.")],
+            "hod_forge": [("safety_procedure", "Grinding machine safety", "Wheel inspection, guards and dust extraction checks."),
+                          ("training_material", "Forge shop induction", "Introduction for new joiners to the forge shop.")],
+        }
+        for who, docs in catalog.items():
+            await self.login(who)
+            dept = self.me[who]["department_id"]
+            for category, title, body in docs:
+                content = _simple_pdf(title, body)
+                await self.call(who, "POST", "/foundation/documents", data={"plant_id": self.plant_id, "department_id": dept, "category": category, "title": title, "version": "1.0"},
+                                files={"file": (title.lower().replace(" ", "_") + ".pdf", content, "application/pdf")})
 
     async def make_work_orders(self) -> None:
         sms = self.me["hod_sms"]["department_id"]
@@ -935,7 +1047,7 @@ class Demo:
             for i, mid in enumerate(self.msg_ids):
                 m = await session.get(Message, uuid.UUID(mid))
                 if m:
-                    m.created_at = now - timedelta(days=len(self.msg_ids) - i, hours=r.randint(0, 5))
+                    m.created_at = now - timedelta(days=(len(self.msg_ids) - i) // 3, hours=r.randint(0, 5))
             for i, oid in enumerate(self.obs_ids):
                 o = await session.get(Observation, uuid.UUID(oid))
                 if o:
@@ -976,6 +1088,7 @@ class Demo:
         await self._phase("issues_safety", self.make_issues_and_safety)
         await self._phase("messages", self.make_messages)
         await self._phase("work_orders", self.make_work_orders)
+        await self._phase("documents", self.make_documents)
         await self._phase("finish", self._finish_phase)
 
 
