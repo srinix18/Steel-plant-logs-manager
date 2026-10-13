@@ -9,6 +9,13 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.pulse_live import (
+    attendance_summary,
+    day_start_utc,
+    open_issue_count,
+    pending_work_orders,
+    plant_department_ids,
+)
 from app.db.models import (
     Asset,
     AssetHealthRecord,
@@ -129,6 +136,14 @@ class PulseService:
                 )
             )
 
+        # Counts people act on are read live, so they follow an edit at once rather than at the next snapshot.
+        live_attendance = await attendance_summary(session, await plant_department_ids(session, plant_id))
+        live_alerts = await open_issue_count(session, plant_id)
+        live_pending = await pending_work_orders(session, plant_id)
+        for card in dept_cards:
+            card.open_issues = await open_issue_count(session, plant_id, card.department_id)
+            card.maintenance_alerts = await pending_work_orders(session, plant_id, card.department_id)
+
         oee_detail = OEEMetrics()
         if snap and snap.metrics.get("oee_detail"):
             od = snap.metrics["oee_detail"]
@@ -152,10 +167,10 @@ class PulseService:
             today_cost=snap.today_cost if snap else None,
             power_consumption_kwh=snap.power_consumption_kwh if snap else None,
             downtime_minutes=snap.downtime_minutes if snap else None,
-            active_alerts=snap.active_alerts if snap else 0,
-            pending_maintenance=snap.pending_maintenance if snap else 0,
+            active_alerts=live_alerts,
+            pending_maintenance=live_pending,
             current_shift_code=snap.current_shift_code if snap else None,
-            attendance_pct=snap.attendance_pct if snap else None,
+            attendance_pct=live_attendance["pct"],
             oee=oee_detail,
             departments=dept_cards,
         )
@@ -176,7 +191,7 @@ class PulseService:
         )
         dp = dp_result.scalar_one_or_none()
 
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         oee_m = await self._oee.compute_oee(session, "department", department_id, today_start, datetime.now(timezone.utc))
 
         runs = await session.execute(
@@ -206,7 +221,15 @@ class PulseService:
 
         from app.services.pulse_aggregator_service import PulseAggregatorService
 
-        attendance_pct = await PulseAggregatorService()._plant_attendance_pct(session, dept.plant_id)
+        oee_detail = (
+            OEEMetrics(availability=0, performance=0, quality=0, oee=0, is_estimated=True)
+            if oee_m.get("no_runs")
+            else OEEMetrics(**{k: oee_m[k] for k in ("availability", "performance", "quality", "oee", "is_estimated")})
+        )
+        attendance = await attendance_summary(session, [department_id])
+        attendance_pct = attendance["pct"]
+        open_issues = await open_issue_count(session, dept.plant_id, department_id)
+        maintenance_alerts = await pending_work_orders(session, dept.plant_id, department_id)
 
         return DepartmentPulseResponse(
             department_id=department_id,
@@ -221,16 +244,16 @@ class PulseService:
             oee=dp.oee if dp else oee_m["oee"],
             downtime_minutes=dp.downtime_minutes if dp else None,
             power_kwh=dp.power_kwh if dp else None,
-            open_issues=dp.open_issues if dp else 0,
-            maintenance_alerts=dp.maintenance_alerts if dp else 0,
+            open_issues=open_issues,
+            maintenance_alerts=maintenance_alerts,
             health_score=dp.health_score if dp else None,
             attendance_pct=attendance_pct,
             production_target=float(target),
             actual_production=actual,
             shift_completion_pct=round(shift_pct, 1),
             department_cost=dept_cost,
-            oee_detail=OEEMetrics(**{k: oee_m[k] for k in ("availability", "performance", "quality", "oee", "is_estimated")}),
-            metrics=dp.metrics if dp else {},
+            oee_detail=oee_detail,
+            metrics={**(dp.metrics if dp else {}), "attendance": attendance},
             active_runs=active_runs,
         )
 
@@ -276,7 +299,7 @@ class PulseService:
             for p in params.scalars()
         ]
 
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         oee_m = await self._oee.compute_oee(session, "asset", asset_id, today_start, datetime.now(timezone.utc))
 
         return AssetPulseResponse(
@@ -516,7 +539,7 @@ class PulseService:
     ) -> dict:
         self._assert_plant_access(user, plant_id)
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
 
         assets = await session.execute(select(Asset).where(Asset.plant_id == plant_id))
         asset_list = list(assets.scalars())

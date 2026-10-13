@@ -8,13 +8,14 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.pulse_live import day_start_utc, run_energy_kwh
 from app.db.models import Asset, AssetLiveParameter, Department, EnergyReading, FactProcessRun, ProcessRun
 
 
 class EnergyService:
     async def plant_dashboard(self, session: AsyncSession, plant_id: UUID) -> dict:
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         week_start = today_start - timedelta(days=7)
         month_start = today_start - timedelta(days=30)
 
@@ -26,7 +27,8 @@ class EnergyService:
             )
             return float(r.scalar() or 0)
 
-        today_kwh = await _sum(today_start)
+        # Energy logged on today's finished log sheets comes first; metered readings and the live power figure follow.
+        today_kwh = await run_energy_kwh(session, plant_id, today_start) or await _sum(today_start)
         if not today_kwh:
             today_kwh = await self._fallback_power(session, plant_id)
 
@@ -50,7 +52,7 @@ class EnergyService:
                     EnergyReading.department_id == dept.id, EnergyReading.reading_at >= today_start
                 )
             )
-            kwh = float(dr.scalar() or 0)
+            kwh = await run_energy_kwh(session, plant_id, today_start, dept.id) or float(dr.scalar() or 0)
             dept_rows.append({"department_id": str(dept.id), "code": dept.code, "name": dept.name, "kwh": kwh})
 
         assets = await session.execute(select(Asset).where(Asset.plant_id == plant_id).limit(20))

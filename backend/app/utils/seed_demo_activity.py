@@ -1202,9 +1202,15 @@ async def run_demo_seed(client: httpx.AsyncClient) -> int | None:
     if await demo_seed_finished():
         log.info("demo seed: already complete, skipping")
         return None
+    from app.services import pulse_live
+
     started = datetime.now()
     demo = Demo(client)
-    await demo.run()
+    pulse_live.suspended = True  # thousands of writes: refresh once at the end instead
+    try:
+        await demo.run()
+    finally:
+        pulse_live.suspended = False
     log.info("demo seed: finished in %.0fs (%s failed calls)", (datetime.now() - started).total_seconds(), demo.failures)
     return demo.failures
 

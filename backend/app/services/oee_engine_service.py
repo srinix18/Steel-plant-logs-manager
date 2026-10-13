@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.pulse_live import day_start_utc
 from app.db.models import (
     AggShiftKPI,
     Asset,
@@ -38,6 +39,18 @@ def _clamp(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 
 class OEEEngineService:
+    @staticmethod
+    def _no_data() -> dict:
+        """Nothing ran (or nothing usable): callers show "no data" instead of a made-up figure."""
+        return {
+            "availability": 0.85,
+            "performance": 0.80,
+            "quality": 0.95,
+            "oee": round(0.85 * 0.80 * 0.95, 4),
+            "is_estimated": True,
+            "no_runs": True,
+        }
+
     async def compute_oee(
         self,
         session: AsyncSession,
@@ -54,19 +67,18 @@ class OEEEngineService:
                 "quality": 0.95,
                 "oee": round(0.85 * 0.80 * 0.95, 4),
                 "is_estimated": True,
+                "no_runs": True,  # nothing ran in the period: callers show "no data" rather than this placeholder
             }
 
-        planned_minutes = max((period_end - period_start).total_seconds() / 60, 1)
-        downtime_min = 0.0
         run_ids = [r.id for r in runs]
+        downtime_min = 0.0
         if run_ids:
             delay_result = await session.execute(
-                select(func.coalesce(func.sum(DelayEvent.time_lost_minutes), 0)).where(
-                    DelayEvent.run_id.in_(run_ids)
-                )
+                select(func.coalesce(func.sum(DelayEvent.time_lost_minutes), 0)).where(DelayEvent.run_id.in_(run_ids))
             )
             downtime_min = float(delay_result.scalar() or 0)
 
+        # Time the runs were actually going in this period.
         running_min = 0.0
         for run in runs:
             start = run.started_at or run.created_at
@@ -82,35 +94,35 @@ class OEEEngineService:
             if end > start:
                 running_min += (end - start).total_seconds() / 60
 
-        availability = _clamp(running_min / planned_minutes if planned_minutes else 0.85)
+        if running_min <= 0:
+            return self._no_data()
 
+        # Availability: how much of the running time was not lost to recorded delays.
+        availability = _clamp(1 - downtime_min / running_min)
+
+        # Performance: output against the ideal, but only for runs that recorded an output.
+        # Where none did there is nothing to measure, so no figure is shown.
         actual_output = 0.0
         ideal_output = 0.0
         accepted = 0
         rejected = 0
         for run in runs:
-            fact = await session.execute(
-                select(FactProcessRun).where(FactProcessRun.run_id == run.id)
-            )
-            f = fact.scalar_one_or_none()
-            output = float(f.charge_kg or 0) / 1000 if f and f.charge_kg else 1.0
-            actual_output += output
-            dept_code = await self._dept_code_for_run(session, run)
-            ideal = _IDEAL_OUTPUT_BY_DEPT.get(dept_code or "", 10.0)
-            ideal_output += ideal
+            fact = (await session.execute(select(FactProcessRun).where(FactProcessRun.run_id == run.id))).scalar_one_or_none()
+            if fact and fact.charge_kg:
+                actual_output += float(fact.charge_kg) / 1000
+                ideal_output += await self._ideal_output_t(session, run)
             if run.outcome == ProcessRunOutcome.REJECTED:
                 rejected += 1
-            elif run.outcome in (ProcessRunOutcome.ACCEPTED, ProcessRunOutcome.REWORK, None):
-                if run.completed_at or run.closed_at:
-                    accepted += 1
-                else:
-                    accepted += 1
+            else:
+                accepted += 1
 
-        performance = _clamp(actual_output / ideal_output if ideal_output else 0.80)
+        if ideal_output == 0:
+            return self._no_data()  # runs exist but none recorded an output yet: no honest figure
+        performance = _clamp(actual_output / ideal_output)
         total_quality = accepted + rejected
-        quality = _clamp(accepted / total_quality if total_quality else 0.95)
+        quality = _clamp(accepted / total_quality) if total_quality else 1.0
         oee = round(availability * performance * quality, 4)
-        is_estimated = ideal_output == 0 or len(runs) < 2
+        is_estimated = len(runs) < 2
 
         return {
             "availability": round(availability, 4),
@@ -155,7 +167,7 @@ class OEEEngineService:
         scope_id: UUID,
     ) -> dict:
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
 
         hourly = []
         for h in range(max(0, now.hour), -1, -1):
@@ -235,6 +247,26 @@ class OEEEngineService:
 
         result = await session.execute(q.limit(500))
         return list(result.scalars())
+
+    async def _ideal_output_t(self, session: AsyncSession, run: ProcessRun) -> float:
+        """Target output (tonnes) for one run: a little above this process's own average over the last 30 days,
+        so a line is judged against what it really does. With too little history, a typical figure for the department."""
+        since = datetime.now(timezone.utc) - timedelta(days=30)
+        row = (await session.execute(
+            select(func.avg(FactProcessRun.charge_kg), func.count())
+            .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
+            .where(
+                ProcessRun.process_id == run.process_id,
+                ProcessRun.id != run.id,
+                FactProcessRun.charge_kg > 0,
+                ProcessRun.created_at >= since,
+            )
+        )).one()
+        avg_kg, n = row
+        if n and n >= 3 and avg_kg:
+            return float(avg_kg) / 1000 * 1.2
+        dept_code = await self._dept_code_for_run(session, run)
+        return _IDEAL_OUTPUT_BY_DEPT.get(dept_code or "", 10.0)
 
     async def _dept_code_for_run(self, session: AsyncSession, run: ProcessRun) -> str | None:
         proc = await session.get(Process, run.process_id)

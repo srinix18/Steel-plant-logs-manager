@@ -28,6 +28,14 @@ from app.db.models import (
     Shift,
     User,
 )
+from app.services.pulse_live import (
+    attendance_summary,
+    day_start_utc,
+    open_issue_count,
+    pending_work_orders,
+    plant_department_ids,
+    run_energy_kwh,
+)
 from app.models.enums import AttendanceStatus, EventSeverity, EventSource, MaintenanceWorkOrderStatus
 from app.services.asset_health_engine_service import AssetHealthEngineService
 from app.services.oee_engine_service import OEEEngineService
@@ -61,12 +69,13 @@ class PulseAggregatorService:
         plants = list((await session.execute(plants_q)).scalars())
         stats = {"plants": 0, "departments": 0, "assets": 0, "events": 0}
         for plant in plants:
-            await self._refresh_plant(session, plant)
-            stats["plants"] += 1
             depts = await session.execute(select(Department).where(Department.plant_id == plant.id))
             for dept in depts.scalars():
                 await self._refresh_department(session, dept)
                 stats["departments"] += 1
+            await session.flush()
+            await self._refresh_plant(session, plant)  # after the departments, so its status reflects them
+            stats["plants"] += 1
             assets = await session.execute(select(Asset).where(Asset.plant_id == plant.id))
             for asset in assets.scalars():
                 await self._refresh_asset(session, asset)
@@ -78,7 +87,7 @@ class PulseAggregatorService:
 
     async def _refresh_plant(self, session: AsyncSession, plant: Plant) -> PulseSnapshot:
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
 
         oee_m = await self._oee.compute_oee(session, "plant", plant.id, today_start, now)
         await self._oee.persist_snapshot(session, "plant", plant.id, "day", today_start, now, oee_m)
@@ -86,7 +95,7 @@ class PulseAggregatorService:
         prod_result = await session.execute(
             select(func.coalesce(func.sum(FactProcessRun.charge_kg), 0))
             .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
-            .where(FactProcessRun.plant_id == plant.id, FactProcessRun.computed_at >= today_start)
+            .where(FactProcessRun.plant_id == plant.id, ProcessRun.completed_at >= today_start)
         )
         today_production = float(prod_result.scalar() or 0) / 1000
 
@@ -104,7 +113,7 @@ class PulseAggregatorService:
                 EnergyReading.plant_id == plant.id, EnergyReading.reading_at >= today_start
             )
         )
-        power_kwh = float(energy_result.scalar() or 0)
+        power_kwh = await run_energy_kwh(session, plant.id, today_start) or float(energy_result.scalar() or 0)
         if not power_kwh:
             param_result = await session.execute(
                 select(func.coalesce(func.sum(AssetLiveParameter.value), 0))
@@ -156,7 +165,7 @@ class PulseAggregatorService:
             plant_id=plant.id,
             snapshot_at=now,
             plant_status=worst,
-            overall_oee=oee_m["oee"],
+            overall_oee=None if oee_m.get("no_runs") else oee_m["oee"],
             today_production=today_production,
             today_cost=today_cost,
             power_consumption_kwh=power_kwh,
@@ -165,11 +174,11 @@ class PulseAggregatorService:
             pending_maintenance=pending_count,
             current_shift_code=shift_code,
             attendance_pct=attendance_pct,
-            metrics={"oee_detail": oee_m},
+            metrics={"oee_detail": {"availability": 0, "performance": 0, "quality": 0, "oee": 0, "is_estimated": True} if oee_m.get("no_runs") else oee_m},
         )
         session.add(snap)
 
-        if oee_m["oee"] < 0.6 and plant.organisation_id:
+        if not oee_m.get("no_runs") and oee_m["oee"] < 0.6 and plant.organisation_id:
             await self._notify.notify_plant_leaders(
                 session,
                 plant.organisation_id,
@@ -194,7 +203,7 @@ class PulseAggregatorService:
 
     async def _refresh_department(self, session: AsyncSession, dept: Department) -> DepartmentPulse:
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         oee_m = await self._oee.compute_oee(session, "department", dept.id, today_start, now)
 
         active_run = await session.execute(
@@ -210,28 +219,12 @@ class PulseAggregatorService:
             select(func.coalesce(func.sum(FactProcessRun.charge_kg), 0))
             .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
             .join(Process, ProcessRun.process_id == Process.id)
-            .where(Process.department_id == dept.id, FactProcessRun.computed_at >= today_start)
+            .where(Process.department_id == dept.id, ProcessRun.completed_at >= today_start)
         )
         production = float(prod.scalar() or 0) / 1000
 
-        issues = await session.execute(
-            select(func.count())
-            .select_from(MaintenanceIssue)
-            .join(ProcessRun, MaintenanceIssue.run_id == ProcessRun.id, isouter=True)
-            .where(
-                MaintenanceIssue.status == "open",
-                MaintenanceIssue.plant_id == dept.plant_id,
-            )
-        )
-        open_issues = int(issues.scalar() or 0)
-
-        maint_alerts = await session.execute(
-            select(func.count())
-            .select_from(MaintenanceWorkOrder)
-            .join(Asset, MaintenanceWorkOrder.asset_id == Asset.id)
-            .where(Asset.department_id == dept.id, MaintenanceWorkOrder.status.notin_(list(_CLOSED_WO)))
-        )
-        maint_count = int(maint_alerts.scalar() or 0)
+        open_issues = await open_issue_count(session, dept.plant_id, dept.id)
+        maint_count = await pending_work_orders(session, dept.plant_id, dept.id)
 
         assets = await session.execute(select(Asset).where(Asset.department_id == dept.id).limit(5))
         health_scores = []
@@ -246,10 +239,11 @@ class PulseAggregatorService:
                 EnergyReading.department_id == dept.id, EnergyReading.reading_at >= today_start
             )
         )
-        power_kwh = float(power.scalar() or 0)
+        power_kwh = await run_energy_kwh(session, dept.plant_id, today_start, dept.id) or float(power.scalar() or 0)
 
-        status = _status_color(avg_health, open_issues, oee_m["oee"])
+        status = _status_color(avg_health, open_issues, None if oee_m.get("no_runs") else oee_m["oee"])
         dept_metrics = self._dept_specific_metrics(dept.code, run)
+        dept_metrics["attendance"] = await attendance_summary(session, [dept.id])
 
         pulse = DepartmentPulse(
             department_id=dept.id,
@@ -259,7 +253,7 @@ class PulseAggregatorService:
             current_run_id=run.id if run else None,
             current_run_label=run.run_number if run else None,
             production=production,
-            oee=oee_m["oee"],
+            oee=None if oee_m.get("no_runs") else oee_m["oee"],
             downtime_minutes=oee_m.get("downtime_minutes", 0),
             power_kwh=power_kwh,
             open_issues=open_issues,
@@ -272,7 +266,7 @@ class PulseAggregatorService:
 
     async def _refresh_asset(self, session: AsyncSession, asset: Asset) -> AssetPulse:
         now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         oee_m = await self._oee.compute_oee(session, "asset", asset.id, today_start, now)
         health = await self._health.compute_health(session, asset.id)
 
@@ -371,29 +365,7 @@ class PulseAggregatorService:
         return s.code if s else None
 
     async def _plant_attendance_pct(self, session: AsyncSession, plant_id: UUID) -> float | None:
-        today = date.today()
-        depts = await session.execute(select(Department.id).where(Department.plant_id == plant_id))
-        dept_ids = [d for d in depts.scalars()]
-        if not dept_ids:
-            return None
-        total = await session.execute(
-            select(func.count()).select_from(AttendanceRecord).where(
-                AttendanceRecord.attendance_date == today,
-                AttendanceRecord.department_id.in_(dept_ids),
-            )
-        )
-        present = await session.execute(
-            select(func.count()).select_from(AttendanceRecord).where(
-                AttendanceRecord.attendance_date == today,
-                AttendanceRecord.department_id.in_(dept_ids),
-                AttendanceRecord.status == AttendanceStatus.PRESENT,
-            )
-        )
-        t = int(total.scalar() or 0)
-        p = int(present.scalar() or 0)
-        if t == 0:
-            return None
-        return round(p / t * 100, 1)
+        return (await attendance_summary(session, await plant_department_ids(session, plant_id)))["pct"]
 
     def _dept_specific_metrics(self, code: str, run: ProcessRun | None) -> dict:
         base: dict = {}

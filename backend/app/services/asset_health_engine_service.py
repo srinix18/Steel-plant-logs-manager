@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.pulse_live import day_start_utc
 from app.db.models import Asset, AssetHealthRecord, MaintenanceIssue, MaintenanceWorkOrder, ProcessRun
 from app.models.enums import MaintenanceWorkOrderStatus
 from app.services.oee_engine_service import OEEEngineService
@@ -85,14 +86,15 @@ class AssetHealthEngineService:
             score -= min(20, bd * 5)
             factors["recent_breakdowns"] = bd
 
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = day_start_utc()
         oee_m = await self._oee.compute_oee(session, "asset", asset_id, today_start, now)
-        oee_val = oee_m["oee"]
-        if oee_val < 0.6:
-            score -= 20
-        elif oee_val < 0.75:
-            score -= 10
-        factors["oee"] = round(oee_val, 3)
+        if not oee_m.get("no_runs"):  # no output recorded today is not evidence of a poor asset
+            oee_val = oee_m["oee"]
+            if oee_val < 0.6:
+                score -= 20
+            elif oee_val < 0.75:
+                score -= 10
+            factors["oee"] = round(oee_val, 3)
 
         if asset.installation_date:
             age_years = (date.today() - asset.installation_date).days / 365.25

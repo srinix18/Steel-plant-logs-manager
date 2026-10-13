@@ -128,6 +128,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PULSE_WRITE_PATHS = tuple(
+    f"{settings.API_V1_PREFIX}{p}"
+    for p in ("/workforce/attendance", "/workforce/contractor-attendance", "/maintenance", "/process-runs", "/process-instances")
+)
+
+
+@app.middleware("http")
+async def refresh_pulse_after_changes(request, call_next):
+    """The plant and department pulse follow real changes within seconds instead of waiting for the next 5-minute snapshot."""
+    response = await call_next(request)
+    if (
+        settings.PULSE_REFRESH_ON_WRITE
+        and request.method in ("POST", "PATCH", "PUT", "DELETE")
+        and response.status_code < 400
+        and request.url.path.startswith(PULSE_WRITE_PATHS)
+    ):
+        from app.services.pulse_live import schedule_refresh
+
+        schedule_refresh()
+    return response
+
+
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
