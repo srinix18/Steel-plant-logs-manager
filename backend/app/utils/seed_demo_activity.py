@@ -1004,6 +1004,88 @@ class Demo:
                 await self.call(who, "POST", "/foundation/documents", data={"plant_id": self.plant_id, "department_id": dept, "category": category, "title": title, "version": "1.0"},
                                 files={"file": (title.lower().replace(" ", "_") + ".pdf", content, "application/pdf")})
 
+    async def make_headcount(self) -> None:
+        """About 250 employees through the HR Excel upload, then their attendance, leave, skills and payroll."""
+        from app.db.models import PayrollRun
+        from app.utils import seed_demo_headcount as hc
+
+        content = hc.build_workbook(hc.build_rows())
+        up = await self.ok("hr", "POST", "/imports/employees/upload", files={"file": ("employees.xlsx", content, "application/octet-stream")})
+        if not up:
+            raise RuntimeError("headcount upload failed")
+        job = up["id"]
+        await self.call("hr", "POST", f"/imports/jobs/{job}/preview")
+        checked = await self.ok("hr", "POST", f"/imports/jobs/{job}/validate") or {}
+        done = await self.ok("hr", "POST", f"/imports/jobs/{job}/commit") or {}
+        log.info("demo seed: headcount import checked=%s imported=%s failed=%s", checked.get("valid_count"), done.get("imported"), done.get("failed"))
+
+        employees = [e for e in (await self.ok("hr", "GET", "/workforce/employees") or []) if str(e.get("employee_uid") or "").startswith(hc.UID_PREFIX)]
+        ids = {e["id"] for e in employees}
+        assignments = [a for a in (await self.ok("hr", "GET", "/workforce/shift-assignments") or []) if a["user_id"] in ids]
+        groups: dict[tuple[str, str], list[str]] = {}
+        for a in assignments:
+            groups.setdefault((a["department_id"], a["shift_id"]), []).append(a["user_id"])
+
+        # Attendance for the same days as the original staff, including last month so payroll has data.
+        r = self.rng
+        first_this = self.today.replace(day=1)
+        last_prev = first_this - timedelta(days=1)
+        month_days = [d for d in (last_prev.replace(day=i) for i in range(1, last_prev.day + 1)) if d.weekday() < 6]
+        days = sorted(set(_weekdays_back(12, self.today)) | set(month_days))
+        statuses, weights = ["present", "absent", "half_day", "leave"], [86, 6, 5, 3]
+        for d in days:
+            for (dept, shift), users in groups.items():
+                entries = [{"user_id": u, "status": r.choices(statuses, weights)[0]} for u in users]
+                await self.call("hr", "POST", "/workforce/attendance/bulk", json={"attendance_date": d.isoformat(), "department_id": dept, "shift_id": shift, "entries": entries})
+        log.info("demo seed: headcount attendance recorded")
+
+        # Leave: a spread of requests from the new staff, decided by HR.
+        types = await self.ok("worker_sms", "GET", "/workforce/leave/types") or []
+        tid = {t["code"]: t["id"] for t in types}
+        codes = [c for c in ("CL", "SL", "EL") if c in tid]
+        people = [e for e in employees if str(e["role"]).lower() in ("worker", "supervisor", "maintenance")]
+        r.shuffle(people)
+        for i, emp in enumerate(people[:36]):
+            email = emp["email"]
+            key = f"hc_{i}"
+            ACCOUNTS[key] = (email, hc.PASSWORD)
+            code = codes[i % len(codes)] if codes else None
+            if not code:
+                break
+            off = r.choice([-20, -14, -9, -5, -2, 3, 6, 10])
+            span = r.randint(1, 3)
+            frm = self.today + timedelta(days=off)
+            lr = await self.ok(key, "POST", "/workforce/leave/requests", json={"leave_type_id": tid[code], "from_date": frm.isoformat(), "to_date": (frm + timedelta(days=span - 1)).isoformat(), "remarks": r.choice(["Family function", "Not well", "Personal work", "Village visit", "Medical check-up"])})
+            if lr and i % 4 != 3:
+                decision = "reject" if i % 9 == 0 else "approve"
+                await self.call("hr", "POST", f"/workforce/leave/requests/{lr['id']}/{decision}", json={"remarks": "Approved" if decision == "approve" else "Needed on the floor that week"})
+
+        # Skills and training for a sample of the new staff.
+        skills = await self.ok("hr", "GET", "/workforce/ops/skills") or []
+        for emp in people[:40]:
+            for sk in r.sample(skills, k=min(len(skills), r.randint(1, 2))) if skills else []:
+                await self.call("hr", "POST", f"/workforce/ops/employees/{emp['id']}/skills", json={"skill_id": sk["id"], "proficiency_level": r.choice(["beginner", "intermediate", "advanced", "expert"])})
+        courses = ["Fire safety refresher", "First aid", "Crane operation", "Electrical safety", "Confined space entry", "Hot work permit", "PPE and housekeeping"]
+        for emp in people[40:75]:
+            valid = r.choice([-30, 15, 45, 120, 200, 330])  # a few already expired or about to
+            await self.call("hr", "POST", "/workforce/ops/training", json={"user_id": emp["id"], "name": r.choice(courses), "certification": f"CERT-{r.randint(1000, 9999)}", "issue_date": (self.today - timedelta(days=330)).isoformat(), "expiry_date": (self.today + timedelta(days=valid)).isoformat()})
+
+        # Reprocess last month's payroll so every employee has a payslip. A finished run is reopened first.
+        async with async_session_factory() as session:
+            run = (await session.execute(select(PayrollRun).where(PayrollRun.month == last_prev.month, PayrollRun.year == last_prev.year))).scalars().first()
+            if run:
+                run.status = "draft"
+                await session.commit()
+                run_id = str(run.id)
+            else:
+                run_id = None
+        if run_id is None:
+            created = await self.ok("hr", "POST", "/workforce/payroll/runs", json={"plant_id": self.plant_id, "month": last_prev.month, "year": last_prev.year})
+            run_id = created["id"] if created else None
+        if run_id:
+            await self.call("hr", "POST", f"/workforce/payroll/runs/{run_id}/process")
+        log.info("demo seed: headcount done (%s employees)", len(employees))
+
     async def make_work_orders(self) -> None:
         sms = self.me["hod_sms"]["department_id"]
         rolling = self.me["hod_rolling"]["department_id"]
@@ -1101,12 +1183,18 @@ class Demo:
         await self._phase("messages", self.make_messages)
         await self._phase("work_orders", self.make_work_orders)
         await self._phase("documents", self.make_documents)
+        await self._phase("headcount", self.make_headcount)
         await self._phase("finish", self._finish_phase)
 
 
+PHASES = ["runs", "workforce", "issues_safety", "messages", "work_orders", "documents", "headcount", "finish"]
+
+
 async def demo_seed_finished() -> bool:
+    """True once every phase is recorded; a newer release with an extra phase therefore still runs it."""
     async with async_session_factory() as session:
-        return await session.get(DemoSeedState, "finish") is not None
+        done = {row[0] for row in await session.execute(select(DemoSeedState.name))}
+    return set(PHASES) <= done
 
 
 async def run_demo_seed(client: httpx.AsyncClient) -> int | None:

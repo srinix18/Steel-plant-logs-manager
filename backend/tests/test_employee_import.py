@@ -6,7 +6,7 @@ from openpyxl import Workbook, load_workbook
 
 from app.services.import_engine.handlers.employees import COLUMNS
 
-HEADERS = ["employee_uid", "full_name", "email", "password", "role", "department", "maintenance_division", "shift", "date_of_joining", "basic", "hra"]
+HEADERS = ["employee_uid", "full_name", "email", "password", "role", "department", "process", "maintenance_division", "shift", "date_of_joining", "basic", "hra"]
 
 
 def _sheet(rows: list[list]) -> bytes:
@@ -43,25 +43,28 @@ async def test_template_has_guide_lists_and_dropdowns(api):
 
 async def test_import_creates_users_with_shift_and_salary(api):
     content = _sheet([
-        ["IMP-001", "Import Worker", "import.worker@example.com", "Temp@1234", "worker", "SMS", "", "A", "2025-01-06", 21000, 6500],
-        ["IMP-002", "Import Fitter", "import.fitter@example.com", "Temp@1234", "maintenance", "SMS", "equipment", "", "06-01-2025", "", ""],
-        ["IMP-003", "Bad Role", "bad.role@example.com", "Temp@1234", "astronaut", "SMS", "", "", "", "", ""],
-        ["IMP-004", "No Dept", "no.dept@example.com", "Temp@1234", "worker", "", "", "", "", "", ""],
-        ["IMP-005", "Same Mail", "import.worker@example.com", "Temp@1234", "worker", "SMS", "", "", "", "", ""],
-        ["IMP-006", "Existing", "melter@chandansteel.com", "Temp@1234", "worker", "SMS", "", "", "", "", ""],
+        ["IMP-001", "Import Worker", "import.worker@example.com", "Temp@1234", "worker", "SMS", "", "", "A", "2025-01-06", 21000, 6500],
+        ["IMP-002", "Import Fitter", "import.fitter@example.com", "Temp@1234", "maintenance", "SMS", "", "equipment", "", "06-01-2025", "", ""],
+        ["IMP-003", "Bad Role", "bad.role@example.com", "Temp@1234", "astronaut", "SMS", "", "", "", "", "", ""],
+        ["IMP-004", "No Dept", "no.dept@example.com", "Temp@1234", "worker", "", "", "", "", "", "", ""],
+        ["IMP-005", "Same Mail", "import.worker@example.com", "Temp@1234", "worker", "SMS", "", "", "", "", "", ""],
+        ["IMP-006", "Existing", "melter@chandansteel.com", "Temp@1234", "worker", "SMS", "", "", "", "", "", ""],
+        ["IMP-007", "No Process", "no.process@example.com", "Temp@1234", "supervisor", "SMS", "", "", "B", "", "", ""],
+        ["IMP-008", "Iaf Supervisor", "iaf.new@example.com", "Temp@1234", "supervisor", "SMS", "IAF", "", "B", "", "", ""],
     ])
     job, validated = await _run(api, "hr", content)
-    assert validated["valid_count"] == 2
-    assert validated["invalid_count"] == 4
+    assert validated["valid_count"] == 3
+    assert validated["invalid_count"] == 5
     reasons = {r["row_number"]: " ".join(r["errors"]) for r in validated["rows"] if r["errors"]}
     assert "Invalid role" in reasons[4]
     assert "department" in reasons[5]
     assert "Duplicate email" in reasons[6]
     assert "already registered" in reasons[7]
+    assert "process is required" in reasons[8]
 
     done = await api.ok("hr", "POST", f"/imports/jobs/{job}/commit")
     jobinfo = await api.ok("hr", "GET", f"/imports/jobs/{job}")
-    assert done["imported"] == 2 and done["failed"] == 0, [r["errors"] for r in jobinfo["rows"] if r["errors"]]
+    assert done["imported"] == 3 and done["failed"] == 0, [r["errors"] for r in jobinfo["rows"] if r["errors"]]
 
     # The new people can log in, and the optional columns took effect.
     login = await api.post(None, "/auth/login", json={"email": "import.worker@example.com", "password": "Temp@1234"})

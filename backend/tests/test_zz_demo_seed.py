@@ -35,3 +35,9 @@ async def test_demo_seed_completes_and_is_repeatable(client, api):
     assert await api.ok("hr", "GET", "/workforce/payroll/runs")
     issues = await api.ok("ceo", "GET", "/maintenance/issues", params={"limit": 200})
     assert {"open", "in_progress", "closed"} <= {i["status"] for i in issues}
+
+    # Around 250 people across every department, with payslips for last month.
+    staff = await api.ok("hr", "GET", "/workforce/employees")
+    assert 240 <= len(staff) <= 270
+    roles = {str(e["role"]).lower() for e in staff}
+    assert {"worker", "supervisor", "hod", "maintenance", "hr"} <= roles

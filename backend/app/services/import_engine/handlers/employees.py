@@ -13,7 +13,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Department, Shift, User
+from app.db.models import Department, Process, Shift, User
 from app.models.enums import EmploymentStatus, EmploymentType, ObservationCategory, UserRole
 from app.schemas.moi import ShiftAssignmentCreate, WorkforceEmployeeCreate
 from app.schemas.workforce_ops import SalaryStructureCreate
@@ -28,6 +28,7 @@ COLUMNS = [
     "password",
     "role",
     "department_id",
+    "process",
     "maintenance_division",
     "shift",
     "designation",
@@ -48,6 +49,8 @@ ALIASES = {
     "department": "department_id",
     "department_code": "department_id",
     "dept": "department_id",
+    "process_code": "process",
+    "process_name": "process",
     "name": "full_name",
     "employee_name": "full_name",
     "employee_id": "employee_uid",
@@ -91,6 +94,18 @@ async def _resolve_department(
         if raw.upper() == (dept.code or "").upper() or raw.lower() == (dept.name or "").lower():
             return dept, []
     return None, [f"Department not found: {raw} (use the department code from the Lists sheet)"]
+
+
+async def _resolve_process(session: AsyncSession, dept: Department | None, raw: Any) -> Process | None:
+    """A supervisor looks after one process (for example IAF or RMILL) inside their department."""
+    if not dept or not raw:
+        return None
+    text = str(raw).strip()
+    result = await session.execute(select(Process).where(Process.department_id == dept.id))
+    for proc in result.scalars():
+        if text.upper() == (proc.code or "").upper() or text.lower() == (proc.name or "").lower():
+            return proc
+    return None
 
 
 def _parse_date(val: Any) -> date | None:
@@ -155,6 +170,11 @@ async def validate_row(session: AsyncSession, actor: User, row: dict[str, Any], 
     errors.extend(dept_errors)
     if role and role.value not in NO_DEPARTMENT_ROLES and not row.get("department_id"):
         errors.append("Missing required field: department (needed for everyone except HR)")
+    if role and role.value == "supervisor":
+        if not row.get("process"):
+            errors.append("process is required for supervisors (the process code from the Lists sheet, for example IAF)")
+        elif dept and not await _resolve_process(session, dept, row.get("process")):
+            errors.append(f"Process not found in {dept.code}: {row['process']}")
     if role and role.value == "maintenance" and not _parse_enum(ObservationCategory, row.get("maintenance_division")):
         errors.append("maintenance_division is required for maintenance staff (quality, safety, energy, equipment or process)")
     if row.get("maintenance_division") and not _parse_enum(ObservationCategory, row.get("maintenance_division")):
@@ -204,6 +224,7 @@ async def import_row(session: AsyncSession, actor: User, row: dict[str, Any], *,
         raise ValueError("Invalid role")
     dept, _ = await _resolve_department(session, org_id, row.get("department_id"))
     emp_type = _parse_enum(EmploymentType, row.get("employment_type"))
+    process = await _resolve_process(session, dept, row.get("process")) if role.value == "supervisor" else None
     joined = _parse_date(row.get("date_of_joining"))
 
     data = WorkforceEmployeeCreate(
@@ -213,6 +234,7 @@ async def import_row(session: AsyncSession, actor: User, row: dict[str, Any], *,
         role=role,
         department_id=dept.id if dept else None,
         plant_id=dept.plant_id if dept else None,
+        process_id=process.id if process else None,
         designation=str(row["designation"]).strip() if row.get("designation") else None,
         phone=str(row["phone"]).strip() if row.get("phone") else None,
         maintenance_division=_parse_enum(ObservationCategory, row.get("maintenance_division")),
@@ -254,6 +276,7 @@ HEADER_NOTES = {
     "password": "Required, at least 6 characters. Tell staff to keep it private",
     "role": "Required. Pick from the list",
     "department_id": "Department code from the Lists sheet. Needed for everyone except HR",
+    "process": "Supervisors only: the process they run (code from the Lists sheet, for example IAF)",
     "maintenance_division": "Only for maintenance staff: quality, safety, energy, equipment or process",
     "shift": "A, B or C (optional). Creates the shift assignment",
     "designation": "Job title (optional)",
@@ -269,9 +292,9 @@ HEADER_NOTES = {
 }
 
 EXAMPLES = [
-    ["CS-1001", "Ramesh Kumar", "ramesh.kumar@example.com", "Temp@1234", "worker", "SMS", "", "A", "Furnace operator", "9876543210", "permanent", "active", "2024-04-01", 22000, 7000, 1500, 1800, 500],
-    ["CS-1002", "Sunita Devi", "sunita.devi@example.com", "Temp@1234", "supervisor", "ROLL", "", "B", "Shift in-charge", "9876501234", "permanent", "active", "2022-07-15", 32000, 10000, 3000, 2400, 600],
-    ["CS-1003", "Anil Sharma", "anil.sharma@example.com", "Temp@1234", "maintenance", "SMS", "equipment", "", "Fitter", "9876512345", "contract", "active", "2025-01-10", "", "", "", "", ""],
+    ["CS-1001", "Ramesh Kumar", "ramesh.kumar@example.com", "Temp@1234", "worker", "SMS", "", "", "A", "Furnace operator", "9876543210", "permanent", "active", "2024-04-01", 22000, 7000, 1500, 1800, 500],
+    ["CS-1002", "Sunita Devi", "sunita.devi@example.com", "Temp@1234", "supervisor", "ROLLING", "RMILL", "", "B", "Shift in-charge", "9876501234", "permanent", "active", "2022-07-15", 32000, 10000, 3000, 2400, 600],
+    ["CS-1003", "Anil Sharma", "anil.sharma@example.com", "Temp@1234", "maintenance", "SMS", "", "equipment", "", "Fitter", "9876512345", "contract", "active", "2025-01-10", "", "", "", "", ""],
 ]
 
 
@@ -285,7 +308,7 @@ async def build_template(session: AsyncSession, org_id: UUID) -> bytes:
         ("Employee upload template", True),
         ("", False),
         ("1. Fill one row per person on the 'Employees' sheet. Do not rename or reorder the column headings.", False),
-        ("2. Required columns have a dark heading: full_name, email, password, role. Everything else is optional.", False),
+        ("2. Required columns have a dark heading: full_name, email, password, role. Everything else is optional, except: department (everyone but HR), process (supervisors) and maintenance_division (maintenance staff).", False),
         ("3. department: use the short code from the 'Lists' sheet (for example SMS). Needed for everyone except HR staff.", False),
         ("4. The 'Example' sheet shows three filled rows. It is only an illustration and is never read on upload.", False),
         ("5. Save as .xlsx and upload it in the app: Workforce > Employees > Upload Excel.", False),
@@ -321,13 +344,19 @@ async def build_template(session: AsyncSession, org_id: UUID) -> bytes:
         dv.add(f"{letter}2:{letter}1000")
 
     lists = wb.create_sheet("Lists")
-    lists.append(["role", "department_code", "department_name", "shift", "employment_type", "employment_status", "maintenance_division"])
+    processes = (await session.execute(
+        select(Process.code, Process.name, Department.code)
+        .join(Department, Process.department_id == Department.id)
+        .where(Department.organisation_id == org_id)
+        .order_by(Department.code, Process.code)
+    )).all()
+    lists.append(["role", "department_code", "department_name", "shift", "employment_type", "employment_status", "maintenance_division", "process_code", "process_name", "process_department"])
     for c in lists[1]:
         c.font = Font(bold=True)
     statuses = [e.value for e in EmploymentStatus]
     types = [e.value for e in EmploymentType]
     divisions = [e.value for e in ObservationCategory]
-    for i in range(max(len(IMPORTABLE_ROLES), len(depts), 3, len(statuses), len(divisions))):
+    for i in range(max(len(IMPORTABLE_ROLES), len(depts), 3, len(statuses), len(divisions), len(processes))):
         lists.append([
             IMPORTABLE_ROLES[i] if i < len(IMPORTABLE_ROLES) else None,
             depts[i].code if i < len(depts) else None,
@@ -336,12 +365,17 @@ async def build_template(session: AsyncSession, org_id: UUID) -> bytes:
             types[i] if i < len(types) else None,
             statuses[i] if i < len(statuses) else None,
             divisions[i] if i < len(divisions) else None,
+            processes[i][0] if i < len(processes) else None,
+            processes[i][1] if i < len(processes) else None,
+            processes[i][2] if i < len(processes) else None,
         ])
-    for letter in "ABCDEFG":
+    for letter in "ABCDEFGHIJ":
         lists.column_dimensions[letter].width = 22
     dropdown("role", f"=Lists!$A$2:$A${1 + len(IMPORTABLE_ROLES)}")
     if depts:
         dropdown("department_id", f"=Lists!$B$2:$B${1 + len(depts)}")
+    if processes:
+        dropdown("process", f"=Lists!$H$2:$H${1 + len(processes)}")
     dropdown("shift", "=Lists!$D$2:$D$4")
     dropdown("employment_type", f"=Lists!$E$2:$E${1 + len(types)}")
     dropdown("employment_status", f"=Lists!$F$2:$F${1 + len(statuses)}")
