@@ -25,8 +25,8 @@ class Settings(BaseSettings):
         "http://localhost:5173,http://localhost:3000,"
         "http://localhost:8081,http://localhost:19006,http://127.0.0.1:8081"
     )
-    SEED_ADMIN_EMAIL: str = "admin@logbook.app"
-    SEED_ADMIN_PASSWORD: str = "admin123"
+    SEED_ADMIN_EMAIL: str = "admin@chandansteel.com"
+    SEED_ADMIN_PASSWORD: str = "Admin@123"
     SEED_ADMIN_NAME: str = "System Admin"
     # Fill an empty plant with two weeks of believable history (runs, leave, payroll, ...) once,
     # in the background after startup. Set to false for a clean production database.

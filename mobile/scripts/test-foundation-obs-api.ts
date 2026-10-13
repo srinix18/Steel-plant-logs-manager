@@ -68,8 +68,8 @@ async function apiSmoke() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'iaf.supervisor@chandansteel.com',
-        password: 'iaf123',
+        email: 'sup.iaf@chandansteel.com',
+        password: 'Sup@123',
       }),
     });
   } catch (err) {

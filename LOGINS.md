@@ -49,32 +49,32 @@ See [docs/MANUFACTURING_HIERARCHY.md](docs/MANUFACTURING_HIERARCHY.md) for the f
 
 | Role | Full name | Email | Password | Scope |
 |------|-----------|-------|----------|-------|
-| Super Admin | System Admin | `admin@logbook.app` | `admin123` | Platform-wide |
-| CEO | Chandan CEO | `ceo@chandansteel.com` | `ceo123` | Chandan Steel — all departments |
-| HR | HR Workforce Manager | `hr@chandansteel.com` | `hr123` | Workforce management — all departments |
-| HoD | SMS Head of Department | `hod@chandansteel.com` | `hod123` | SMS department (all processes) |
-| Supervisor (IAF) | IAF Shift Incharge | `iaf.supervisor@chandansteel.com` | `iaf123` | SMS — IAF log sheet only |
-| Supervisor (AOD) | AOD Shift Incharge | `aod.supervisor@chandansteel.com` | `aod123` | SMS — AOD log sheet only |
-| Supervisor (CCM) | CCM Shift Incharge | `ccm.supervisor@chandansteel.com` | `ccm123` | SMS — CCM log sheet only |
-| Supervisor (legacy) | SMS Supervisor | `supervisor@chandansteel.com` | `supervisor123` | SMS — IAF (migrated) |
-| Worker | Plant Melter | `melter@chandansteel.com` | `worker123` | SMS department — own runs |
-| Maintenance (Quality) | Quality Maintenance | `maint.quality@chandansteel.com` | `maint123` | Quality issues |
-| Maintenance (Safety) | Safety Maintenance | `maint.safety@chandansteel.com` | `maint123` | Safety issues |
-| Maintenance (Energy) | Energy Maintenance | `maint.energy@chandansteel.com` | `maint123` | Energy issues |
-| Maintenance (Equipment) | Equipment Maintenance | `maint.equipment@chandansteel.com` | `maint123` | Equipment issues |
-| Maintenance (Process) | Process Maintenance | `maint.process@chandansteel.com` | `maint123` | Process issues |
-| HoD (Rolling Mill) | Rolling Mill HoD | `hod.rolling@chandansteel.com` | `hod123` | Rolling Mill department |
-| Supervisor (Rolling Mill) | Rolling Mill Shift Incharge | `supervisor.rolling@chandansteel.com` | `rolling123` | RMILL shift report |
-| Worker (Rolling Mill) | Rolling Mill Operator | `worker.rolling@chandansteel.com` | `rolling123` | RMILL shift entry |
-| HoD (Wire Division) | Wire Division HoD | `hod.wire@chandansteel.com` | `hod123` | Wire Division department |
-| Supervisor (Wire) | Wire Division Shift Incharge | `supervisor.wire@chandansteel.com` | `wire123` | WFURN / WDRAW shift reports |
-| Worker (Wire) | Wire Division Operator | `worker.wire@chandansteel.com` | `wire123` | WFURN / WDRAW shift entry |
-| HoD (Bright Bar) | Bright Bar Division HoD | `hod.bbd@chandansteel.com` | `hod123` | Bright Bar Division department |
-| Supervisor (Bright Bar) | Bright Bar Shift Incharge | `supervisor.bbd@chandansteel.com` | `bbd123` | BBAR daily register |
-| Worker (Bright Bar) | Bright Bar Production Clerk | `worker.bbd@chandansteel.com` | `bbd123` | BBAR daily entry |
-| HoD (Forge Shop) | Forge Shop HoD | `hod.forge@chandansteel.com` | `hod123` | Forge Shop department |
-| Supervisor (Forge) | Forge Shop Shift Incharge | `supervisor.forge@chandansteel.com` | `forge123` | GRIND daily register |
-| Worker (Forge) | Grinding Operator | `worker.forge@chandansteel.com` | `forge123` | GRIND daily entry |
+| Super Admin | System Admin | `admin@chandansteel.com` | `Admin@123` | Platform-wide |
+| CEO | Chandan CEO | `ceo@chandansteel.com` | `Ceo@123` | Chandan Steel — all departments |
+| HR | HR Workforce Manager | `hr@chandansteel.com` | `Hr@123` | Workforce management — all departments |
+| HoD | SMS Head of Department | `hod.sms@chandansteel.com` | `Hod@123` | SMS department (all processes) |
+| Supervisor (IAF) | IAF Shift Incharge | `sup.iaf@chandansteel.com` | `Sup@123` | SMS — IAF log sheet only |
+| Supervisor (AOD) | AOD Shift Incharge | `sup.aod@chandansteel.com` | `Sup@123` | SMS — AOD log sheet only |
+| Supervisor (CCM) | CCM Shift Incharge | `sup.ccm@chandansteel.com` | `Sup@123` | SMS — CCM log sheet only |
+| Supervisor (legacy) | SMS Supervisor | `sup.sms@chandansteel.com` | `Sup@123` | SMS — IAF (migrated) |
+| Worker | Plant Melter | `op.sms@chandansteel.com` | `Op@123` | SMS department — own runs |
+| Maintenance (Quality) | Quality Maintenance | `maint.quality@chandansteel.com` | `Maint@123` | Quality issues |
+| Maintenance (Safety) | Safety Maintenance | `maint.safety@chandansteel.com` | `Maint@123` | Safety issues |
+| Maintenance (Energy) | Energy Maintenance | `maint.energy@chandansteel.com` | `Maint@123` | Energy issues |
+| Maintenance (Equipment) | Equipment Maintenance | `maint.equipment@chandansteel.com` | `Maint@123` | Equipment issues |
+| Maintenance (Process) | Process Maintenance | `maint.process@chandansteel.com` | `Maint@123` | Process issues |
+| HoD (Rolling Mill) | Rolling Mill HoD | `hod.rolling@chandansteel.com` | `Hod@123` | Rolling Mill department |
+| Supervisor (Rolling Mill) | Rolling Mill Shift Incharge | `sup.rolling@chandansteel.com` | `Sup@123` | RMILL shift report |
+| Worker (Rolling Mill) | Rolling Mill Operator | `op.rolling@chandansteel.com` | `Op@123` | RMILL shift entry |
+| HoD (Wire Division) | Wire Division HoD | `hod.wire@chandansteel.com` | `Hod@123` | Wire Division department |
+| Supervisor (Wire) | Wire Division Shift Incharge | `sup.wire@chandansteel.com` | `Sup@123` | WFURN / WDRAW shift reports |
+| Worker (Wire) | Wire Division Operator | `op.wire@chandansteel.com` | `Op@123` | WFURN / WDRAW shift entry |
+| HoD (Bright Bar) | Bright Bar Division HoD | `hod.bbd@chandansteel.com` | `Hod@123` | Bright Bar Division department |
+| Supervisor (Bright Bar) | Bright Bar Shift Incharge | `sup.bbd@chandansteel.com` | `Sup@123` | BBAR daily register |
+| Worker (Bright Bar) | Bright Bar Production Clerk | `op.bbd@chandansteel.com` | `Op@123` | BBAR daily entry |
+| HoD (Forge Shop) | Forge Shop HoD | `hod.forge@chandansteel.com` | `Hod@123` | Forge Shop department |
+| Supervisor (Forge) | Forge Shop Shift Incharge | `sup.forge@chandansteel.com` | `Sup@123` | GRIND daily register |
+| Worker (Forge) | Grinding Operator | `op.forge@chandansteel.com` | `Op@123` | GRIND daily entry |
 
 ### Rolling Mill delay codes (F/PRD/05)
 
@@ -104,7 +104,7 @@ Content-Type: application/json
 
 {
   "email": "ceo@chandansteel.com",
-  "password": "ceo123"
+  "password": "Ceo@123"
 }
 ```
 
@@ -128,8 +128,8 @@ The super admin email and password can be changed before first seed via environm
 
 | Variable | Default |
 |----------|---------|
-| `SEED_ADMIN_EMAIL` | `admin@logbook.app` |
-| `SEED_ADMIN_PASSWORD` | `admin123` |
+| `SEED_ADMIN_EMAIL` | `admin@chandansteel.com` |
+| `SEED_ADMIN_PASSWORD` | `Admin@123` |
 | `SEED_ADMIN_NAME` | `System Admin` |
 
 CEO and org-role users are created by `seed_org_roles.py` on startup (idempotent). Workforce demo data (contractors, shift assignments, sample handover note) is seeded by `seed_workforce.py`.

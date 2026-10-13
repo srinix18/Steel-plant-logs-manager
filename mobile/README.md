@@ -206,7 +206,7 @@ mobile/
 
 - Kill app → reopen → still signed in until logout or 401
 - Drawer / Profile → **Sign out** / **Log out** clears storage
-- Demo accounts: [`LOGINS.md`](../LOGINS.md) (e.g. `admin@logbook.app` / `admin123`)
+- Demo accounts: [`LOGINS.md`](../LOGINS.md) (e.g. `admin@chandansteel.com` / `Admin@123`)
 
 ## Plan 1 acceptance (P1-08)
 

@@ -101,7 +101,7 @@ Expo Go **native** does not use browser CORS. CORS is still configured for web +
 
 | Email | Password | Role returned |
 |-------|----------|---------------|
-| `admin@logbook.app` | `admin123` | `super_admin` |
+| `admin@chandansteel.com` | `Admin@123` | `super_admin` |
 
 More roles: [`LOGINS.md`](../LOGINS.md).
 

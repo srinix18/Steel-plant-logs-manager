@@ -1,6 +1,6 @@
 /**
  * Smoke: BBAR daily register — customers, production row weight×count, save.
- * Login: worker.bbd@chandansteel.com / bbd123
+ * Login: op.bbd@chandansteel.com / Op@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -32,8 +32,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'worker.bbd@chandansteel.com',
-        password: 'bbd123',
+        email: 'op.bbd@chandansteel.com',
+        password: 'Op@123',
       }),
     });
   } catch (err) {

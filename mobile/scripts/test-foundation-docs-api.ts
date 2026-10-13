@@ -68,7 +68,7 @@ async function apiSmoke() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'hod@chandansteel.com', password: 'hod123' }),
+      body: JSON.stringify({ email: 'hod.sms@chandansteel.com', password: 'Hod@123' }),
     });
   } catch (err) {
     console.log(`foundation-docs-api: API unreachable — unit OK; skipped (${String(err)})`);
@@ -142,8 +142,8 @@ async function apiSmoke() {
   const supLogin = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({
-      email: 'iaf.supervisor@chandansteel.com',
-      password: 'iaf123',
+      email: 'sup.iaf@chandansteel.com',
+      password: 'Sup@123',
     }),
   });
   if (supLogin.res.ok) {

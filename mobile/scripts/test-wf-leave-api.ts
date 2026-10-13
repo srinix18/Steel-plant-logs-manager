@@ -13,8 +13,8 @@ assert.ok(api.includes('fetchLeaveTypes') && api.includes('createLeaveRequest') 
 const base = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
 async function request(p: string, init: RequestInit = {}) { const res = await fetch(`${base}${p}`, { ...init, headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) } }); const text = await res.text(); let json: unknown; try { json = text ? JSON.parse(text) : null; } catch { json = text; } return { res, json }; }
 try {
-  const worker = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'melter@chandansteel.com', password: 'worker123' }) });
-  const hr = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'hr123' }) });
+  const worker = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'op.sms@chandansteel.com', password: 'Op@123' }) });
+  const hr = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'Hr@123' }) });
   if (!worker.res.ok || !hr.res.ok) throw new Error(`demo login unavailable w=${worker.res.status} hr=${hr.res.status}`);
   const workerAuth = { Authorization: `Bearer ${(worker.json as { access_token: string }).access_token}` };
   const hrAuth = { Authorization: `Bearer ${(hr.json as { access_token: string }).access_token}` };

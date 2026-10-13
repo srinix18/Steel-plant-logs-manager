@@ -1,7 +1,7 @@
 /**
  * Smoke: WDRAW — ensure completed coil via WFURN, then drawing input/output with
  * condition + lubricant + dual inlet_coil_ref.
- * Login: worker.wire@chandansteel.com / wire123
+ * Login: op.wire@chandansteel.com / Op@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -36,8 +36,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'worker.wire@chandansteel.com',
-        password: 'wire123',
+        email: 'op.wire@chandansteel.com',
+        password: 'Op@123',
       }),
     });
   } catch (err) {

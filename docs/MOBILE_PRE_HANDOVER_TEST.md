@@ -27,7 +27,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `melter@chandansteel.com` / `worker123` |
+| **Login** | `op.sms@chandansteel.com` / `Op@123` |
 | **Expect home** | Shift Dashboard |
 
 | # | Test | OK |
@@ -44,7 +44,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `iaf.supervisor@chandansteel.com` / `iaf123` |
+| **Login** | `sup.iaf@chandansteel.com` / `Sup@123` |
 | **Expect home** | Operations Activity (`/supervisor`) |
 
 | # | Test | OK |
@@ -57,7 +57,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `maint.equipment@chandansteel.com` / `maint123` |
+| **Login** | `maint.equipment@chandansteel.com` / `Maint@123` |
 | **Expect home** | Maintenance |
 
 | # | Test | OK |
@@ -71,7 +71,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `hr@chandansteel.com` / `hr123` |
+| **Login** | `hr@chandansteel.com` / `Hr@123` |
 | **Expect home** | Workforce |
 
 | # | Test | OK |
@@ -86,7 +86,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `hod@chandansteel.com` / `hod123` |
+| **Login** | `hod.sms@chandansteel.com` / `Hod@123` |
 | **Expect home** | Dept pulse / HOD |
 
 | # | Test | OK |
@@ -99,7 +99,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `ceo@chandansteel.com` / `ceo123` |
+| **Login** | `ceo@chandansteel.com` / `Ceo@123` |
 | **Expect home** | Plant pulse / executive area |
 
 | # | Test | OK |
@@ -113,7 +113,7 @@ These cover every major area. If all pass, you can hand over for manager UAT.
 
 | | |
 |--|--|
-| **Login** | `admin@logbook.app` / `admin123` |
+| **Login** | `admin@chandansteel.com` / `Admin@123` |
 | **Expect home** | Admin |
 
 | # | Test | OK |
@@ -130,12 +130,12 @@ Do **one** create → open → Save each. Skip deep workflow.
 
 | Process | Login | Password | OK |
 |---------|-------|----------|----|
-| AOD | `aod.supervisor@chandansteel.com` | `aod123` | ☐ |
-| CCM | `ccm.supervisor@chandansteel.com` | `ccm123` | ☐ |
-| RMILL | `supervisor.rolling@chandansteel.com` | `rolling123` | ☐ |
-| WFURN or WDRAW | `supervisor.wire@chandansteel.com` | `wire123` | ☐ |
-| BBAR | `supervisor.bbd@chandansteel.com` | `bbd123` | ☐ |
-| GRIND | `supervisor.forge@chandansteel.com` | `forge123` | ☐ |
+| AOD | `sup.aod@chandansteel.com` | `Sup@123` | ☐ |
+| CCM | `sup.ccm@chandansteel.com` | `Sup@123` | ☐ |
+| RMILL | `sup.rolling@chandansteel.com` | `Sup@123` | ☐ |
+| WFURN or WDRAW | `sup.wire@chandansteel.com` | `Sup@123` | ☐ |
+| BBAR | `sup.bbd@chandansteel.com` | `Sup@123` | ☐ |
+| GRIND | `sup.forge@chandansteel.com` | `Sup@123` | ☐ |
 | PEEL (blocked) | any BBD e.g. `worker.bbd@…` / `bbd123` | Open **PEEL** → blocked message, no crash | ☐ |
 
 ---
@@ -144,11 +144,11 @@ Do **one** create → open → Save each. Skip deep workflow.
 
 | Login | Password | Quick check | OK |
 |-------|----------|-------------|----|
-| `maint.quality@chandansteel.com` | `maint123` | Queue opens (quality scope) | ☐ |
-| `maint.safety@chandansteel.com` | `maint123` | Queue opens | ☐ |
-| `worker.rolling@chandansteel.com` | `rolling123` | Shift + My Runs | ☐ |
-| `worker.wire@chandansteel.com` | `wire123` | Shift + My Runs | ☐ |
-| `hod.rolling@chandansteel.com` | `hod123` | HoD home loads | ☐ |
+| `maint.quality@chandansteel.com` | `Maint@123` | Queue opens (quality scope) | ☐ |
+| `maint.safety@chandansteel.com` | `Maint@123` | Queue opens | ☐ |
+| `op.rolling@chandansteel.com` | `Op@123` | Shift + My Runs | ☐ |
+| `op.wire@chandansteel.com` | `Op@123` | Shift + My Runs | ☐ |
+| `hod.rolling@chandansteel.com` | `Hod@123` | HoD home loads | ☐ |
 
 Full 26-account matrix: [`MOBILE_P6_DEVICE_QA.md`](./MOBILE_P6_DEVICE_QA.md) — **not required** before manager UAT if §1–2 pass.
 

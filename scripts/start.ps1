@@ -50,8 +50,8 @@ Write-Host "  Frontend:  http://localhost:$FrontendPort" -ForegroundColor White
 Write-Host "  Backend:   http://localhost:$BackendPort" -ForegroundColor White
 Write-Host "  API Docs:  http://localhost:$BackendPort/docs" -ForegroundColor White
 Write-Host ""
-Write-Host "  Admin:     admin@logbook.app / admin123" -ForegroundColor White
-Write-Host "  Worker:    melter@chandansteel.com / worker123" -ForegroundColor White
+Write-Host "  Admin:     admin@chandansteel.com / Admin@123" -ForegroundColor White
+Write-Host "  Worker:    op.sms@chandansteel.com / Op@123" -ForegroundColor White
 Write-Host ""
 if ($startFrontend) {
     Write-Host "A new frontend window was opened." -ForegroundColor Gray

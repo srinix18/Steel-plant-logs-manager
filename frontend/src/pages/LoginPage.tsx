@@ -8,8 +8,8 @@ import { Input } from '../components/ui/Input';
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@logbook.app');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('admin@chandansteel.com');
+  const [password, setPassword] = useState('Admin@123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +43,7 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: admin@logbook.app / admin123
+          Demo: admin@chandansteel.com / Admin@123
         </p>
       </div>
     </div>

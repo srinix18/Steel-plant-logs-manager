@@ -21,38 +21,38 @@ type Scenario = {
 const SCENARIOS: Scenario[] = [
   {
     label: 'IAF heat',
-    email: 'melter@chandansteel.com',
-    password: 'worker123',
+    email: 'op.sms@chandansteel.com',
+    password: 'Op@123',
     code: 'IAF',
     payload: { run_type: 'heat', includeShift: true, includeGrade: true },
   },
   {
     label: 'CCM cast (no grade)',
-    email: 'ccm.supervisor@chandansteel.com',
-    password: 'ccm123',
+    email: 'sup.ccm@chandansteel.com',
+    password: 'Sup@123',
     code: 'CCM',
     payload: { run_type: 'cast', includeShift: true, includeGrade: false },
     forbidGrade: true,
   },
   {
     label: 'BBAR daily',
-    email: 'worker.bbd@chandansteel.com',
-    password: 'bbd123',
+    email: 'op.bbd@chandansteel.com',
+    password: 'Op@123',
     code: 'BBAR',
     payload: { run_type: 'daily' },
     forbidGrade: true,
   },
   {
     label: 'RMILL shift',
-    email: 'worker.rolling@chandansteel.com',
-    password: 'rolling123',
+    email: 'op.rolling@chandansteel.com',
+    password: 'Op@123',
     code: 'RMILL',
     payload: { run_type: 'shift', includeShift: true, includeGrade: true },
   },
   {
     label: 'GRIND daily',
-    email: 'worker.forge@chandansteel.com',
-    password: 'forge123',
+    email: 'op.forge@chandansteel.com',
+    password: 'Op@123',
     code: 'GRIND',
     payload: { run_type: 'daily' },
     forbidGrade: true,
@@ -172,8 +172,8 @@ async function checkActiveRunsAndHandover(): Promise<void> {
   const login = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({
-      email: 'iaf.supervisor@chandansteel.com',
-      password: 'iaf123',
+      email: 'sup.iaf@chandansteel.com',
+      password: 'Sup@123',
     }),
   });
   if (!login.res.ok) {
@@ -243,7 +243,7 @@ async function main() {
   try {
     await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'admin@logbook.app', password: 'admin123' }),
+      body: JSON.stringify({ email: 'admin@chandansteel.com', password: 'Admin@123' }),
     });
   } catch (err) {
     console.log(`shift-launcher-api: API unreachable at ${API_URL} — skipped (${String(err)})`);

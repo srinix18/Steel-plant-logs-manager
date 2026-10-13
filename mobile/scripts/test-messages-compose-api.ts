@@ -124,7 +124,7 @@ async function apiSmoke() {
       method: 'POST',
       body: JSON.stringify({
         email: 'ceo@chandansteel.com',
-        password: 'ceo123',
+        password: 'Ceo@123',
       }),
     });
   } catch (err) {
@@ -144,7 +144,7 @@ async function apiSmoke() {
     process.exit(1);
   }
   const users = suggest.json as { id: string; email: string }[];
-  const worker = users.find((u) => u.email === 'melter@chandansteel.com') ?? users[0];
+  const worker = users.find((u) => u.email === 'op.sms@chandansteel.com') ?? users[0];
   if (!worker) {
     console.log('messages-compose-api: no recipients — unit OK; skipped');
     return;

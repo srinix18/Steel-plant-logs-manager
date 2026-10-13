@@ -66,7 +66,7 @@ async function apiSmoke() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'hod@chandansteel.com', password: 'hod123' }),
+      body: JSON.stringify({ email: 'hod.sms@chandansteel.com', password: 'Hod@123' }),
     });
   } catch (err) {
     console.log(`pulse-dept-api: API unreachable — unit OK; skipped (${String(err)})`);

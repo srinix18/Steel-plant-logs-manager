@@ -33,32 +33,32 @@ cd mobile
 
 | # | Role | Email | API login | Phone Pass | Notes |
 |---|------|-------|-----------|------------|-------|
-| 1 | Super Admin | `admin@logbook.app` | ☐ | ☐ | Home `/admin` |
+| 1 | Super Admin | `admin@chandansteel.com` | ☐ | ☐ | Home `/admin` |
 | 2 | CEO | `ceo@chandansteel.com` | ☐ | ☐ | Home `/pulse/plant` |
 | 3 | HR | `hr@chandansteel.com` | ☐ | ☐ | Home `/workforce` |
-| 4 | HoD SMS | `hod@chandansteel.com` | ☐ | ☐ | Home `/pulse/department` |
-| 5 | Sup IAF | `iaf.supervisor@chandansteel.com` | ☐ | ☐ | Home `/supervisor` |
-| 6 | Sup AOD | `aod.supervisor@chandansteel.com` | ☐ | ☐ | |
-| 7 | Sup CCM | `ccm.supervisor@chandansteel.com` | ☐ | ☐ | |
-| 8 | Sup legacy | `supervisor@chandansteel.com` | ☐ | ☐ | |
-| 9 | Worker melter | `melter@chandansteel.com` | ☐ | ☐ | Home `/shift` |
+| 4 | HoD SMS | `hod.sms@chandansteel.com` | ☐ | ☐ | Home `/pulse/department` |
+| 5 | Sup IAF | `sup.iaf@chandansteel.com` | ☐ | ☐ | Home `/supervisor` |
+| 6 | Sup AOD | `sup.aod@chandansteel.com` | ☐ | ☐ | |
+| 7 | Sup CCM | `sup.ccm@chandansteel.com` | ☐ | ☐ | |
+| 8 | Sup legacy | `sup.sms@chandansteel.com` | ☐ | ☐ | |
+| 9 | Worker melter | `op.sms@chandansteel.com` | ☐ | ☐ | Home `/shift` |
 | 10 | Maint quality | `maint.quality@chandansteel.com` | ☐ | ☐ | Home `/maintenance` |
 | 11 | Maint safety | `maint.safety@chandansteel.com` | ☐ | ☐ | |
 | 12 | Maint energy | `maint.energy@chandansteel.com` | ☐ | ☐ | |
 | 13 | Maint equipment | `maint.equipment@chandansteel.com` | ☐ | ☐ | |
 | 14 | Maint process | `maint.process@chandansteel.com` | ☐ | ☐ | |
 | 15 | HoD Rolling | `hod.rolling@chandansteel.com` | ☐ | ☐ | |
-| 16 | Sup Rolling | `supervisor.rolling@chandansteel.com` | ☐ | ☐ | |
-| 17 | Worker Rolling | `worker.rolling@chandansteel.com` | ☐ | ☐ | |
+| 16 | Sup Rolling | `sup.rolling@chandansteel.com` | ☐ | ☐ | |
+| 17 | Worker Rolling | `op.rolling@chandansteel.com` | ☐ | ☐ | |
 | 18 | HoD Wire | `hod.wire@chandansteel.com` | ☐ | ☐ | |
-| 19 | Sup Wire | `supervisor.wire@chandansteel.com` | ☐ | ☐ | |
-| 20 | Worker Wire | `worker.wire@chandansteel.com` | ☐ | ☐ | |
+| 19 | Sup Wire | `sup.wire@chandansteel.com` | ☐ | ☐ | |
+| 20 | Worker Wire | `op.wire@chandansteel.com` | ☐ | ☐ | |
 | 21 | HoD BBD | `hod.bbd@chandansteel.com` | ☐ | ☐ | |
-| 22 | Sup BBD | `supervisor.bbd@chandansteel.com` | ☐ | ☐ | |
-| 23 | Worker BBD | `worker.bbd@chandansteel.com` | ☐ | ☐ | |
+| 22 | Sup BBD | `sup.bbd@chandansteel.com` | ☐ | ☐ | |
+| 23 | Worker BBD | `op.bbd@chandansteel.com` | ☐ | ☐ | |
 | 24 | HoD Forge | `hod.forge@chandansteel.com` | ☐ | ☐ | |
-| 25 | Sup Forge | `supervisor.forge@chandansteel.com` | ☐ | ☐ | |
-| 26 | Worker Forge | `worker.forge@chandansteel.com` | ☐ | ☐ | |
+| 25 | Sup Forge | `sup.forge@chandansteel.com` | ☐ | ☐ | |
+| 26 | Worker Forge | `op.forge@chandansteel.com` | ☐ | ☐ | |
 
 Mark **API login** from `p6-device-qa.ps1` / `test-demo-logins` output. Mark **Phone Pass** only after Expo Go sign-in.
 

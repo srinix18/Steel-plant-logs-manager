@@ -188,9 +188,9 @@ Add to `seed_divisions.py`: `("FORGE", "Forge Shop")`
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod.forge@chandansteel.com` | `hod123` |
-| Supervisor | `supervisor.forge@chandansteel.com` | `forge123` |
-| Worker | `worker.forge@chandansteel.com` | `forge123` |
+| HoD | `hod.forge@chandansteel.com` | `Hod@123` |
+| Supervisor | `sup.forge@chandansteel.com` | `Sup@123` |
+| Worker | `op.forge@chandansteel.com` | `Op@123` |
 
 ---
 

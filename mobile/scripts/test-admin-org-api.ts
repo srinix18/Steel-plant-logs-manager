@@ -61,7 +61,7 @@ async function apiSmoke() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'admin@logbook.app', password: 'admin123' }),
+      body: JSON.stringify({ email: 'admin@chandansteel.com', password: 'Admin@123' }),
     });
   } catch (err) {
     console.log(`admin-org-api: API unreachable — unit OK; skipped (${String(err)})`);

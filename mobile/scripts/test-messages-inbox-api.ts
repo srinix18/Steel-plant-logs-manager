@@ -82,7 +82,7 @@ async function login(email: string, password: string) {
 async function apiSmoke() {
   let ceoToken;
   try {
-    ceoToken = await login('ceo@chandansteel.com', 'ceo123');
+    ceoToken = await login('ceo@chandansteel.com', 'Ceo@123');
   } catch (err) {
     console.log(`messages-inbox-api: API unreachable — unit OK; skipped (${String(err)})`);
     return;
@@ -93,7 +93,7 @@ async function apiSmoke() {
   }
   const ceoAuth = { Authorization: `Bearer ${ceoToken}` };
 
-  const workerToken = await login('melter@chandansteel.com', 'worker123');
+  const workerToken = await login('op.sms@chandansteel.com', 'Op@123');
   if (!workerToken) {
     console.log('messages-inbox-api: worker login failed — unit OK; skipped');
     return;

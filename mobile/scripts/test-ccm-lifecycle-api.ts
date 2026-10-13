@@ -1,6 +1,6 @@
 /**
  * Smoke: CCM cast — create run, add casting row with mould_tube + time_range + zone_strand, reopen.
- * Login: ccm.supervisor@chandansteel.com / ccm123
+ * Login: sup.ccm@chandansteel.com / Sup@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -32,8 +32,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'ccm.supervisor@chandansteel.com',
-        password: 'ccm123',
+        email: 'sup.ccm@chandansteel.com',
+        password: 'Sup@123',
       }),
     });
   } catch (err) {

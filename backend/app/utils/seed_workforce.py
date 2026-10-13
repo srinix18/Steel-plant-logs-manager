@@ -86,16 +86,16 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
 
     effective = date.today() - timedelta(days=30)
     assignment_specs: list[tuple[str, str, str]] = [
-        ("melter@chandansteel.com", "SMS", "A"),
-        ("iaf.supervisor@chandansteel.com", "SMS", "A"),
-        ("worker.rolling@chandansteel.com", "ROLLING", "B"),
-        ("supervisor.rolling@chandansteel.com", "ROLLING", "B"),
-        ("worker.wire@chandansteel.com", "WIRE", "C"),
-        ("supervisor.wire@chandansteel.com", "WIRE", "C"),
-        ("worker.bbd@chandansteel.com", "BBD", "A"),
-        ("supervisor.bbd@chandansteel.com", "BBD", "A"),
-        ("worker.forge@chandansteel.com", "FORGE", "B"),
-        ("supervisor.forge@chandansteel.com", "FORGE", "B"),
+        ("op.sms@chandansteel.com", "SMS", "A"),
+        ("sup.iaf@chandansteel.com", "SMS", "A"),
+        ("op.rolling@chandansteel.com", "ROLLING", "B"),
+        ("sup.rolling@chandansteel.com", "ROLLING", "B"),
+        ("op.wire@chandansteel.com", "WIRE", "C"),
+        ("sup.wire@chandansteel.com", "WIRE", "C"),
+        ("op.bbd@chandansteel.com", "BBD", "A"),
+        ("sup.bbd@chandansteel.com", "BBD", "A"),
+        ("op.forge@chandansteel.com", "FORGE", "B"),
+        ("sup.forge@chandansteel.com", "FORGE", "B"),
     ]
     dept_map = {
         "SMS": sms_dept,
@@ -134,7 +134,7 @@ async def seed_workforce_demo(session: AsyncSession) -> None:
             )
 
     if sms_dept and shift_a:
-        author = await session.execute(select(User).where(User.email == "iaf.supervisor@chandansteel.com"))
+        author = await session.execute(select(User).where(User.email == "sup.iaf@chandansteel.com"))
         author_user = author.scalar_one_or_none()
         if author_user:
             note_date = date.today() - timedelta(days=1)

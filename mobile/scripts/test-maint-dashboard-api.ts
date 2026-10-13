@@ -67,7 +67,7 @@ async function apiSmoke() {
       method: 'POST',
       body: JSON.stringify({
         email: 'maint.quality@chandansteel.com',
-        password: 'maint123',
+        password: 'Maint@123',
       }),
     });
   } catch (err) {

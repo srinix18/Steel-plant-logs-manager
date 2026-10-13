@@ -59,8 +59,8 @@ async function apiSmoke() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'melter@chandansteel.com',
-        password: 'worker123',
+        email: 'op.sms@chandansteel.com',
+        password: 'Op@123',
       }),
     });
   } catch (err) {
@@ -102,7 +102,7 @@ async function apiSmoke() {
   // HR must not use worker self endpoint
   const hrLogin = await request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'hr123' }),
+    body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'Hr@123' }),
   });
   if (hrLogin.res.ok) {
     const hrAuth = {

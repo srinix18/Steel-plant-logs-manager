@@ -48,7 +48,7 @@ async def test_import_creates_users_with_shift_and_salary(api):
         ["IMP-003", "Bad Role", "bad.role@example.com", "Temp@1234", "astronaut", "SMS", "", "", "", "", "", ""],
         ["IMP-004", "No Dept", "no.dept@example.com", "Temp@1234", "worker", "", "", "", "", "", "", ""],
         ["IMP-005", "Same Mail", "import.worker@example.com", "Temp@1234", "worker", "SMS", "", "", "", "", "", ""],
-        ["IMP-006", "Existing", "melter@chandansteel.com", "Temp@1234", "worker", "SMS", "", "", "", "", "", ""],
+        ["IMP-006", "Existing", "op.sms@chandansteel.com", "Temp@1234", "worker", "SMS", "", "", "", "", "", ""],
         ["IMP-007", "No Process", "no.process@example.com", "Temp@1234", "supervisor", "SMS", "", "", "B", "", "", ""],
         ["IMP-008", "Iaf Supervisor", "iaf.new@example.com", "Temp@1234", "supervisor", "SMS", "IAF", "", "B", "", "", ""],
     ])

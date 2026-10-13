@@ -16,6 +16,15 @@ async def seed_admin_user() -> None:
     existing = await repo.get_by_email(settings.SEED_ADMIN_EMAIL)
     if existing:
         return
+    # An admin that was renamed (see login_pattern) must not be recreated under a stale configured address.
+    from sqlalchemy import select
+
+    from app.db.session import async_session_factory
+
+    async with async_session_factory() as session:
+        any_admin = (await session.execute(select(User.id).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN])).limit(1))).first()
+    if any_admin:
+        return
     admin = User(
         email=settings.SEED_ADMIN_EMAIL,
         hashed_password=get_password_hash(settings.SEED_ADMIN_PASSWORD),

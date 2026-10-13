@@ -60,7 +60,7 @@ async function apiSmoke() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'ceo@chandansteel.com', password: 'ceo123' }),
+      body: JSON.stringify({ email: 'ceo@chandansteel.com', password: 'Ceo@123' }),
     });
   } catch (err) {
     console.log(`pulse-asset-api: API unreachable — unit OK; skipped (${String(err)})`);

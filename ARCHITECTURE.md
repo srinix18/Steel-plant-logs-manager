@@ -248,7 +248,7 @@ Auth: `Authorization: Bearer <access_token>`
 **POST /auth/login**
 ```json
 // Request
-{ "email": "admin@logbook.app", "password": "admin123" }
+{ "email": "admin@chandansteel.com", "password": "Admin@123" }
 
 // Response 200
 {

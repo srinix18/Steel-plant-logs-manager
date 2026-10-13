@@ -131,12 +131,12 @@ async def test_login_lockout_after_repeated_failures(api, client):
     assert r.status_code == 429
     assert "Retry-After" in r.headers
     # Other accounts are unaffected.
-    r = await client.post("/auth/login", json={"email": "ceo@chandansteel.com", "password": "ceo123"}, headers=headers)
+    r = await client.post("/auth/login", json={"email": "ceo@chandansteel.com", "password": "Ceo@123"}, headers=headers)
     assert r.status_code == 200
 
 
 async def test_success_resets_failure_count(client):
-    email, pw = "worker.forge@chandansteel.com", "forge123"
+    email, pw = "op.forge@chandansteel.com", "Op@123"
     headers = {"X-Forwarded-For": "10.8.8.8"}
     for _ in range(4):
         await client.post("/auth/login", json={"email": email, "password": "wrong"}, headers=headers)
@@ -150,7 +150,7 @@ async def test_ip_lockout(client):
     headers = {"X-Forwarded-For": "10.7.7.7"}
     for i in range(30):
         await client.post("/auth/login", json={"email": f"spray{i}@chandansteel.com", "password": "x"}, headers=headers)
-    r = await client.post("/auth/login", json={"email": "ceo@chandansteel.com", "password": "ceo123"}, headers=headers)
+    r = await client.post("/auth/login", json={"email": "ceo@chandansteel.com", "password": "Ceo@123"}, headers=headers)
     assert r.status_code == 429
 
 

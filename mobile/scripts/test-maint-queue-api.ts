@@ -66,7 +66,7 @@ async function login(email: string, password: string) {
 async function apiSmoke() {
   let token;
   try {
-    token = await login('maint.quality@chandansteel.com', 'maint123');
+    token = await login('maint.quality@chandansteel.com', 'Maint@123');
   } catch (err) {
     console.log(`maint-queue-api: API unreachable — unit OK; skipped (${String(err)})`);
     return;
@@ -89,7 +89,7 @@ async function apiSmoke() {
   console.log(`ok  mine → ${(mine.json as unknown[]).length} issue(s)`);
 
   // Raise a quality issue as IAF supervisor so maint.quality can take it
-  const supToken = await login('iaf.supervisor@chandansteel.com', 'iaf123');
+  const supToken = await login('sup.iaf@chandansteel.com', 'Sup@123');
   if (!supToken) {
     console.log('maint-queue-api: supervisor login failed — skipped assign/close');
     return;

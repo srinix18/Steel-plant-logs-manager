@@ -31,7 +31,7 @@ async function main() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'admin@logbook.app', password: 'admin123' }),
+      body: JSON.stringify({ email: 'admin@chandansteel.com', password: 'Admin@123' }),
     });
   } catch (err) {
     console.log(`profile-api: API unreachable at ${API_URL} — skipped (${String(err)})`);

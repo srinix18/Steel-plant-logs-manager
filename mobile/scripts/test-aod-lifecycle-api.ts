@@ -1,6 +1,6 @@
 /**
  * Smoke: AOD ladle_metallurgy — create run, PATCH all 13 section keys + sample temp + blow columns.
- * Login: aod.supervisor@chandansteel.com / aod123
+ * Login: sup.aod@chandansteel.com / Sup@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -48,8 +48,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'aod.supervisor@chandansteel.com',
-        password: 'aod123',
+        email: 'sup.aod@chandansteel.com',
+        password: 'Sup@123',
       }),
     });
   } catch (err) {

@@ -338,8 +338,8 @@ async def seed_all(session: AsyncSession) -> None:
         is_active=True,
     )
     supervisor = User(
-        email="supervisor@chandansteel.com",
-        hashed_password=get_password_hash("supervisor123"),
+        email="sup.sms@chandansteel.com",
+        hashed_password=get_password_hash("Sup@123"),
         full_name="SMS Supervisor",
         role=UserRole.SUPERVISOR,
         organisation_id=org.id,
@@ -348,8 +348,8 @@ async def seed_all(session: AsyncSession) -> None:
         is_active=True,
     )
     worker = User(
-        email="melter@chandansteel.com",
-        hashed_password=get_password_hash("worker123"),
+        email="op.sms@chandansteel.com",
+        hashed_password=get_password_hash("Op@123"),
         full_name="Plant Melter",
         role=UserRole.WORKER,
         organisation_id=org.id,

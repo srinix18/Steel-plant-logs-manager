@@ -118,7 +118,7 @@ Also seeded: **QUAL**, **MAINT**, **UTIL** for workforce grouping. Backend start
 
 **On phone today:** login → Shift → start **IAF / AOD / CCM / RMILL / WFURN / WDRAW / BBAR / GRIND** → fill cards → Save / workflow. Peeling shows blocked stub. Other modules appear in the drawer as placeholders until Plans 3–5.
 
-**Phone smoke accounts:** melter `melter@chandansteel.com` / `worker123` · AOD `aod.supervisor@chandansteel.com` / `aod123` · CCM `ccm.supervisor@chandansteel.com` / `ccm123` · Rolling `worker.rolling@chandansteel.com` / `rolling123` · Wire `worker.wire@chandansteel.com` / `wire123` · Bright Bar `worker.bbd@chandansteel.com` / `bbd123` · Forge `worker.forge@chandansteel.com` / `forge123`
+**Phone smoke accounts:** melter `op.sms@chandansteel.com` / `Op@123` · AOD `sup.aod@chandansteel.com` / `Sup@123` · CCM `sup.ccm@chandansteel.com` / `Sup@123` · Rolling `op.rolling@chandansteel.com` / `Op@123` · Wire `op.wire@chandansteel.com` / `Op@123` · Bright Bar `op.bbd@chandansteel.com` / `Op@123` · Forge `op.forge@chandansteel.com` / `Op@123`
 
 ```powershell
 cd mobile
@@ -266,13 +266,13 @@ Open **http://localhost:5173/login**
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | `admin@logbook.app` | `admin123` |
-| CEO | `ceo@chandansteel.com` | `ceo123` |
-| HR | `hr@chandansteel.com` | `hr123` |
-| SMS HoD | `hod@chandansteel.com` | `hod123` |
-| IAF Supervisor | `iaf.supervisor@chandansteel.com` | `iaf123` |
-| Melter (worker) | `melter@chandansteel.com` | `worker123` |
-| AOD Supervisor | `aod.supervisor@chandansteel.com` | `aod123` |
+| Super Admin | `admin@chandansteel.com` | `Admin@123` |
+| CEO | `ceo@chandansteel.com` | `Ceo@123` |
+| HR | `hr@chandansteel.com` | `Hr@123` |
+| SMS HoD | `hod.sms@chandansteel.com` | `Hod@123` |
+| IAF Supervisor | `sup.iaf@chandansteel.com` | `Sup@123` |
+| Melter (worker) | `op.sms@chandansteel.com` | `Op@123` |
+| AOD Supervisor | `sup.aod@chandansteel.com` | `Sup@123` |
 
 Full user list (rolling, wire, BBD, forge, maintenance crews): **[LOGINS.md](LOGINS.md)**
 

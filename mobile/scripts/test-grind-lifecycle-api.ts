@@ -1,6 +1,6 @@
 /**
  * Smoke: GRIND daily register — create, save header, workflow Start Register.
- * Login: worker.forge@chandansteel.com / forge123
+ * Login: op.forge@chandansteel.com / Op@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -32,8 +32,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'worker.forge@chandansteel.com',
-        password: 'forge123',
+        email: 'op.forge@chandansteel.com',
+        password: 'Op@123',
       }),
     });
   } catch (err) {

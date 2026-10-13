@@ -1,6 +1,6 @@
 /**
  * Smoke: RMILL shift — create run, save delay + batch + all 12 hourly hours, reopen.
- * Login: worker.rolling@chandansteel.com / rolling123
+ * Login: op.rolling@chandansteel.com / Op@123
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -32,8 +32,8 @@ async function main() {
     login = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'worker.rolling@chandansteel.com',
-        password: 'rolling123',
+        email: 'op.rolling@chandansteel.com',
+        password: 'Op@123',
       }),
     });
   } catch (err) {

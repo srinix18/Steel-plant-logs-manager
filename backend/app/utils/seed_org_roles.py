@@ -22,7 +22,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
 
     hr_seed = {
         "email": "hr@chandansteel.com",
-        "password": "hr123",
+        "password": "Hr@123",
         "full_name": "HR Workforce Manager",
         "role": UserRole.HR,
         "designation": "HR Manager",
@@ -62,7 +62,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
     seeds = [
         {
             "email": "ceo@chandansteel.com",
-            "password": "ceo123",
+            "password": "Ceo@123",
             "full_name": "Chandan CEO",
             "role": UserRole.CEO,
             "designation": "Chief Executive Officer",
@@ -70,8 +70,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "process_id": None,
         },
         {
-            "email": "hod@chandansteel.com",
-            "password": "hod123",
+            "email": "hod.sms@chandansteel.com",
+            "password": "Hod@123",
             "full_name": "SMS Head of Department",
             "role": UserRole.HOD,
             "designation": "HOD (Production)",
@@ -79,8 +79,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "process_id": None,
         },
         {
-            "email": "iaf.supervisor@chandansteel.com",
-            "password": "iaf123",
+            "email": "sup.iaf@chandansteel.com",
+            "password": "Sup@123",
             "full_name": "IAF Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "IAF Supervisor",
@@ -88,8 +88,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "process_code": "IAF",
         },
         {
-            "email": "aod.supervisor@chandansteel.com",
-            "password": "aod123",
+            "email": "sup.aod@chandansteel.com",
+            "password": "Sup@123",
             "full_name": "AOD Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "AOD Supervisor",
@@ -97,8 +97,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             "process_code": "AOD",
         },
         {
-            "email": "ccm.supervisor@chandansteel.com",
-            "password": "ccm123",
+            "email": "sup.ccm@chandansteel.com",
+            "password": "Sup@123",
             "full_name": "CCM Shift Incharge",
             "role": UserRole.SUPERVISOR,
             "designation": "CCM Supervisor",
@@ -147,15 +147,15 @@ async def seed_org_role_users(session: AsyncSession) -> None:
         rolling_seeds = [
             {
                 "email": "hod.rolling@chandansteel.com",
-                "password": "hod123",
+                "password": "Hod@123",
                 "full_name": "Rolling Mill HoD",
                 "role": UserRole.HOD,
                 "designation": "HOD (Rolling Mill)",
                 "employee_uid": "CHANDAN-HOD-RM-0001",
             },
             {
-                "email": "supervisor.rolling@chandansteel.com",
-                "password": "rolling123",
+                "email": "sup.rolling@chandansteel.com",
+                "password": "Sup@123",
                 "full_name": "Rolling Mill Shift Incharge",
                 "role": UserRole.SUPERVISOR,
                 "designation": "Rolling Mill Supervisor",
@@ -163,8 +163,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                 "process_id": rmill.id if rmill else None,
             },
             {
-                "email": "worker.rolling@chandansteel.com",
-                "password": "rolling123",
+                "email": "op.rolling@chandansteel.com",
+                "password": "Op@123",
                 "full_name": "Rolling Mill Operator",
                 "role": UserRole.WORKER,
                 "designation": "Mill Operator",
@@ -197,23 +197,23 @@ async def seed_org_role_users(session: AsyncSession) -> None:
         wire_seeds = [
             {
                 "email": "hod.wire@chandansteel.com",
-                "password": "hod123",
+                "password": "Hod@123",
                 "full_name": "Wire Division HoD",
                 "role": UserRole.HOD,
                 "designation": "HOD (Wire Division)",
                 "employee_uid": "CHANDAN-HOD-WIRE-0001",
             },
             {
-                "email": "supervisor.wire@chandansteel.com",
-                "password": "wire123",
+                "email": "sup.wire@chandansteel.com",
+                "password": "Sup@123",
                 "full_name": "Wire Division Shift Incharge",
                 "role": UserRole.SUPERVISOR,
                 "designation": "Wire Division Supervisor",
                 "employee_uid": "CHANDAN-WIRE-SUP-0001",
             },
             {
-                "email": "worker.wire@chandansteel.com",
-                "password": "wire123",
+                "email": "op.wire@chandansteel.com",
+                "password": "Op@123",
                 "full_name": "Wire Division Operator",
                 "role": UserRole.WORKER,
                 "designation": "Wire Division Operator",
@@ -250,23 +250,23 @@ async def seed_org_role_users(session: AsyncSession) -> None:
         bbd_seeds = [
             {
                 "email": "hod.bbd@chandansteel.com",
-                "password": "hod123",
+                "password": "Hod@123",
                 "full_name": "Bright Bar Division HoD",
                 "role": UserRole.HOD,
                 "designation": "HOD (Bright Bar Division)",
                 "employee_uid": "CHANDAN-HOD-BBD-0001",
             },
             {
-                "email": "supervisor.bbd@chandansteel.com",
-                "password": "bbd123",
+                "email": "sup.bbd@chandansteel.com",
+                "password": "Sup@123",
                 "full_name": "Bright Bar Shift Incharge",
                 "role": UserRole.SUPERVISOR,
                 "designation": "Bright Bar Supervisor",
                 "employee_uid": "CHANDAN-BBD-SUP-0001",
             },
             {
-                "email": "worker.bbd@chandansteel.com",
-                "password": "bbd123",
+                "email": "op.bbd@chandansteel.com",
+                "password": "Op@123",
                 "full_name": "Bright Bar Production Clerk",
                 "role": UserRole.WORKER,
                 "designation": "Bright Bar Operator",
@@ -307,15 +307,15 @@ async def seed_org_role_users(session: AsyncSession) -> None:
         forge_seeds = [
             {
                 "email": "hod.forge@chandansteel.com",
-                "password": "hod123",
+                "password": "Hod@123",
                 "full_name": "Forge Shop HoD",
                 "role": UserRole.HOD,
                 "designation": "HOD (Forge Shop)",
                 "employee_uid": "CHANDAN-HOD-FORGE-0001",
             },
             {
-                "email": "supervisor.forge@chandansteel.com",
-                "password": "forge123",
+                "email": "sup.forge@chandansteel.com",
+                "password": "Sup@123",
                 "full_name": "Forge Shop Shift Incharge",
                 "role": UserRole.SUPERVISOR,
                 "designation": "Forge Shop Supervisor",
@@ -323,8 +323,8 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                 "process_id": grind.id if grind else None,
             },
             {
-                "email": "worker.forge@chandansteel.com",
-                "password": "forge123",
+                "email": "op.forge@chandansteel.com",
+                "password": "Op@123",
                 "full_name": "Grinding Operator",
                 "role": UserRole.WORKER,
                 "designation": "Grinding Operator",
@@ -353,7 +353,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
                 )
 
     # Migrate legacy supervisor to IAF scope
-    legacy = await session.execute(select(User).where(User.email == "supervisor@chandansteel.com"))
+    legacy = await session.execute(select(User).where(User.email == "sup.sms@chandansteel.com"))
     legacy_user = legacy.scalar_one_or_none()
     iaf = processes.get("IAF")
     if legacy_user and iaf:
@@ -375,7 +375,7 @@ async def seed_org_role_users(session: AsyncSession) -> None:
             session.add(
                 User(
                     email=email,
-                    hashed_password=get_password_hash("maint123"),
+                    hashed_password=get_password_hash("Maint@123"),
                     full_name=name,
                     role=UserRole.MAINTENANCE,
                     organisation_id=org.id,

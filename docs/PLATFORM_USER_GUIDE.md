@@ -390,12 +390,12 @@ Contractors / contract workers → contractor attendance (separate from permanen
 
 | Role | Login example | Primary areas |
 |------|---------------|---------------|
-| Super admin | `admin@logbook.app` | Admin, all modules |
+| Super admin | `admin@chandansteel.com` | Admin, all modules |
 | CEO | `ceo@chandansteel.com` | Executive, finance view, workforce view, PM programs |
 | HR | `hr@chandansteel.com` | Workforce ops, import |
-| HoD | `hod@chandansteel.com` | Department overview, foundation assets, finance view |
-| IAF supervisor | `iaf.supervisor@chandansteel.com` | Shift floor, supervisor monitor, finance view |
-| Melter | `melter@chandansteel.com` | Shift dashboard, heat workspace |
+| HoD | `hod.sms@chandansteel.com` | Department overview, foundation assets, finance view |
+| IAF supervisor | `sup.iaf@chandansteel.com` | Shift floor, supervisor monitor, finance view |
+| Melter | `op.sms@chandansteel.com` | Shift dashboard, heat workspace |
 | Maintenance | `maint.equipment@chandansteel.com` | Issue queue (equipment category) |
 
 Full table: [LOGINS.md](../LOGINS.md).

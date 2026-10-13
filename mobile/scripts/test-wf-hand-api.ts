@@ -22,7 +22,7 @@ async function request(pathname: string, init: RequestInit = {}) {
 }
 
 try {
-  const login = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'hr123' }) });
+  const login = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'Hr@123' }) });
   if (!login.res.ok) throw new Error('login unavailable');
   const auth = { Authorization: `Bearer ${(login.json as { access_token: string }).access_token}` };
   const [depts, shifts] = await Promise.all([request('/departments', { headers: auth }), request('/workforce/shifts', { headers: auth })]);

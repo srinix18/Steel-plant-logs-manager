@@ -44,7 +44,7 @@ async function tryLogin(
 }
 
 async function main() {
-  const probe = await tryLogin('admin@logbook.app', 'admin123');
+  const probe = await tryLogin('admin@chandansteel.com', 'Admin@123');
   if (!probe.ok && /fetch failed|ECONNREFUSED|network|Failed to fetch|Cannot reach/i.test(probe.detail)) {
     console.log(`demo-logins: API unreachable at ${API_URL} — skipped (${probe.detail})`);
     process.exit(0);

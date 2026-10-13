@@ -49,7 +49,7 @@ async function apiSmoke() {
   try {
     login = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'hr123' }),
+      body: JSON.stringify({ email: 'hr@chandansteel.com', password: 'Hr@123' }),
     });
   } catch (err) {
     console.log(`wf-sal-api: API unreachable — unit OK; skipped (${String(err)})`);

@@ -25,9 +25,9 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | `admin@logbook.app` | `admin123` |
-| CEO | `ceo@chandansteel.com` | `ceo123` |
-| HR | `hr@chandansteel.com` | `hr123` |
+| Super Admin | `admin@chandansteel.com` | `Admin@123` |
+| CEO | `ceo@chandansteel.com` | `Ceo@123` |
+| HR | `hr@chandansteel.com` | `Hr@123` |
 
 ---
 
@@ -35,12 +35,12 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod@chandansteel.com` | `hod123` |
-| IAF Supervisor | `iaf.supervisor@chandansteel.com` | `iaf123` |
-| AOD Supervisor | `aod.supervisor@chandansteel.com` | `aod123` |
-| CCM Supervisor | `ccm.supervisor@chandansteel.com` | `ccm123` |
-| Supervisor (legacy) | `supervisor@chandansteel.com` | `supervisor123` |
-| Worker (melter) | `melter@chandansteel.com` | `worker123` |
+| HoD | `hod.sms@chandansteel.com` | `Hod@123` |
+| IAF Supervisor | `sup.iaf@chandansteel.com` | `Sup@123` |
+| AOD Supervisor | `sup.aod@chandansteel.com` | `Sup@123` |
+| CCM Supervisor | `sup.ccm@chandansteel.com` | `Sup@123` |
+| Supervisor (legacy) | `sup.sms@chandansteel.com` | `Sup@123` |
+| Worker (melter) | `op.sms@chandansteel.com` | `Op@123` |
 
 ---
 
@@ -48,9 +48,9 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod.rolling@chandansteel.com` | `hod123` |
-| Supervisor | `supervisor.rolling@chandansteel.com` | `rolling123` |
-| Worker | `worker.rolling@chandansteel.com` | `rolling123` |
+| HoD | `hod.rolling@chandansteel.com` | `Hod@123` |
+| Supervisor | `sup.rolling@chandansteel.com` | `Sup@123` |
+| Worker | `op.rolling@chandansteel.com` | `Op@123` |
 
 ---
 
@@ -58,9 +58,9 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod.wire@chandansteel.com` | `hod123` |
-| Supervisor | `supervisor.wire@chandansteel.com` | `wire123` |
-| Worker | `worker.wire@chandansteel.com` | `wire123` |
+| HoD | `hod.wire@chandansteel.com` | `Hod@123` |
+| Supervisor | `sup.wire@chandansteel.com` | `Sup@123` |
+| Worker | `op.wire@chandansteel.com` | `Op@123` |
 
 ---
 
@@ -68,9 +68,9 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod.bbd@chandansteel.com` | `hod123` |
-| Supervisor | `supervisor.bbd@chandansteel.com` | `bbd123` |
-| Worker | `worker.bbd@chandansteel.com` | `bbd123` |
+| HoD | `hod.bbd@chandansteel.com` | `Hod@123` |
+| Supervisor | `sup.bbd@chandansteel.com` | `Sup@123` |
+| Worker | `op.bbd@chandansteel.com` | `Op@123` |
 
 ---
 
@@ -78,9 +78,9 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| HoD | `hod.forge@chandansteel.com` | `hod123` |
-| Supervisor | `supervisor.forge@chandansteel.com` | `forge123` |
-| Worker | `worker.forge@chandansteel.com` | `forge123` |
+| HoD | `hod.forge@chandansteel.com` | `Hod@123` |
+| Supervisor | `sup.forge@chandansteel.com` | `Sup@123` |
+| Worker | `op.forge@chandansteel.com` | `Op@123` |
 
 ---
 
@@ -88,11 +88,11 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 
 | Role | Email | Password |
 |------|-------|----------|
-| Quality | `maint.quality@chandansteel.com` | `maint123` |
-| Safety | `maint.safety@chandansteel.com` | `maint123` |
-| Energy | `maint.energy@chandansteel.com` | `maint123` |
-| Equipment | `maint.equipment@chandansteel.com` | `maint123` |
-| Process | `maint.process@chandansteel.com` | `maint123` |
+| Quality | `maint.quality@chandansteel.com` | `Maint@123` |
+| Safety | `maint.safety@chandansteel.com` | `Maint@123` |
+| Energy | `maint.energy@chandansteel.com` | `Maint@123` |
+| Equipment | `maint.equipment@chandansteel.com` | `Maint@123` |
+| Process | `maint.process@chandansteel.com` | `Maint@123` |
 
 ---
 
@@ -114,7 +114,7 @@ If the first login is slow, wait ~30–60 seconds (Render free tier may be wakin
 ## Suggested walkthrough
 
 1. Install `MOI-preview.apk` (allow unknown sources if asked).
-2. Login as **`melter@chandansteel.com` / `worker123`** → start / open an IAF heat.
+2. Login as **`op.sms@chandansteel.com` / `Op@123`** → start / open an IAF heat.
 3. Then try each department’s **Worker** account above for that area’s sheet.
 4. Use Supervisor / HoD accounts for oversight.
 

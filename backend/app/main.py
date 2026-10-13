@@ -54,6 +54,10 @@ async def lifespan(fastapi_app: FastAPI):
     bootstrap_import_handlers()
     await init_db()
     async with async_session_factory() as session:
+        from app.utils.login_pattern import migrate_logins
+
+        await migrate_logins(session)  # before the seeds, which look users up by their (new) addresses
+    async with async_session_factory() as session:
         await seed_all(session)
         await patch_unified_chandan_plant(session)
         await seed_chandan_divisions(session)
