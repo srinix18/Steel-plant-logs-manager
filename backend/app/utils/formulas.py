@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+# Times typed without an offset are plant-local (IST); everything is compared as timezone-aware.
+IST = timezone(timedelta(hours=5, minutes=30))
 
 DIFF_PATTERN = re.compile(r"^\s*(\w+)\s*-\s*(\w+)\s*$")
 
@@ -12,14 +15,17 @@ DIFF_PATTERN = re.compile(r"^\s*(\w+)\s*-\s*(\w+)\s*$")
 def _parse_iso(value: Any) -> datetime | None:
     if value is None or value == "":
         return None
+    parsed: datetime | None = None
     if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
+        parsed = value
+    elif isinstance(value, str):
         try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
-    return None
+    if parsed is None:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=IST)
 
 
 def _format_duration(minutes: float) -> str:
