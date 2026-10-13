@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MOI",
+    "name": "Ulti-Met IMAP",
     "slug": "chandan-steel-app",
     "version": "1.0.0",
     "orientation": "default",
@@ -39,7 +39,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow MOI to use the camera to scan asset QR codes.",
+          "cameraPermission": "Allow Ulti-Met IMAP to use the camera to scan asset QR codes.",
           "barcodeScannerEnabled": true,
           "recordAudioAndroid": false
         }

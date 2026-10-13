@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "Manufacturing Operations Intelligence Platform"
+    APP_NAME: str = "Ulti-Met IMAP"
     API_V1_PREFIX: str = "/api/v1"
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/moi_platform"
     JWT_SECRET_KEY: str = "change-me-in-production-use-long-random-string"

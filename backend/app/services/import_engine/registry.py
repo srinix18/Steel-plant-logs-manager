@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Awaitable
 
-Handler = Callable[..., Awaitable[dict[str, Any]]]
+Handler = Callable[..., Awaitable[Any]]
 
 _REGISTRY: dict[str, dict[str, Any]] = {}
 
@@ -14,12 +14,20 @@ def register_module(
     required: list[str],
     validate_row: Handler,
     import_row: Handler,
+    aliases: dict[str, str] | None = None,
+    unique_keys: list[str] | None = None,
+    build_template: Handler | None = None,
 ) -> None:
+    """``aliases`` maps alternative header spellings to a column; ``unique_keys`` are columns that may not
+    repeat inside one file; ``build_template(session, org_id)`` returns a richer workbook than bare headers."""
     _REGISTRY[key] = {
         "columns": columns,
         "required": required,
         "validate_row": validate_row,
         "import_row": import_row,
+        "aliases": aliases or {},
+        "unique_keys": unique_keys or [],
+        "build_template": build_template,
     }
 
 

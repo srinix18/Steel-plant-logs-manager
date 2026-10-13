@@ -83,7 +83,7 @@ export function buildReportHtml(opts: {
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>${escapeHtml(opts.runNumber)} — MOI Report</title>
+<title>${escapeHtml(opts.runNumber)} — Ulti-Met IMAP Report</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 24px; color: #0f172a; }
   h1 { font-size: 1.35rem; margin: 0 0 4px; }

@@ -955,7 +955,7 @@ class Demo:
             ("worker_sms", ["sup_iaf"], False, "Uniform request", "Need a new set of safety shoes, size 9."),
             ("hr", ["worker_rolling", "worker_wire", "worker_bbd"], False, "Payslips available", "Last month's payslips are now available under My Payslips."),
             ("legacy_sup", ["hod_sms"], False, "Scrap stock", "Scrap yard has two days of 304 left; please plan the next purchase."),
-            ("admin", None, True, "Welcome to MOI", "Your plant's logbook is live. Use Messages for anything the whole team should see."),
+            ("admin", None, True, "Welcome to Ulti-Met IMAP", "Your plant's logbook is live. Use Messages for anything the whole team should see."),
             ("hod_rolling", ["sup_rolling", "worker_rolling"], False, "Roll change on Saturday", "Roll change is planned for the Saturday night shift. Please prepare the roll shop."),
             ("sup_rolling", ["hod_rolling"], False, "Pusher alignment", "Pusher aligned after the morning jam. Watching it for the next two shifts."),
             ("worker_rolling", ["sup_rolling"], False, "Gloves stock", "Gloves are running low at the mill pulpit."),

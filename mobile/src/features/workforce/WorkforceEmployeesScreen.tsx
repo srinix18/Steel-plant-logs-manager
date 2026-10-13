@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 
 import { getErrorMessage } from '@/src/api/client';
 import { fetchDepartments } from '@/src/api/lookups';
@@ -30,6 +31,8 @@ import { colors, spacing, typography } from '@/src/theme/tokens';
  */
 export function WorkforceEmployeesScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const canImport = user ? hasRole(user.role, WORKFORCE_HR_ROLES) : false;
   const orgId = user?.organisation_id ?? '';
   // The server lets only HR, CEO and admin create or edit employees; a HoD gets a read-only list.
   const canEditEmployees = user
@@ -125,6 +128,15 @@ export function WorkforceEmployeesScreen() {
                 setEditing(null);
                 setShowForm(true);
               }}
+            />
+          ) : null}
+
+          {canImport ? (
+            <Button
+              title="Upload employees from Excel"
+              variant="secondary"
+              style={styles.addBtn}
+              onPress={() => router.push('/(app)/workforce/import-employees' as Href)}
             />
           ) : null}
 

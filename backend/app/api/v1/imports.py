@@ -29,8 +29,8 @@ async def list_import_modules(user: CurrentUser):
 
 
 @router.get("/imports/{module_key}/template")
-async def download_template(module_key: str, user: CurrentUser):
-    content = service.get_template_bytes(module_key)
+async def download_template(module_key: str, session: DbSession, user: CurrentUser):
+    content = await service.get_template(session, user, module_key)
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

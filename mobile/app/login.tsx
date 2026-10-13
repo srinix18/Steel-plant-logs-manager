@@ -74,7 +74,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Card>
-            <Text style={styles.brand}>MOI Platform</Text>
+            <Text style={styles.brand}>Ulti-Met IMAP</Text>
             <Text style={styles.subtitle}>Chandan Steel — Manufacturing Operations</Text>
 
             <TextField

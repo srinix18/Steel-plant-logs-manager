@@ -32,8 +32,11 @@ class ImportEngineService:
     def list_module_keys(self) -> list[str]:
         return list_modules()
 
-    def get_template_bytes(self, module_key: str) -> bytes:
+    async def get_template(self, session: AsyncSession, actor: User, module_key: str) -> bytes:
+        assert_import_access(actor)
         mod = get_module(module_key)
+        if mod.get("build_template"):
+            return await mod["build_template"](session, actor.organisation_id)
         return parser.build_template(mod["columns"])
 
     async def upload(
@@ -115,7 +118,7 @@ class ImportEngineService:
         job = await self._load_job(session, job_id, actor)
         mod = get_module(job.module_key)
         content = await self._read_file(job)
-        rows = parser.parse_xlsx(content)
+        rows = parser.parse_xlsx(content, mod.get("aliases"))
 
         existing = await session.execute(
             select(ImportJobRow).where(ImportJobRow.job_id == job.id)
@@ -156,10 +159,19 @@ class ImportEngineService:
         rows = await self._load_rows(session, job.id)
 
         valid_count = invalid_count = 0
+        seen: dict[str, dict[str, int]] = {k: {} for k in mod.get("unique_keys", [])}
         for row in rows:
             errors = await mod["validate_row"](
                 session, actor, row.raw_data, org_id=actor.organisation_id
             )
+            for key, first_rows in seen.items():
+                value = str(row.raw_data.get(key, "")).strip().lower()
+                if not value:
+                    continue
+                if value in first_rows:
+                    errors.append(f"Duplicate {key} in this file (also on row {first_rows[value]})")
+                else:
+                    first_rows[value] = row.row_number
             if errors:
                 row.status = ImportRowStatus.INVALID.value
                 row.errors = errors
@@ -205,15 +217,17 @@ class ImportEngineService:
 
         for row in rows:
             try:
-                outcome = await mod["import_row"](
-                    session, actor, row.raw_data, org_id=actor.organisation_id
-                )
+                # A savepoint per row: one bad row rolls back only itself, not the rest of the file.
+                async with session.begin_nested():
+                    outcome = await mod["import_row"](
+                        session, actor, row.raw_data, org_id=actor.organisation_id
+                    )
                 row.status = ImportRowStatus.IMPORTED.value
                 row.entity_id = outcome.get("entity_id")
                 imported += 1
             except Exception as exc:
                 row.status = ImportRowStatus.INVALID.value
-                row.errors = [str(exc)]
+                row.errors = [getattr(exc, "detail", None) or str(exc)]
                 failed += 1
 
         job.status = (

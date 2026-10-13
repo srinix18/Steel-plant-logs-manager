@@ -16,7 +16,7 @@ export function AppLayout() {
   }, [location.pathname]);
 
   const title =
-    location.pathname.split('/').filter(Boolean).slice(-1)[0]?.replace(/-/g, ' ') ?? 'MOI';
+    location.pathname.split('/').filter(Boolean).slice(-1)[0]?.replace(/-/g, ' ') ?? 'Ulti-Met IMAP';
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden safe-pt">

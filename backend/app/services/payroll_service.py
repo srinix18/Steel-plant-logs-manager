@@ -320,7 +320,7 @@ class PayrollService:
       <tr class="net"><td>Net salary</td><td class="amount">₹{line.net_salary:,.2f}</td></tr>
     </tbody>
   </table>
-  <div class="footer">Computer-generated payslip — MOI Platform Workforce</div>
+  <div class="footer">Computer-generated payslip — Ulti-Met IMAP Workforce</div>
 </div>
 </body></html>"""
         return PayslipResponse(line_item_id=line.id, html=html)

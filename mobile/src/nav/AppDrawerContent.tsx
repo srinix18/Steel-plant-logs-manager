@@ -41,7 +41,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.brand}>MOI Platform</Text>
+        <Text style={styles.brand}>Ulti-Met IMAP</Text>
         <Text style={styles.name} numberOfLines={1}>
           {user.full_name}
         </Text>

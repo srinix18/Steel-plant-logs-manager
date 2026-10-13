@@ -31,7 +31,7 @@ export function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">MOI Platform</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Ulti-Met IMAP</h1>
           <p className="mt-2 text-sm text-slate-500">Manufacturing Operations Intelligence</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
