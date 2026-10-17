@@ -204,7 +204,7 @@ class PulseAggregatorService:
         run = active_run.scalar_one_or_none()
 
         prod = await session.execute(
-            select(func.coalesce(func.sum(FactProcessRun.charge_kg), 0))
+            select(func.coalesce(func.sum(func.coalesce(FactProcessRun.output_kg, FactProcessRun.charge_kg)), 0))
             .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
             .join(Process, ProcessRun.process_id == Process.id)
             .where(Process.department_id == dept.id, ProcessRun.completed_at >= today_start)

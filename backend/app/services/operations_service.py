@@ -266,6 +266,8 @@ class AnalyticsService:
         )).scalars().all()
         taps = sorted(f.tap_to_tap_min for f in facts if f.tap_to_tap_min)
         paired = [(f.energy_kwh, f.charge_kg) for f in facts if f.energy_kwh and f.charge_kg]
+        judged = [f.outcome for f in facts if f.outcome]
+        off_spec = sum(1 for o in judged if o in ("rework", "rejected"))
         today_runs = int((await session.execute(
             select(func.count()).select_from(ProcessRun).where(ProcessRun.completed_at >= day_start_utc())
         )).scalar() or 0)
@@ -279,6 +281,7 @@ class AnalyticsService:
             "kwh_per_ton": (round(sum(e for e, _ in paired) / (sum(c for _, c in paired) / 1000), 1) if paired else None,
                             "kWh/t", f"{len(paired)} heats, last 30 days", True),
             "shift_throughput": (float(today_runs), "runs", "finished today", False),
+            "oos_rate": (round(off_spec / len(judged) * 100, 1) if judged else None, "%", f"{len(judged)} judged runs, last 30 days", True),
         }
         out = []
         for k in (await session.execute(select(KPIDefinition).order_by(KPIDefinition.name))).scalars():

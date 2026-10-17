@@ -835,6 +835,7 @@ class FactProcessRun(Base):
     tap_to_tap_min: Mapped[Optional[float]] = mapped_column()
     energy_kwh: Mapped[Optional[float]] = mapped_column()
     charge_kg: Mapped[Optional[float]] = mapped_column()
+    output_kg: Mapped[Optional[float]] = mapped_column()  # what the process produced, from its own log sheet
     alloy_kg: Mapped[Optional[float]] = mapped_column()
     outcome: Mapped[Optional[str]] = mapped_column(String(20))
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -53,3 +53,36 @@ async def test_demo_seed_completes_and_is_repeatable(client, api):
     stock = {i["material_code"]: i for i in await api.ok("ceo", "GET", f"/inventory-pulse/{plant}")}
     assert stock["304_SCRAP"]["avg_daily_consumption"]  # drawn down by the heats
     assert all(i["quantity"] >= 0 for i in stock.values())
+
+    # Today: every process has activity (finished and live), so the "today" tiles and live boards are never empty.
+    from datetime import datetime, timedelta, timezone
+
+    from app.utils.seed_demo_activity import run_today_top_up
+
+    now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+    if not (now.hour == 0 and now.minute < 40):
+        assert await run_today_top_up(client) == 0
+        assert await run_today_top_up(client) is None  # once a day
+        await api.ok("admin", "POST", "/pulse/refresh")
+        runs = await api.ok("ceo", "GET", "/process-runs", params={"limit": 500})
+        stamp = now.strftime("%Y%m%d")
+        today_runs = [r for r in runs if f"-{stamp}-" in r["run_number"]]
+        codes = {processes[r["process_id"]] for r in today_runs if r["process_id"] in processes}
+        assert set(PROCESS_PLAN) <= codes, f"no run today for {set(PROCESS_PLAN) - codes}"
+        assert any(r["current_state"] in ("in_progress", "refining", "waiting_for_sample") for r in today_runs)
+        pulse = await api.ok("ceo", "GET", f"/pulse/plant/{plant}")
+        by_dept = {d["department_code"]: d for d in pulse["departments"]}
+        for code in ("SMS", "ROLLING", "WIRE", "BBD", "FORGE"):
+            assert by_dept[code]["production"] and by_dept[code]["production"] > 0, f"{code} produced nothing today"
+        assert pulse["attendance_pct"] is not None and pulse["today_cost"] and pulse["today_cost"] > 0
+        kpis = {k["code"]: k for k in await api.ok("ceo", "GET", "/foundation/kpi-values")}
+        assert all(kpis[c]["value"] is not None for c in ("tap_to_tap_p95", "kwh_per_ton", "shift_throughput", "oos_rate"))
+        assert 300 < kpis["kwh_per_ton"]["value"] < 1200  # a believable melting figure
+        stock = {i["material_code"]: i["status"] for i in await api.ok("ceo", "GET", f"/inventory-pulse/{plant}")}
+        assert "critical" in stock.values()
+    # Every maintenance crew has work and history, and the safety library is stocked.
+    for crew in ("maint_quality", "maint_safety", "maint_energy", "maint_equipment", "maint_process"):
+        assert await api.ok(crew, "GET", "/maintenance/issues", params={"limit": 200}), f"{crew} has no issues"
+    assert len(await api.ok("ceo", "GET", f"/safety/sops/{plant}")) >= 6
+    inbox = await api.ok("hod_sms", "GET", "/messages/inbox")
+    assert any(m["subject"].startswith("Re:") for m in inbox)

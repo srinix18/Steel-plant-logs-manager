@@ -184,3 +184,32 @@ async def seed_forge_grinding_template(session: AsyncSession) -> None:
             )
         )
     await session.flush()
+
+
+GRIND_REGISTER_COLUMNS = [
+    {"key": "material", "label": "Material", "type": "text"},
+    {"key": "size_mm", "label": "Size (mm)", "type": "number"},
+    {"key": "pieces", "label": "Pieces", "type": "integer"},
+    {"key": "weight_kg", "label": "Weight (kg)", "type": "number"},
+    {"key": "remark", "label": "Remark", "type": "text"},
+]
+
+
+async def patch_grinding_register(session: AsyncSession) -> None:
+    """Adds the grinding register table to the published grinding sheet, so a shift records what it ground."""
+    ver = (await session.execute(
+        select(TemplateVersion).join(Template, TemplateVersion.template_id == Template.id)
+        .where(Template.doc_no == DOC_NO, TemplateVersion.status == TemplateVersionStatus.PUBLISHED).limit(1)
+    )).scalar_one_or_none()
+    if ver is None:
+        return
+    existing = (await session.execute(
+        select(TemplateSection).where(TemplateSection.version_id == ver.id, TemplateSection.key == "grinding_register")
+    )).scalar_one_or_none()
+    if existing is not None:
+        return
+    session.add(TemplateSection(
+        version_id=ver.id, key="grinding_register", title="Grinding Register", section_type="production_register_table",
+        sort_order=1, config={"columns": GRIND_REGISTER_COLUMNS, "default_empty_rows": 8},
+    ))
+    await session.flush()

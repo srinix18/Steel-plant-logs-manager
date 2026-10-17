@@ -108,8 +108,9 @@ class OEEEngineService:
         rejected = 0
         for run in runs:
             fact = (await session.execute(select(FactProcessRun).where(FactProcessRun.run_id == run.id))).scalar_one_or_none()
-            if fact and fact.charge_kg:
-                actual_output += float(fact.charge_kg) / 1000
+            produced = (fact.output_kg or fact.charge_kg) if fact else None
+            if produced:
+                actual_output += float(produced) / 1000
                 ideal_output += await self._ideal_output_t(session, run)
             if run.outcome == ProcessRunOutcome.REJECTED:
                 rejected += 1
@@ -253,12 +254,12 @@ class OEEEngineService:
         so a line is judged against what it really does. With too little history, a typical figure for the department."""
         since = datetime.now(timezone.utc) - timedelta(days=30)
         row = (await session.execute(
-            select(func.avg(FactProcessRun.charge_kg), func.count())
+            select(func.avg(func.coalesce(FactProcessRun.output_kg, FactProcessRun.charge_kg)), func.count())
             .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
             .where(
                 ProcessRun.process_id == run.process_id,
                 ProcessRun.id != run.id,
-                FactProcessRun.charge_kg > 0,
+                func.coalesce(FactProcessRun.output_kg, FactProcessRun.charge_kg) > 0,
                 ProcessRun.created_at >= since,
             )
         )).one()

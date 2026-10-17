@@ -467,6 +467,7 @@ class ProcessRunService:
             session.add(fact)
 
         fact.duration_min = duration_min
+        fact.output_kg = _output_kg(process.code if process else None, field_map, section_map, charge_kg)
         fact.tap_to_tap_min = _duration_text_to_minutes(field_map.get("tap_to_tap_time"))
         fact.energy_kwh = _optional_float(energy)
         fact.charge_kg = charge_kg
@@ -487,3 +488,52 @@ class ProcessRunService:
             "grade_id": str(run.grade_id) if run.grade_id else None,
         }
         await session.flush()
+
+
+def _row_values(data) -> list[dict]:
+    """Rows of a table section, whether stored as a list or {rows: [...]} and with or without a values wrapper."""
+    rows = data.get("rows") if isinstance(data, dict) else data
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if isinstance(row, dict):
+            out.append(row.get("values") if isinstance(row.get("values"), dict) else row)
+    return out
+
+
+def _sum(data, key: str) -> float:
+    total = 0.0
+    for row in _row_values(data):
+        try:
+            total += float(row.get(key) or 0)
+        except (TypeError, ValueError):
+            pass
+    return total
+
+
+# Nominal weights where a sheet counts pieces rather than weighing them.
+NOMINAL_BILLET_KG = 200.0  # concast billet
+NOMINAL_ROLLED_PIECE_KG = 160.0  # rolled bar/billet
+
+
+def _output_kg(code, fields: dict, sections: dict, charge_kg):
+    """What a run produced, in kg, from the sheet of its own process (None when the sheet records no output)."""
+    if code == "IAF":
+        return charge_kg
+    if code == "AOD":
+        try:
+            return float(fields.get("final_weight")) or None
+        except (TypeError, ValueError):
+            return None
+    if code == "CCM":
+        return _sum(sections.get("casting_entries"), "billets_count") * NOMINAL_BILLET_KG or None
+    if code == "RMILL":
+        return _sum(sections.get("production_batches"), "rolled") * NOMINAL_ROLLED_PIECE_KG or None
+    if code == "WFURN":
+        return _sum(sections.get("furnace_output"), "weight_kg") or None
+    if code == "WDRAW":
+        return _sum(sections.get("output_material"), "weight_kg") or None
+    if code == "BBAR":
+        return _sum(sections.get("production_register"), "total_weight_kg") or None
+    if code == "GRIND":
+        return _sum(sections.get("grinding_register"), "weight_kg") or None
+    return None

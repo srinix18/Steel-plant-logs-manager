@@ -258,7 +258,7 @@ class Demo:
             "final_voltage": lambda: round(r.uniform(615, 665), 1),
             "final_frequency": lambda: round(r.uniform(49.6, 50.3), 1),
             "power_initial": lambda: ctx.setdefault("p0", r.randint(180000, 900000)),
-            "power_final": lambda: ctx.setdefault("p0", r.randint(180000, 900000)) + r.randint(5200, 6600),
+            "power_final": lambda: ctx.setdefault("p0", r.randint(180000, 900000)) + r.randint(1650, 2150),
             "transfer_ladle_weight": lambda: r.randint(6400, 7300),
             "final_weight": lambda: ctx.setdefault("w", r.randint(5800, 6600)),
             "final_weight_summary": lambda: ctx.setdefault("w", r.randint(5800, 6600)),
@@ -321,11 +321,9 @@ class Demo:
             return None
         return None
 
-    def _times(self, d: date, shift: str, slot: int) -> dict[str, datetime]:
+    def _times(self, d: date, shift: str, slot: int, start_at: datetime | None = None) -> dict[str, datetime]:
         h = SHIFT_START_HOUR[shift]
-        start = self._dt(d, h, 12 + slot * 5)
-        if shift == "C":
-            start = start  # night shift starts the evening of ``d``
+        start = start_at or self._dt(d, h, 12 + slot * 5)
         tap = start + timedelta(minutes=self.rng.randint(78, 98))
         return {
             "start": start,
@@ -524,6 +522,12 @@ class Demo:
             for i, coil in enumerate(ctx.get("inlet_refs", [])):
                 rows.append({"values": {"inlet_coil_ref": coil, "outlet_size_mm": r.choice([2.0, 2.5, 3.2, 4.0]), "lubricant": "Soap powder",
                                         "finish_coil_no": f"FC-{ctx['date']:%m%d}-{ctx['seq']}{i + 1}", "weight_kg": r.randint(700, 1200), "remark": ""}})
+        elif process == "GRIND":
+            for _ in range(r.randint(5, 9)):
+                size = r.choice([12, 16, 20, 25, 32, 40])
+                pieces = r.randint(40, 160)
+                rows.append({"values": {"material": r.choice(["EN8 bar", "304 bar", "316 bar", "EN24 round", "410 bar"]), "size_mm": size,
+                                        "pieces": pieces, "weight_kg": round(pieces * size * size * 6.0 / 1000, 1), "remark": ""}})
         elif process == "BBAR":
             for i in range(r.randint(4, 8)):
                 ref = self._heat_ref(ctx)
@@ -536,7 +540,7 @@ class Demo:
         return rows
 
     # -------------------------------------------------------------- run lifecycle
-    async def _make_run(self, process: str, days_ago: int, shift: str, final: str, seq: int) -> None:
+    async def _make_run(self, process: str, days_ago: int, shift: str, final: str, seq: int, start_at: datetime | None = None) -> None:
         run_type, worker_key, sup_key, prefix = PROCESS_PLAN[process]
         # Sheets left at "completed" were started by the shift in-charge, so each supervisor's My Runs has something in it.
         operator_key = worker_key
@@ -567,7 +571,7 @@ class Demo:
         tv = await self.ok(worker_key, "GET", f"/templates/versions/{detail['template_version_id']}")
         if not tv:
             return
-        times = self._times(d, shift, seq % 3)
+        times = self._times(d, shift, seq % 3, start_at)
         dept_people = self._people(process, operator_key, sup_key)
         ctx: dict[str, Any] = {
             "date": d, "shift": shift, "heat_no": heat_no, "grade_id": grade["id"], "grade_code": grade["code"],
@@ -652,7 +656,7 @@ class Demo:
                 await self.call(worker_key, "POST", f"/process-runs/{rid}/transitions", json={"to_state": st})
 
         # Remember it for later cross-references (heat refs, coils) and for backdating.
-        rec = {"id": rid, "heat_no": heat_no, "state": final, "start": times["start"], "grade": grade["code"], "process": process}
+        rec = {"id": rid, "heat_no": heat_no, "state": final, "start": times["start"], "grade": grade["code"], "process": process, "today": start_at is not None}
         self.run_ids.setdefault(process, []).append(rec)
         await self.backdate_run(rec)
         if process == "WFURN" and ctx.get("coil_refs"):
@@ -706,6 +710,9 @@ class Demo:
             if not run:
                 return
             duration = timedelta(hours=1, minutes=self.rng.randint(25, 50)) if process in ("IAF", "AOD") else timedelta(hours=7, minutes=self.rng.randint(20, 40))
+            if rec.get("today") and state != "in_progress":
+                # finished earlier today: keep it between the start of the day and now
+                duration = min(duration, max(timedelta(minutes=20), datetime.now(IST) - start - timedelta(minutes=8)))
             if state == "in_progress":
                 start = datetime.now(IST) - timedelta(minutes=self.rng.randint(35, 80))
             run.created_at = start - timedelta(minutes=4)
@@ -715,6 +722,8 @@ class Demo:
                 run.completed_at = done
             if state in ("closed", "aborted"):
                 run.closed_at = done + timedelta(minutes=self.rng.randint(40, 190))
+            if rec.get("today") and run.closed_at:
+                run.closed_at = max(done + timedelta(minutes=1), min(run.closed_at, datetime.now(IST) - timedelta(minutes=2)))
             run.updated_at = run.closed_at or run.completed_at or start
             logs = (await session.execute(
                 select(WorkflowTransitionLog).where(WorkflowTransitionLog.run_id == run.id).order_by(WorkflowTransitionLog.created_at)
@@ -1086,6 +1095,16 @@ class Demo:
             await self.call("hr", "POST", f"/workforce/payroll/runs/{run_id}/process")
         log.info("demo seed: headcount done (%s employees)", len(employees))
 
+    async def make_enrich(self) -> None:
+        from app.utils.seed_demo_extras import enrich
+
+        await enrich(self)
+
+    async def make_today(self) -> None:
+        from app.utils.seed_demo_extras import make_today
+
+        await make_today(self)
+
     async def make_finance(self) -> None:
         """Price every finished run with the current cost rules (so stock, labour and gases are included)."""
         # Re-derive the analytics facts of finished runs (tap-to-tap, energy), then price them.
@@ -1197,11 +1216,12 @@ class Demo:
         await self._phase("work_orders", self.make_work_orders)
         await self._phase("documents", self.make_documents)
         await self._phase("headcount", self.make_headcount)
+        await self._phase("enrich", self.make_enrich)
         await self._phase("finance", self.make_finance)
         await self._phase("finish", self._finish_phase)
 
 
-PHASES = ["runs", "workforce", "issues_safety", "messages", "work_orders", "documents", "headcount", "finance", "finish"]
+PHASES = ["runs", "workforce", "issues_safety", "messages", "work_orders", "documents", "headcount", "enrich", "finance", "finish"]
 
 
 async def demo_seed_finished() -> bool:
@@ -1229,11 +1249,44 @@ async def run_demo_seed(client: httpx.AsyncClient) -> int | None:
     return demo.failures
 
 
+async def run_today_top_up(client: httpx.AsyncClient) -> int | None:
+    """Today's activity (attendance, runs in every department, handovers), once per day. None if already done."""
+    from app.services import pulse_live
+
+    now = datetime.now(IST)
+    if now.hour == 0 and now.minute < 40:
+        return None  # too early in the day for runs that have already happened; try again later
+    name = f"today_{now.date().isoformat()}"
+    async with async_session_factory() as session:
+        if await session.get(DemoSeedState, name):
+            return None
+    demo = Demo(client)
+    await demo.load_reference()
+    pulse_live.suspended = True
+    try:
+        await demo._phase(name, demo.make_today)
+    finally:
+        pulse_live.suspended = False
+    await demo.call("admin", "POST", "/pulse/refresh")
+    return demo.failures
+
+
 async def seed_demo_activity_in_background(app: Any) -> None:
-    """Entry point used at startup: drive the app's own API in-process, then finish."""
+    """Startup entry point: drive the app's own API in-process. Then, every half hour, make sure today has activity,
+    so the demo looks alive on whichever day it is opened."""
+    import asyncio
+
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://demo-seed/api/v1", timeout=120) as client:
             await run_demo_seed(client)
+            while True:
+                try:
+                    await run_today_top_up(client)
+                except Exception:
+                    log.exception("demo seed: daily top-up failed (will retry)")
+                await asyncio.sleep(1800)
+    except asyncio.CancelledError:
+        raise
     except Exception:
         log.exception("demo seed failed (the app keeps running)")
