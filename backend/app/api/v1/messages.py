@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, UploadFile
 from app.services.storage import file_response
 
 from app.api.deps import CurrentUser, DbSession
-from app.schemas.moi import MessageAttachmentResponse, MessageCreate, MessageResponse, NotificationResponse, UserProfile
+from app.schemas.moi import MessageAttachmentResponse, MessageCreate, MessageReplyCreate, MessageResponse, NotificationResponse, UserProfile
 from app.services.message_service import MessageService
 
 router = APIRouter()
@@ -35,6 +35,16 @@ async def sent(session: DbSession, user: CurrentUser, limit: int = 50, offset: i
 @router.get("/messages/{message_id}", response_model=MessageResponse)
 async def get_message(message_id: UUID, session: DbSession, user: CurrentUser):
     return await message_service.get_message(session, user, message_id)
+
+
+@router.post("/messages/{message_id}/reply", response_model=MessageResponse, status_code=201)
+async def reply_to_message(message_id: UUID, data: MessageReplyCreate, session: DbSession, user: CurrentUser):
+    """Reply to the sender of a message you can read. Sent as a new message so it shows in both inboxes."""
+    original = await message_service.get_message(session, user, message_id)
+    subject = original.subject if original.subject.lower().startswith("re:") else f"Re: {original.subject}"
+    return await message_service.send_message(
+        session, user, MessageCreate(subject=subject[:500], body=data.body, recipient_ids=[original.sender_id], is_broadcast=False)
+    )
 
 
 @router.post("/messages/{message_id}/attachments", response_model=MessageAttachmentResponse, status_code=201)

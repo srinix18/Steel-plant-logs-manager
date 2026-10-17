@@ -36,6 +36,7 @@ from app.db.models import (
     SafetyInspection,
     User,
 )
+from app.models.enums import UserRole
 from app.models.enums import AssetStatus, MaintenanceWorkOrderStatus
 from app.schemas.pulse import (
     AssetPulseResponse,
@@ -157,6 +158,7 @@ class PulseService:
         elif snap and snap.overall_oee is not None:
             oee_detail.oee = snap.overall_oee
 
+        show_money = user.role not in (UserRole.WORKER, UserRole.MAINTENANCE)  # cost figures are for leadership
         return PlantPulseResponse(
             plant_id=plant_id,
             plant_name=plant.name,
@@ -164,7 +166,7 @@ class PulseService:
             plant_status=snap.plant_status if snap else "normal",
             overall_oee=snap.overall_oee if snap else None,
             today_production=snap.today_production if snap else None,
-            today_cost=snap.today_cost if snap else None,
+            today_cost=(snap.today_cost if snap else None) if show_money else None,
             power_consumption_kwh=snap.power_consumption_kwh if snap else None,
             downtime_minutes=snap.downtime_minutes if snap else None,
             active_alerts=live_alerts,

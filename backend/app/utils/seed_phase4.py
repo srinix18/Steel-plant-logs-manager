@@ -76,6 +76,11 @@ async def seed_phase4(session: AsyncSession) -> None:
         )
         if not existing.scalar_one_or_none():
             session.add(LeaveType(organisation_id=org.id, code=code, name=name, is_active=True))
+    await session.flush()
+    for code, days in {"CL": 12, "SL": 10, "EL": 15}.items():  # yearly allowances; loss of pay has none
+        lt = (await session.execute(select(LeaveType).where(LeaveType.organisation_id == org.id, LeaveType.code == code))).scalar_one_or_none()
+        if lt is not None and lt.annual_days is None:
+            lt.annual_days = days
 
     await _seed_demo_salary_structures(session, org.id)
 

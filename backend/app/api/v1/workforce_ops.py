@@ -9,6 +9,7 @@ from app.schemas.workforce_ops import (
     EmployeeSkillResponse,
     LeaveRequestCreate,
     LeaveRequestDecision,
+    LeaveBalance,
     LeaveRequestResponse,
     LeaveTypeCreate,
     LeaveTypeResponse,
@@ -99,6 +100,12 @@ async def reject_leave_request(
     result = await leave_service.reject_request(session, user, request_id, data)
     await session.commit()
     return result
+
+
+@router.get("/workforce/leave/balances", response_model=list[LeaveBalance])
+async def my_leave_balances(session: DbSession, user: CurrentUser):
+    """This year's leave left, per type: allowance, approved days, pending days, remaining."""
+    return await leave_service.balances(session, user)
 
 
 @router.get("/workforce/leave/requests/mine", response_model=list[LeaveRequestResponse])

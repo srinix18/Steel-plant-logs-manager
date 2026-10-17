@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AttendanceRecord, LeaveRequest, LeaveType, Shift, ShiftAssignment, User
@@ -12,6 +12,7 @@ from app.models.enums import AttendanceStatus, LeaveRequestStatus
 from app.schemas.workforce_ops import (
     LeaveRequestCreate,
     LeaveRequestDecision,
+    LeaveBalance,
     LeaveRequestResponse,
     LeaveTypeCreate,
     LeaveTypeResponse,
@@ -117,6 +118,16 @@ class LeaveService:
         lt = await session.get(LeaveType, data.leave_type_id)
         if not lt or lt.organisation_id != self._org_id(actor):
             raise HTTPException(status_code=404, detail="Leave type not found")
+        await self._assert_no_overlap(session, actor.id, data.from_date, data.to_date)
+        days = (data.to_date - data.from_date).days + 1
+        if lt.annual_days is not None:
+            used, pending = await self._used_days(session, actor.id, lt.id, data.from_date.year)
+            left = lt.annual_days - used - pending
+            if days > left:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Only {max(left, 0)} day(s) of {lt.name} left for {data.from_date.year} (requested {days})",
+                )
         req = LeaveRequest(
             user_id=actor.id,
             leave_type_id=data.leave_type_id,
@@ -128,6 +139,50 @@ class LeaveService:
         session.add(req)
         await session.flush()
         return self._leave_response(req, actor.full_name, lt.name)
+
+    async def _assert_no_overlap(self, session: AsyncSession, user_id: UUID, start: date, end: date) -> None:
+        clash = (await session.execute(
+            select(LeaveRequest.id).where(
+                LeaveRequest.user_id == user_id,
+                LeaveRequest.status.in_([LeaveRequestStatus.PENDING.value, LeaveRequestStatus.APPROVED.value]),
+                and_(LeaveRequest.from_date <= end, LeaveRequest.to_date >= start),
+            ).limit(1)
+        )).first()
+        if clash:
+            raise HTTPException(status_code=400, detail="You already have a leave request covering some of these dates")
+
+    async def _used_days(self, session: AsyncSession, user_id: UUID, type_id: UUID, year: int) -> tuple[int, int]:
+        """(approved days, pending days) of one leave type in a calendar year."""
+        rows = await session.execute(
+            select(LeaveRequest.from_date, LeaveRequest.to_date, LeaveRequest.status).where(
+                LeaveRequest.user_id == user_id,
+                LeaveRequest.leave_type_id == type_id,
+                LeaveRequest.status.in_([LeaveRequestStatus.PENDING.value, LeaveRequestStatus.APPROVED.value]),
+            )
+        )
+        used = pending = 0
+        for start, end, status in rows:
+            if start.year != year:
+                continue
+            days = (end - start).days + 1
+            if status == LeaveRequestStatus.APPROVED.value:
+                used += days
+            else:
+                pending += days
+        return used, pending
+
+    async def balances(self, session: AsyncSession, actor: User) -> list[LeaveBalance]:
+        year = date.today().year
+        out: list[LeaveBalance] = []
+        for lt in (await session.execute(
+            select(LeaveType).where(LeaveType.organisation_id == self._org_id(actor), LeaveType.is_active.is_(True)).order_by(LeaveType.code)
+        )).scalars():
+            used, pending = await self._used_days(session, actor.id, lt.id, year)
+            out.append(LeaveBalance(
+                leave_type_id=lt.id, code=lt.code, name=lt.name, annual_days=lt.annual_days, used=used, pending=pending,
+                remaining=None if lt.annual_days is None else max(lt.annual_days - used - pending, 0),
+            ))
+        return out
 
     @staticmethod
     def _assert_can_decide(actor: User, requester: User) -> None:

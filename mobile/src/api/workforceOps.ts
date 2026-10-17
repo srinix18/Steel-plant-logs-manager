@@ -239,3 +239,19 @@ export function formatPayrollMonth(month: number, year: number): string {
 export function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
+
+export type LeaveBalance = {
+  leave_type_id: string;
+  code: string;
+  name: string;
+  annual_days: number | null;
+  used: number;
+  pending: number;
+  remaining: number | null;
+};
+
+/** GET /workforce/leave/balances — this year's allowance, used and remaining per leave type. */
+export async function fetchLeaveBalances(): Promise<LeaveBalance[]> {
+  const { data } = await apiClient.get<LeaveBalance[]>('/workforce/leave/balances');
+  return data;
+}

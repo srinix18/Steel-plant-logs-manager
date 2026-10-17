@@ -14,6 +14,7 @@ import { getErrorMessage } from '@/src/api/client';
 import {
   downloadMessageAttachment,
   fetchMessage,
+  replyToMessage,
   type AppMessage,
   type MessageAttachment,
 } from '@/src/api/messages';
@@ -23,6 +24,7 @@ import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorBanner } from '@/src/components/ui/ErrorBanner';
 import { LoadingView } from '@/src/components/ui/LoadingView';
 import { Screen } from '@/src/components/ui/Screen';
+import { TextField } from '@/src/components/ui/TextField';
 import { colors, spacing, typography } from '@/src/theme/tokens';
 
 /**
@@ -37,6 +39,9 @@ export function MessageDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [reply, setReply] = useState('');
+  const [replying, setReplying] = useState(false);
+  const [replied, setReplied] = useState(false);
 
   const load = useCallback(async () => {
     if (!messageId) return;
@@ -145,6 +150,38 @@ export function MessageDetailScreen() {
             />
           ))}
         </>
+      ) : null}
+
+      {msg.sender && !msg.is_broadcast ? (
+        <Card style={styles.bodyCard}>
+          <Text style={styles.section}>Reply to {msg.sender.full_name}</Text>
+          <TextField
+            label="Your reply"
+            value={reply}
+            onChangeText={setReply}
+            multiline
+            numberOfLines={3}
+          />
+          {replied ? <Text style={styles.meta}>Reply sent.</Text> : null}
+          <Button
+            title={replying ? 'Sending…' : 'Send reply'}
+            disabled={replying || !reply.trim()}
+            onPress={async () => {
+              if (!messageId) return;
+              setReplying(true);
+              setError(null);
+              try {
+                await replyToMessage(messageId, reply.trim());
+                setReply('');
+                setReplied(true);
+              } catch (e) {
+                setError(getErrorMessage(e));
+              } finally {
+                setReplying(false);
+              }
+            }}
+          />
+        </Card>
       ) : null}
 
       <Modal

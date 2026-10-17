@@ -11,11 +11,13 @@ class LeaveTypeCreate(BaseModel):
     code: str = Field(min_length=1, max_length=32)
     name: str = Field(min_length=1, max_length=100)
     is_active: bool = True
+    annual_days: Optional[int] = Field(default=None, ge=0)
 
 
 class LeaveTypeUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    annual_days: Optional[int] = Field(default=None, ge=0)
 
 
 class LeaveTypeResponse(BaseModel):
@@ -28,6 +30,17 @@ class LeaveTypeResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+    annual_days: Optional[int] = None
+
+
+class LeaveBalance(BaseModel):
+    leave_type_id: UUID
+    code: str
+    name: str
+    annual_days: Optional[int] = None
+    used: int = 0
+    pending: int = 0
+    remaining: Optional[int] = None
 
 
 class LeaveRequestCreate(BaseModel):

@@ -1310,6 +1310,7 @@ class LeaveType(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    annual_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # yearly allowance; None = unlimited
 
     __table_args__ = (UniqueConstraint("organisation_id", "code", name="uq_leave_type_org_code"),)
 

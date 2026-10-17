@@ -5,7 +5,9 @@ import { getErrorMessage } from '@/src/api/client';
 import {
   createLeaveRequest,
   fetchLeaveTypes,
+  fetchLeaveBalances,
   fetchMyLeaveRequests,
+  type LeaveBalance,
   type LeaveRequest,
   type LeaveType,
 } from '@/src/api/workforceOps';
@@ -37,6 +39,7 @@ function statusTone(status: string): 'success' | 'danger' | 'neutral' {
 export function MyLeaveScreen() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [types, setTypes] = useState<LeaveType[]>([]);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -54,7 +57,12 @@ export function MyLeaveScreen() {
     else setLoading(true);
     setError(null);
     try {
-      const [reqs, t] = await Promise.all([fetchMyLeaveRequests(), fetchLeaveTypes()]);
+      const [reqs, t, b] = await Promise.all([
+        fetchMyLeaveRequests(),
+        fetchLeaveTypes(),
+        fetchLeaveBalances().catch(() => [] as LeaveBalance[]),
+      ]);
+      setBalances(b);
       setRequests(reqs);
       setTypes(t);
       setForm((f) => ({
@@ -179,6 +187,21 @@ export function MyLeaveScreen() {
     <Screen scroll refreshing={refreshing} onRefresh={() => void load(true)}>
       <Text style={styles.title}>My Leave</Text>
       <Text style={styles.sub}>Apply for leave and track request status.</Text>
+      {balances.length > 0 ? (
+        <View style={styles.balances}>
+          {balances
+            .filter((b) => b.annual_days != null)
+            .map((b) => (
+              <Card key={b.leave_type_id} style={styles.balanceCard}>
+                <Text style={styles.balanceCode}>{b.code}</Text>
+                <Text style={styles.balanceLeft}>{b.remaining} left</Text>
+                <Text style={styles.balanceMeta}>
+                  of {b.annual_days} · {b.used} used{b.pending ? ` · ${b.pending} pending` : ''}
+                </Text>
+              </Card>
+            ))}
+        </View>
+      ) : null}
       <Button title="Apply for leave" size="lg" style={styles.addBtn} onPress={openForm} />
       {error ? (
         <View style={styles.banner}>
@@ -208,6 +231,11 @@ export function MyLeaveScreen() {
 }
 
 const styles = StyleSheet.create({
+  balances: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  balanceCard: { minWidth: 100, flexGrow: 1 },
+  balanceCode: { ...typography.caption, color: colors.textMuted },
+  balanceLeft: { ...typography.section, color: colors.text },
+  balanceMeta: { ...typography.caption, color: colors.textMuted },
   title: { ...typography.title, color: colors.text, marginBottom: spacing.xs },
   sub: {
     ...typography.caption,

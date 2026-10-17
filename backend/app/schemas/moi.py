@@ -87,6 +87,10 @@ class MessageCreate(BaseModel):
     is_broadcast: bool = False
 
 
+class MessageReplyCreate(BaseModel):
+    body: str = Field(min_length=1)
+
+
 class MessageAttachmentResponse(BaseModel):
     id: UUID
     message_id: UUID

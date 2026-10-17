@@ -988,6 +988,7 @@ _PHASE5_PATCHES = (
     )
     """,
     "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS title VARCHAR(300)",
+    "ALTER TABLE leave_types ADD COLUMN IF NOT EXISTS annual_days INTEGER",
     "ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS body TEXT",
     "CREATE INDEX IF NOT EXISTS ix_pulse_snapshots_plant ON pulse_snapshots (plant_id, snapshot_at DESC)",
     "CREATE INDEX IF NOT EXISTS ix_dept_pulses_dept ON department_pulses (department_id, snapshot_at DESC)",

@@ -155,3 +155,9 @@ export async function markNotificationRead(notificationId: string): Promise<AppN
   );
   return data;
 }
+
+/** POST /messages/{id}/reply — answers the sender of a message you received. */
+export async function replyToMessage(messageId: string, body: string): Promise<AppMessage> {
+  const { data } = await apiClient.post<AppMessage>(`/messages/${messageId}/reply`, { body });
+  return data;
+}
