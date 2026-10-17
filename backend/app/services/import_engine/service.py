@@ -160,6 +160,7 @@ class ImportEngineService:
 
         valid_count = invalid_count = 0
         seen: dict[str, dict[str, int]] = {k: {} for k in mod.get("unique_keys", [])}
+        seen_keys: dict[str, dict[str, int]] = {}
         for row in rows:
             errors = await mod["validate_row"](
                 session, actor, row.raw_data, org_id=actor.organisation_id
@@ -172,6 +173,14 @@ class ImportEngineService:
                     errors.append(f"Duplicate {key} in this file (also on row {first_rows[value]})")
                 else:
                     first_rows[value] = row.row_number
+            # Rows that may not share something other than a column (for example one HoD per department).
+            if mod.get("row_keys") and not errors:
+                for label, value in mod["row_keys"](row.raw_data).items():
+                    bucket = seen_keys.setdefault(label, {})
+                    if value in bucket:
+                        errors.append(f"{label} (already on row {bucket[value]} of this file)")
+                    else:
+                        bucket[value] = row.row_number
             if errors:
                 row.status = ImportRowStatus.INVALID.value
                 row.errors = errors

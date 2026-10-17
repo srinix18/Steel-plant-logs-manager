@@ -83,3 +83,44 @@ async def test_import_creates_users_with_shift_and_salary(api):
 async def test_workers_cannot_import(api):
     r = await api.post("worker_sms", "/imports/employees/upload", files={"file": ("x.xlsx", _sheet([]), "application/octet-stream")})
     assert r.status_code == 403
+
+
+async def test_one_hod_per_department_is_checked_before_creating(api):
+    # SMS already has a HoD; a file with another one is told so at the check step, not when creating.
+    content = _sheet([
+        ["HOD-1", "Second Hod", "second.hod@example.com", "Temp@1234", "hod", "SMS", "", "", "A", "", "", ""],
+    ])
+    _, validated = await _run(api, "hr", content)
+    assert validated["valid_count"] == 0
+    assert "already has an active HoD" in " ".join(validated["rows"][0]["errors"])
+
+
+async def test_two_new_hods_for_one_department_in_one_file_clash(api):
+    deps = await api.ok("admin", "GET", "/departments")
+    util = next(d for d in deps if d["code"] == "UTIL")  # a department without a HoD in a plain test database
+    content = _sheet([
+        ["HOD-A", "First New Hod", "first.new.hod@example.com", "Temp@1234", "hod", "UTIL", "", "", "A", "", "", ""],
+        ["HOD-B", "Other New Hod", "other.new.hod@example.com", "Temp@1234", "hod", "UTIL", "", "", "A", "", "", ""],
+    ])
+    _, validated = await _run(api, "hr", content)
+    states = [bool(r["errors"]) for r in validated["rows"]]
+    assert sorted(states) == [False, True] or states == [True, True]  # never both accepted
+    assert util
+
+
+async def test_new_hire_appears_on_an_attendance_sheet_that_was_already_saved(api):
+    from datetime import date
+
+    shifts = {s["code"]: s["id"] for s in await api.ok("hr", "GET", "/shifts")}
+    dept = api.user("hod_sms")["department_id"]
+    today = date.today().isoformat()
+    sheet = await api.ok("hr", "GET", "/workforce/attendance", params={"attendance_date": today, "department_id": dept, "shift_id": shifts["A"]})
+    await api.ok("hr", "POST", "/workforce/attendance/bulk", json={"attendance_date": today, "department_id": dept, "shift_id": shifts["A"],
+                                                                  "entries": [{"user_id": p["user_id"], "status": "present"} for p in sheet]})
+    content = _sheet([["NEW-1", "Late Joiner", "late.joiner@example.com", "Temp@1234", "worker", "SMS", "", "", "A", "2025-01-01", "", ""]])
+    job, validated = await _run(api, "hr", content)
+    assert validated["valid_count"] == 1
+    await api.ok("hr", "POST", f"/imports/jobs/{job}/commit")
+    after = await api.ok("hr", "GET", "/workforce/attendance", params={"attendance_date": today, "department_id": dept, "shift_id": shifts["A"]})
+    assert len(after) == len(sheet) + 1
+    assert any(p["user_name"] == "Late Joiner" for p in after)

@@ -435,11 +435,13 @@ class WorkforceService:
             .order_by(AttendanceRecord.user_id)
         )
         records = list(result.scalars())
-        if records:
+        marked = {r.user_id for r in records}
+        users = [u for u in await self._assigned_users(session, department_id, shift_id, attendance_date) if u.id not in marked]
+        if records and not users:
             return [self._attendance_response(r) for r in records]
-
-        users = await self._assigned_users(session, department_id, shift_id, attendance_date)
-        return [
+        # Saved entries first, then anyone assigned to the shift who has not been marked yet (for example a new hire).
+        saved = [self._attendance_response(r) for r in records]
+        return saved + [
             AttendanceRecordResponse(
                 id=None,
                 attendance_date=attendance_date,

@@ -17,6 +17,7 @@ def register_module(
     aliases: dict[str, str] | None = None,
     unique_keys: list[str] | None = None,
     build_template: Handler | None = None,
+    row_keys: Callable[[dict[str, Any]], dict[str, str]] | None = None,
 ) -> None:
     """``aliases`` maps alternative header spellings to a column; ``unique_keys`` are columns that may not
     repeat inside one file; ``build_template(session, org_id)`` returns a richer workbook than bare headers."""
@@ -28,6 +29,7 @@ def register_module(
         "aliases": aliases or {},
         "unique_keys": unique_keys or [],
         "build_template": build_template,
+        "row_keys": row_keys,
     }
 
 

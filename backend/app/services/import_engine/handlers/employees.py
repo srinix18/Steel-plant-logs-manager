@@ -180,6 +180,16 @@ async def validate_row(session: AsyncSession, actor: User, row: dict[str, Any], 
     if row.get("maintenance_division") and not _parse_enum(ObservationCategory, row.get("maintenance_division")):
         errors.append(f"Invalid maintenance_division: {row.get('maintenance_division')}")
 
+    if role and role.value == "hod" and dept is not None:
+        has_hod = (await session.execute(
+            select(User.id).where(
+                User.organisation_id == org_id, User.department_id == dept.id,
+                User.role.in_([UserRole.HOD, UserRole.PLANT_ADMIN]), User.is_active.is_(True),
+            ).limit(1)
+        )).first()
+        if has_hod:
+            errors.append(f"Department {dept.code} already has an active HoD (a department can have only one)")
+
     email = str(row.get("email", "")).strip().lower()
     if email:
         if not EMAIL_RE.match(email):
@@ -402,6 +412,13 @@ async def build_template(session: AsyncSession, org_id: UUID) -> bytes:
     return buf.getvalue()
 
 
+def row_keys(row: dict[str, Any]) -> dict[str, str]:
+    """A department can have only one HoD, so two HoD rows for one department in a file clash."""
+    if _parse_role(row.get("role")) == UserRole.HOD and row.get("department_id"):
+        return {"Another HoD for this department": str(row["department_id"]).strip().upper()}
+    return {}
+
+
 def register() -> None:
     register_module(
         "employees",
@@ -412,6 +429,7 @@ def register() -> None:
         aliases=ALIASES,
         unique_keys=["email", "employee_uid"],
         build_template=build_template,
+        row_keys=row_keys,
     )
 
 
