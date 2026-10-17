@@ -108,19 +108,7 @@ class PulseAggregatorService:
         )
         today_cost = float(cost_result.scalar() or 0)
 
-        energy_result = await session.execute(
-            select(func.coalesce(func.sum(EnergyReading.kwh), 0)).where(
-                EnergyReading.plant_id == plant.id, EnergyReading.reading_at >= today_start
-            )
-        )
-        power_kwh = await run_energy_kwh(session, plant.id, today_start) or float(energy_result.scalar() or 0)
-        if not power_kwh:
-            param_result = await session.execute(
-                select(func.coalesce(func.sum(AssetLiveParameter.value), 0))
-                .join(Asset, AssetLiveParameter.asset_id == Asset.id)
-                .where(Asset.plant_id == plant.id, AssetLiveParameter.param_key == "power")
-            )
-            power_kwh = float(param_result.scalar() or 0)
+        power_kwh = await run_energy_kwh(session, plant.id, today_start)
 
         pending_maint = await session.execute(
             select(func.count())
@@ -234,12 +222,7 @@ class PulseAggregatorService:
         avg_health = sum(health_scores) / len(health_scores) if health_scores else 90.0
 
         shift_code = await self._current_shift_code(session, dept.plant_id)
-        power = await session.execute(
-            select(func.coalesce(func.sum(EnergyReading.kwh), 0)).where(
-                EnergyReading.department_id == dept.id, EnergyReading.reading_at >= today_start
-            )
-        )
-        power_kwh = await run_energy_kwh(session, dept.plant_id, today_start, dept.id) or float(power.scalar() or 0)
+        power_kwh = await run_energy_kwh(session, dept.plant_id, today_start, dept.id)
 
         status = _status_color(avg_health, open_issues, None if oee_m.get("no_runs") else oee_m["oee"])
         dept_metrics = self._dept_specific_metrics(dept.code, run)
@@ -283,14 +266,15 @@ class PulseAggregatorService:
             user = await session.get(User, run.created_by)
             operator = user.full_name if user else None
 
-        power_result = await session.execute(
-            select(AssetLiveParameter.value).where(
-                AssetLiveParameter.asset_id == asset.id, AssetLiveParameter.param_key == "power"
-            )
-        )
-        power = power_result.scalar_one_or_none()
+        from app.db.models import FactProcessRun as _Fact
 
-        status = _status_color(health["score"], 0, oee_m["oee"])
+        power = float((await session.execute(
+            select(func.coalesce(func.sum(_Fact.energy_kwh), 0))
+            .join(ProcessRun, _Fact.run_id == ProcessRun.id)
+            .where(ProcessRun.primary_asset_id == asset.id, ProcessRun.completed_at >= today_start)
+        )).scalar() or 0)
+
+        status = _status_color(health["score"], 0, None if oee_m.get("no_runs") else oee_m["oee"])
         pulse = AssetPulse(
             asset_id=asset.id,
             snapshot_at=now,
@@ -298,8 +282,8 @@ class PulseAggregatorService:
             health_score=health["score"],
             current_run_id=run.id if run else None,
             current_operator=operator,
-            oee=oee_m["oee"],
-            power_kwh=float(power) if power else None,
+            oee=None if oee_m.get("no_runs") else oee_m["oee"],
+            power_kwh=power or None,
             metrics={"health_category": health["category"], "oee_detail": oee_m},
         )
         session.add(pulse)

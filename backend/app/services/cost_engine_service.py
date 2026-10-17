@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 from uuid import UUID
 
@@ -62,12 +62,18 @@ def _section_rows(data: Any) -> list[dict[str, Any]]:
     return []
 
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
 def _run_date(run: ProcessRun) -> date:
-    if run.completed_at:
-        return run.completed_at.date()
-    if run.started_at:
-        return run.started_at.date()
-    return run.created_at.date() if run.created_at else date.today()
+    """The plant (IST) day a run belongs to."""
+    moment = run.completed_at or run.started_at or run.created_at
+    return moment.astimezone(IST).date() if moment else datetime.now(IST).date()
+
+
+def _run_moment(run: ProcessRun) -> datetime:
+    """When a run cost counts: when it finished, so recalculating old runs keeps them on their own day."""
+    return run.closed_at or run.completed_at or datetime.now(timezone.utc)
 
 
 class CostEngineService:
@@ -118,8 +124,6 @@ class CostEngineService:
         line_items_data: list[dict[str, Any]] = []
         warnings: list[str] = []
 
-        if not rules:
-            warnings.append("No active cost mapping rules for this template version")
 
         for rule in rules:
             items = await self._apply_rule(
@@ -127,10 +131,16 @@ class CostEngineService:
             )
             line_items_data.extend(items)
 
+        if not any(r.cost_category == CostCategory.LABOUR.value for r in rules):
+            line_items_data.extend(await self._crew_labour_items(session, run, plant_id, run_dt, warnings))
+
         maintenance_items = await self._compute_maintenance_costs(
             session, run, plant_id, warnings
         )
         line_items_data.extend(maintenance_items)
+
+        if not rules and not line_items_data:
+            warnings.append("No active cost mapping rules for this template version")
 
         total = sum(i["amount"] for i in line_items_data)
         status = CostCalculationStatus.COMPLETE
@@ -146,7 +156,7 @@ class CostEngineService:
 
         calc = CostCalculation(
             process_run_id=run_id,
-            calculated_at=datetime.now(timezone.utc),
+            calculated_at=_run_moment(run),
             total_cost=total,
             version=next_version,
             status=status,
@@ -155,6 +165,15 @@ class CostEngineService:
         )
         session.add(calc)
         await session.flush()
+
+        used: dict[str, float] = {}
+        for item in line_items_data:
+            if item.get("stock_code"):
+                used[item["stock_code"]] = used.get(item["stock_code"], 0.0) + item["stock_qty"]
+        if plant_id:
+            from app.services.inventory_pulse_service import InventoryPulseService
+
+            await InventoryPulseService().record_consumption(session, plant_id, run_id, _run_moment(run), used)
 
         for item in line_items_data:
             session.add(
@@ -304,7 +323,17 @@ class CostEngineService:
             warnings.append(f"No rate master for category {category.value}")
 
         amount = quantity * rate
+        stock: dict[str, Any] = {}
+        if category == CostCategory.RAW_MATERIAL and material_id:
+            mat = await session.get(MaterialCatalog, material_id)
+            if mat:
+                stock = {"stock_code": mat.code, "stock_qty": quantity / 1000.0}  # log sheets are in kg, stock in MT
+        elif category == CostCategory.FUEL and quantity:
+            from app.services.inventory_pulse_service import fuel_code
+
+            stock = {"stock_code": fuel_code(item_name), "stock_qty": quantity}
         return {
+            **stock,
             "cost_category": category,
             "item_name": item_name,
             "quantity": quantity,
@@ -443,6 +472,56 @@ class CostEngineService:
         )
         headcount = result.scalar() or 1
         return headcount * shift_hours
+
+    async def _crew_labour_items(
+        self, session: AsyncSession, run: ProcessRun, plant_id: Optional[UUID], run_dt: date, warnings: list[str]
+    ) -> list[dict[str, Any]]:
+        """Labour from attendance: people marked present for this department and shift on that day, for the shift
+        hours, shared between the runs the department ran in that shift. So attendance changes move the cost."""
+        process = await session.get(Process, run.process_id)
+        if not process or not plant_id:
+            return []
+        present = [AttendanceStatus.PRESENT.value, AttendanceStatus.HALF_DAY.value]
+        q = select(AttendanceRecord.status).where(
+            AttendanceRecord.attendance_date == run_dt,
+            AttendanceRecord.department_id == process.department_id,
+            AttendanceRecord.status.in_(present),
+        )
+        if run.shift_id:
+            q = q.where(AttendanceRecord.shift_id == run.shift_id)
+        statuses = [str(getattr(s, "value", s)) for s in (await session.execute(q)).scalars()]
+        crew = sum(0.5 if s == AttendanceStatus.HALF_DAY.value else 1.0 for s in statuses)
+        if crew == 0:
+            return []
+
+        shift_hours = 8.0
+        if run.shift_id:
+            shift = await session.get(Shift, run.shift_id)
+            if shift and shift.start_time and shift.end_time:
+                start_m = shift.start_time.hour * 60 + shift.start_time.minute
+                end_m = shift.end_time.hour * 60 + shift.end_time.minute
+                span = (end_m - start_m) % (24 * 60)
+                shift_hours = (span or 480) / 60.0
+        peers = (await session.execute(
+            select(ProcessRun)
+            .join(Process, ProcessRun.process_id == Process.id)
+            .where(Process.department_id == process.department_id, ProcessRun.shift_id == run.shift_id)
+            .limit(200)
+        )).scalars()
+        sharing = max(1, sum(1 for r in peers if _run_date(r) == run_dt))
+        hours = crew * shift_hours / sharing
+        rate = await self._lookup_labour_rate(session, plant_id, run.process_id, "Operator") or 0.0
+        if rate == 0:
+            warnings.append("No labour rate for Operator")
+        return [{
+            "cost_category": CostCategory.LABOUR,
+            "item_name": "Crew labour",
+            "quantity": round(hours, 2),
+            "unit": "person-hour",
+            "rate": rate,
+            "amount": round(hours * rate, 2),
+            "source_ref": {"attendance_date": run_dt.isoformat(), "crew": crew, "runs_sharing_crew": sharing},
+        }]
 
     async def _compute_maintenance_costs(
         self,

@@ -539,3 +539,20 @@ export async function createKpiDefinition(payload: {
   const { data } = await apiClient.post<KpiDefinition>('/foundation/kpi-definitions', payload);
   return data;
 }
+
+export type KpiValue = {
+  id: string;
+  code: string;
+  name: string;
+  value: number | null;
+  unit: string;
+  target_value: number | null;
+  status: 'on_target' | 'off_target' | null;
+  basis: string;
+};
+
+/** GET /foundation/kpi-values — current value of each KPI from finished log sheets. */
+export async function fetchKpiValues(): Promise<KpiValue[]> {
+  const { data } = await apiClient.get<KpiValue[]>('/foundation/kpi-values');
+  return data;
+}

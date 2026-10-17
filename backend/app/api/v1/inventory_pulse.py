@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, DbSession
-from app.schemas.pulse import InventoryAdjustRequest, InventoryItemResponse
+from app.schemas.pulse import InventoryAdjustRequest, InventoryItemResponse, InventoryReceiveRequest
 from app.services.access_scope import assert_inventory_adjust, assert_inventory_view
 from app.services.inventory_pulse_service import InventoryPulseService
 
@@ -47,6 +47,25 @@ async def adjust_inventory(
         data.quantity,
         quality_grade=data.quality_grade,
         location=data.location,
+        user_id=user.id,
     )
+    await session.commit()
+    return {"material_code": snap.material_code, "quantity": snap.quantity, "status": snap.status}
+
+
+@router.post("/inventory-pulse/{plant_id}/receive")
+async def receive_inventory(
+    plant_id: UUID, data: InventoryReceiveRequest, session: DbSession, user: CurrentUser
+):
+    """Goods received: adds to the stock."""
+    await assert_inventory_adjust(session, user, plant_id)
+    try:
+        snap = await inventory_service.receive(
+            session, plant_id, data.material_code, data.quantity, supplier=data.supplier, note=data.note, user_id=user.id
+        )
+    except ValueError as exc:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail=str(exc))
     await session.commit()
     return {"material_code": snap.material_code, "quantity": snap.quantity, "status": snap.status}

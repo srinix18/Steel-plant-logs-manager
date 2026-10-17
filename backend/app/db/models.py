@@ -1576,6 +1576,22 @@ class InventorySnapshot(Base):
     __table_args__ = (UniqueConstraint("plant_id", "material_code", name="uq_inv_snapshot_material"),)
 
 
+class InventoryMovement(Base):
+    """Every change to stock: opening balance, goods received, stock counts, and what log sheets consumed."""
+
+    __tablename__ = "inventory_movements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid)
+    plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False, index=True)
+    material_code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    movement_type: Mapped[str] = mapped_column(String(20), nullable=False)  # opening | receipt | consumption | adjustment
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)  # signed, in the item unit: consumption is negative
+    run_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("process_runs.id"), nullable=True, index=True)
+    note: Mapped[Optional[str]] = mapped_column(String(300))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    moved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class SafetyInspection(Base):
     __tablename__ = "safety_inspections"
 

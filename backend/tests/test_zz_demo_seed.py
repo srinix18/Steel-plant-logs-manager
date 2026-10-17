@@ -41,3 +41,15 @@ async def test_demo_seed_completes_and_is_repeatable(client, api):
     assert 240 <= len(staff) <= 270
     roles = {str(e["role"]).lower() for e in staff}
     assert {"worker", "supervisor", "hod", "maintenance", "hr"} <= roles
+
+    # Finance covers every production department, and stock has been drawn down by the finished heats.
+    plant = api.user("ceo")["plant_id"]
+    summary = await api.ok("ceo", "GET", "/finance/dashboard/plant-summary", params={"plant_id": plant})
+    cost = {d["department_code"]: d["total_cost"] for d in summary["by_department"]}
+    for code in ("SMS", "ROLLING", "WIRE", "BBD", "FORGE"):
+        assert cost.get(code, 0) > 0, f"{code} has no cost"
+    drivers = {d["category"] for d in await api.ok("ceo", "GET", "/finance/analytics/top-drivers", params={"plant_id": plant})}
+    assert {"raw_material", "labour", "power"} <= drivers
+    stock = {i["material_code"]: i for i in await api.ok("ceo", "GET", f"/inventory-pulse/{plant}")}
+    assert stock["304_SCRAP"]["avg_daily_consumption"]  # drawn down by the heats
+    assert all(i["quantity"] >= 0 for i in stock.values())

@@ -406,6 +406,15 @@ async def list_kpi_definitions(session: DbSession, user: CurrentUser):
     return await kpi_service.list_definitions(session)
 
 
+@router.get("/foundation/kpi-values")
+async def kpi_values(session: DbSession, user: CurrentUser):
+    """Live value of every KPI, computed from finished log sheets."""
+    from app.services.operations_service import AnalyticsService
+
+    assert_can_view_foundation(user)
+    return await AnalyticsService().kpi_values(session)
+
+
 @router.post("/foundation/kpi-definitions", response_model=KpiDefinitionAdminResponse, status_code=201)
 async def create_kpi_definition(data: KpiDefinitionCreate, session: DbSession, user: CeoUser):
     assert_can_manage_masters(user)

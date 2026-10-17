@@ -248,3 +248,10 @@ class InventoryAdjustRequest(BaseModel):
     quantity: float
     quality_grade: Optional[str] = None
     location: Optional[str] = None
+
+
+class InventoryReceiveRequest(BaseModel):
+    material_code: str
+    quantity: float = Field(gt=0)
+    supplier: Optional[str] = None
+    note: Optional[str] = None

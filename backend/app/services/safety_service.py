@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Asset, MaintenanceWorkOrder, SafetyIncident, SafetyInspection, SopDocument, User
+from app.db.models import Asset, AssetPulse, MaintenanceWorkOrder, SafetyIncident, SafetyInspection, SopDocument, TrainingRecord, User
 from app.models.enums import MaintenanceWorkOrderStatus
 from app.services.pulse_notification_service import PulseNotificationService
 
@@ -57,8 +57,11 @@ class SafetyService:
                         pass
             if asset.last_inspection_at and (now - asset.last_inspection_at).days > 90:
                 inspection_due += 1
-            health_cat = (meta.get("health_category") or "")
-            if health_cat == "critical":
+            # An asset is unsafe when its latest health reading is critical (not a stored label).
+            latest = (await session.execute(
+                select(AssetPulse.health_score).where(AssetPulse.asset_id == asset.id).order_by(AssetPulse.snapshot_at.desc()).limit(1)
+            )).scalar_one_or_none()
+            if latest is not None and latest < 60:
                 unsafe += 1
 
         incidents = await session.execute(
@@ -78,6 +81,15 @@ class SafetyService:
             )
         )
         inspection_due += int(due_insp.scalar() or 0)
+
+        # Staff certifications (HR training records) that have passed their expiry date.
+        from datetime import timedelta
+
+        today = datetime.now(timezone(timedelta(hours=5, minutes=30))).date()
+        expired_certs += int((await session.execute(
+            select(func.count()).select_from(TrainingRecord).join(User, User.id == TrainingRecord.user_id)
+            .where(User.plant_id == plant_id, TrainingRecord.expiry_date.isnot(None), TrainingRecord.expiry_date < today)
+        )).scalar() or 0)
 
         return {
             "assets_under_maintenance": int(under_maint.scalar() or 0),

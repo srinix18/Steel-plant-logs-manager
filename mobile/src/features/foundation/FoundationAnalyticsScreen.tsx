@@ -5,6 +5,8 @@ import { getErrorMessage } from '@/src/api/client';
 import {
   createKpiDefinition,
   fetchKpiDefinitions,
+  fetchKpiValues,
+  type KpiValue,
   type KpiDefinition,
 } from '@/src/api/foundation';
 import { fetchDepartments } from '@/src/api/lookups';
@@ -58,6 +60,7 @@ export function FoundationAnalyticsScreen() {
   const canWrite = user ? hasRole(user.role, CEO_TIER_ROLES) : false;
 
   const [kpis, setKpis] = useState<KpiDefinition[]>([]);
+  const [values, setValues] = useState<Record<string, KpiValue>>({});
   const [departments, setDepartments] = useState<Department[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -72,7 +75,12 @@ export function FoundationAnalyticsScreen() {
     else setLoading(true);
     setError(null);
     try {
-      const [k, d] = await Promise.all([fetchKpiDefinitions(), fetchDepartments()]);
+      const [k, d, v] = await Promise.all([
+        fetchKpiDefinitions(),
+        fetchDepartments(),
+        fetchKpiValues().catch(() => [] as KpiValue[]),
+      ]);
+      setValues(Object.fromEntries(v.map((x) => [x.code, x])));
       setKpis(k);
       setDepartments(d);
     } catch (e) {
@@ -140,7 +148,7 @@ export function FoundationAnalyticsScreen() {
         <View style={styles.headerText}>
           <Text style={styles.title}>Analytics Foundation</Text>
           <Text style={styles.subtitle}>
-            KPI definitions (stored only — no auto-calculation yet).
+            Live KPI values from finished log sheets, against their targets.
           </Text>
         </View>
         {canWrite ? <Button title="Add KPI" onPress={openForm} size="sm" /> : null}
@@ -214,6 +222,22 @@ export function FoundationAnalyticsScreen() {
               <Text style={styles.rowTitle}>
                 {k.code} · {k.name}
               </Text>
+              {values[k.code] ? (
+                <View style={styles.metaRow}>
+                  <Text style={styles.rowTitle}>
+                    {values[k.code].value != null
+                      ? `${values[k.code].value} ${values[k.code].unit}`.trim()
+                      : 'No data yet'}
+                  </Text>
+                  {values[k.code].status ? (
+                    <Badge
+                      label={values[k.code].status === 'on_target' ? 'On target' : 'Off target'}
+                      tone={values[k.code].status === 'on_target' ? 'success' : 'danger'}
+                    />
+                  ) : null}
+                  <Text style={styles.rowMeta}>{values[k.code].basis}</Text>
+                </View>
+              ) : null}
               <Text style={styles.formula}>{k.formula}</Text>
               <View style={styles.metaRow}>
                 {k.frequency ? <Badge label={k.frequency} tone="brand" /> : null}

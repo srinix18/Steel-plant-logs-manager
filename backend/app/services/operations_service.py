@@ -253,6 +253,44 @@ class AnalyticsService:
         result = await session.execute(select(KPIDefinition))
         return [KPIDefinitionResponse.model_validate(k) for k in result.scalars()]
 
+    async def kpi_values(self, session: AsyncSession) -> list[dict]:
+        """Current value of each KPI, from finished runs in the last 30 days. KPIs that have no source data yet say so."""
+        from datetime import timedelta
+
+        from app.db.models import FactProcessRun
+        from app.services.pulse_live import day_start_utc
+
+        since = datetime.now(timezone.utc) - timedelta(days=30)
+        facts = (await session.execute(
+            select(FactProcessRun).join(ProcessRun, FactProcessRun.run_id == ProcessRun.id).where(ProcessRun.completed_at >= since)
+        )).scalars().all()
+        taps = sorted(f.tap_to_tap_min for f in facts if f.tap_to_tap_min)
+        paired = [(f.energy_kwh, f.charge_kg) for f in facts if f.energy_kwh and f.charge_kg]
+        today_runs = int((await session.execute(
+            select(func.count()).select_from(ProcessRun).where(ProcessRun.completed_at >= day_start_utc())
+        )).scalar() or 0)
+
+        def p95(values: list[float]) -> float | None:
+            return round(values[min(len(values) - 1, int(0.95 * len(values)))], 1) if values else None
+
+        computed: dict[str, tuple[float | None, str, str, bool]] = {
+            # code: (value, unit, basis, lower is better)
+            "tap_to_tap_p95": (p95(taps), "min", f"{len(taps)} heats, last 30 days", True),
+            "kwh_per_ton": (round(sum(e for e, _ in paired) / (sum(c for _, c in paired) / 1000), 1) if paired else None,
+                            "kWh/t", f"{len(paired)} heats, last 30 days", True),
+            "shift_throughput": (float(today_runs), "runs", "finished today", False),
+        }
+        out = []
+        for k in (await session.execute(select(KPIDefinition).order_by(KPIDefinition.name))).scalars():
+            value, unit, basis, lower_better = computed.get(k.code, (None, "", "no source data yet", True))
+            status = None
+            if value is not None and k.target_value:
+                ok = value <= k.target_value if lower_better else value >= k.target_value
+                status = "on_target" if ok else "off_target"
+            out.append({"id": str(k.id), "code": k.code, "name": k.name, "value": value, "unit": unit,
+                        "target_value": k.target_value, "status": status, "basis": basis})
+        return out
+
     async def dashboard_metrics(self, session: AsyncSession, user: User | None = None) -> dict:
         from app.db.models import Department, Organisation, Plant, Process
         from app.services.access_scope import apply_run_query_scope, is_platform_admin

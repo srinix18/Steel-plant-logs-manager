@@ -56,3 +56,15 @@ export function inventoryStatusTone(
   if (key === 'normal') return 'success';
   return 'neutral';
 }
+
+/** POST /inventory-pulse/{plantId}/receive — goods received, added to the stock. */
+export async function receiveInventory(
+  plantId: string,
+  body: { material_code: string; quantity: number; supplier?: string }
+): Promise<InventoryAdjustResult> {
+  const { data } = await apiClient.post<InventoryAdjustResult>(
+    `/inventory-pulse/${plantId}/receive`,
+    body
+  );
+  return data;
+}

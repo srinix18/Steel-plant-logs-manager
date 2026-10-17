@@ -152,7 +152,9 @@ async def list_attendance(
 
 @router.post("/workforce/attendance/bulk", response_model=list[AttendanceRecordResponse])
 async def save_attendance_bulk(session: DbSession, user: CurrentUser, data: AttendanceBulkSave):
-    return await service.save_attendance_bulk(session, user, data)
+    saved = await service.save_attendance_bulk(session, user, data)
+    await _reprice_runs_for_day(session, data.department_id, data.attendance_date)
+    return saved
 
 
 @router.get("/workforce/contractor-attendance", response_model=list[ContractorAttendanceResponse])
@@ -219,3 +221,25 @@ async def workforce_summary(
 @router.get("/workforce/me", response_model=WorkforceMeResponse)
 async def workforce_me(session: DbSession, user: CurrentUser):
     return await service.get_me(session, user)
+
+
+async def _reprice_runs_for_day(session, department_id, day) -> None:
+    """Crew labour in a run's cost comes from attendance, so a changed attendance sheet re-prices that day's finished runs."""
+    from sqlalchemy import select
+
+    from app.db.models import Process, ProcessRun
+    from app.services.cost_engine_service import CostEngineService, _run_date
+
+    try:
+        runs = (await session.execute(
+            select(ProcessRun).join(Process, ProcessRun.process_id == Process.id)
+            .where(Process.department_id == department_id, ProcessRun.current_state.in_(["completed", "approved", "closed"]))
+            .order_by(ProcessRun.completed_at.desc()).limit(60)
+        )).scalars().all()
+        engine = CostEngineService()
+        for run in runs:
+            if _run_date(run) == day:
+                async with session.begin_nested():  # a failing recalculation rolls back only itself
+                    await engine.compute_for_run(session, run.id, user=None)
+    except Exception:  # never fail the attendance save over a costing problem
+        pass

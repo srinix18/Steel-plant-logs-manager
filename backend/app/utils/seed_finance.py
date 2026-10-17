@@ -145,7 +145,15 @@ async def seed_finance(session: AsyncSession) -> None:
                 )
             )
 
-    # Raw material rates
+    # Gases and furnace oil are priced like fuels (per litre / per Nm3).
+    for fuel_name, unit, rate in [("Furnace Oil", "litre", 62.0), ("Argon", "Nm3", 45.0), ("Oxygen", "Nm3", 8.0), ("Nitrogen", "Nm3", 7.0)]:
+        exists = await session.execute(
+            select(FuelCostRate).where(FuelCostRate.plant_id == plant.id, FuelCostRate.fuel_name == fuel_name).limit(1)
+        )
+        if not exists.scalar_one_or_none():
+            session.add(FuelCostRate(plant_id=plant.id, fuel_name=fuel_name, unit=unit, rate=rate, effective_from=effective))
+
+    # Raw material rates: every material in the catalogue has a price, so no log sheet row is left unpriced.
     material_rates = {
         "304_SCRAP": 45.0,
         "316_SCRAP": 48.0,
@@ -155,6 +163,16 @@ async def seed_finance(session: AsyncSession) -> None:
         "HC_FE_CR": 130.0,
         "HC_FESI": 95.0,
         "FE_NI": 1100.0,
+        "FE_CR": 135.0,
+        "FE_MN": 95.0,
+        "FE_SI": 98.0,
+        "FE_MO": 2200.0,
+        "P_NI": 1250.0,
+        "TI": 650.0,
+        "LIME": 12.0,
+        "DOLOMITE": 9.0,
+        "CPC": 40.0,
+        "OTHER": 20.0,
     }
     mats = await session.execute(
         select(MaterialCatalog).where(MaterialCatalog.organisation_id == org.id)
@@ -213,9 +231,21 @@ async def seed_finance(session: AsyncSession) -> None:
             sort_order=3,
         )
 
-    # AOD F/PRD/03
+    # AOD F/PRD/03: alloys and fluxes added, plus the gases blown (oxygen, nitrogen, argon)
     aod_ver = await _get_published_version(session, "F/PRD/03")
     if aod_ver:
+        for sort, key in ((10, "alloy_additions"), (11, "flux_additions")):
+            await _ensure_mapping(
+                session, aod_ver.id,
+                source_type=CostMappingSourceType.SECTION_ROW, source_key=key, child_key="quantity_kg",
+                material_field_key="material", cost_category=CostCategory.RAW_MATERIAL, sort_order=sort,
+            )
+        for sort, key, gas in ((12, "ar_nm3", "Argon"), (13, "o2_nm3", "Oxygen"), (14, "n2_nm3", "Nitrogen")):
+            await _ensure_mapping(
+                session, aod_ver.id,
+                source_type=CostMappingSourceType.SCALAR_FIELD, source_key=key, cost_category=CostCategory.FUEL,
+                item_label_override=gas, unit_override="Nm3", sort_order=sort,
+            )
         await _ensure_mapping(
             session, aod_ver.id,
             source_type=CostMappingSourceType.SCALAR_FIELD,
@@ -250,6 +280,15 @@ async def seed_finance(session: AsyncSession) -> None:
             item_label_override="Electricity",
             unit_override="kWh",
             sort_order=1,
+        )
+        await _ensure_mapping(
+            session, rolling_ver.id,
+            source_type=CostMappingSourceType.SCALAR_FIELD,
+            source_key="oil_consumption",
+            cost_category=CostCategory.FUEL,
+            item_label_override="Furnace Oil",
+            unit_override="litre",
+            sort_order=2,
         )
 
     await session.flush()

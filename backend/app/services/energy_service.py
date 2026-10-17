@@ -1,111 +1,97 @@
-"""Energy consumption aggregation."""
+"""Energy consumption, built from what the log sheets record (finished runs with a power reading)."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.pulse_live import day_start_utc, run_energy_kwh
-from app.db.models import Asset, AssetLiveParameter, Department, EnergyReading, FactProcessRun, ProcessRun
+from app.db.models import Asset, Department, FactProcessRun, PowerCostRate, Process, ProcessRun
+from app.services.pulse_live import IST, day_start_utc
 
 
 class EnergyService:
-    async def plant_dashboard(self, session: AsyncSession, plant_id: UUID) -> dict:
-        now = datetime.now(timezone.utc)
-        today_start = day_start_utc()
-        week_start = today_start - timedelta(days=7)
-        month_start = today_start - timedelta(days=30)
-
-        async def _sum(since: datetime) -> float:
-            r = await session.execute(
-                select(func.coalesce(func.sum(EnergyReading.kwh), 0)).where(
-                    EnergyReading.plant_id == plant_id, EnergyReading.reading_at >= since
-                )
+    async def _rows(self, session: AsyncSession, plant_id: UUID, since: datetime) -> list[dict]:
+        """Finished runs that recorded energy since a time."""
+        result = await session.execute(
+            select(
+                ProcessRun.completed_at, ProcessRun.started_at, ProcessRun.primary_asset_id,
+                Process.department_id, FactProcessRun.energy_kwh,
             )
-            return float(r.scalar() or 0)
-
-        # Energy logged on today's finished log sheets comes first; metered readings and the live power figure follow.
-        today_kwh = await run_energy_kwh(session, plant_id, today_start) or await _sum(today_start)
-        if not today_kwh:
-            today_kwh = await self._fallback_power(session, plant_id)
-
-        week_kwh = await _sum(week_start) or today_kwh * 7
-        month_kwh = await _sum(month_start) or today_kwh * 30
-
-        peak_val = (await session.execute(
-            select(func.max(EnergyReading.peak_kw)).where(EnergyReading.plant_id == plant_id)
-        )).scalar()
-        avg_val = (await session.execute(
-            select(func.avg(EnergyReading.peak_kw)).where(
-                EnergyReading.plant_id == plant_id, EnergyReading.reading_at >= week_start
-            )
-        )).scalar()
-
-        depts = await session.execute(select(Department).where(Department.plant_id == plant_id))
-        dept_rows = []
-        for dept in depts.scalars():
-            dr = await session.execute(
-                select(func.coalesce(func.sum(EnergyReading.kwh), 0)).where(
-                    EnergyReading.department_id == dept.id, EnergyReading.reading_at >= today_start
-                )
-            )
-            kwh = await run_energy_kwh(session, plant_id, today_start, dept.id) or float(dr.scalar() or 0)
-            dept_rows.append({"department_id": str(dept.id), "code": dept.code, "name": dept.name, "kwh": kwh})
-
-        assets = await session.execute(select(Asset).where(Asset.plant_id == plant_id).limit(20))
-        asset_rows = []
-        for asset in assets.scalars():
-            ar = await session.execute(
-                select(func.coalesce(func.sum(EnergyReading.kwh), 0)).where(
-                    EnergyReading.asset_id == asset.id, EnergyReading.reading_at >= today_start
-                )
-            )
-            kwh = float(ar.scalar() or 0)
-            if not kwh:
-                pr = await session.execute(
-                    select(AssetLiveParameter.value).where(
-                        AssetLiveParameter.asset_id == asset.id, AssetLiveParameter.param_key == "power"
-                    )
-                )
-                kwh = float(pr.scalar() or 0)
-            asset_rows.append({"asset_id": str(asset.id), "name": asset.name, "kwh": kwh})
-
-        hist = await session.execute(
-            select(EnergyReading)
-            .where(EnergyReading.plant_id == plant_id)
-            .order_by(EnergyReading.reading_at.desc())
-            .limit(30)
+            .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
+            .join(Process, ProcessRun.process_id == Process.id)
+            .where(FactProcessRun.plant_id == plant_id, FactProcessRun.energy_kwh > 0, ProcessRun.completed_at >= since)
         )
+        return [
+            {"at": at, "started": st, "asset_id": asset, "department_id": dept, "kwh": float(kwh)}
+            for at, st, asset, dept, kwh in result
+        ]
 
-        cost_per_kwh = 8.5
+    async def _rate(self, session: AsyncSession, plant_id: UUID) -> float:
+        row = (await session.execute(
+            select(PowerCostRate).where(PowerCostRate.plant_id == plant_id).order_by(PowerCostRate.effective_from.desc()).limit(1)
+        )).scalar_one_or_none()
+        return float(row.cost_per_unit) if row else 0.0
+
+    async def plant_dashboard(self, session: AsyncSession, plant_id: UUID) -> dict:
+        today_start = day_start_utc()
+        month = await self._rows(session, plant_id, today_start - timedelta(days=30))
+        rate = await self._rate(session, plant_id)
+
+        def total(rows: list[dict], since: datetime) -> float:
+            return round(sum(r["kwh"] for r in rows if r["at"] >= since), 1)
+
+        today_kwh = total(month, today_start)
+        week_start = today_start - timedelta(days=7)
+
+        # Average load of a run = its energy over the hours it ran; the peak is the busiest run this week.
+        loads = []
+        for r in month:
+            if r["at"] >= week_start and r["started"] and r["at"] > r["started"]:
+                hours = (r["at"] - r["started"]).total_seconds() / 3600
+                if hours > 0:
+                    loads.append(r["kwh"] / hours)
+
+        depts = (await session.execute(select(Department).where(Department.plant_id == plant_id))).scalars().all()
+        dept_rows = [
+            {
+                "department_id": str(d.id), "code": d.code, "name": d.name,
+                "kwh": round(sum(r["kwh"] for r in month if r["department_id"] == d.id and r["at"] >= today_start), 1),
+                "week_kwh": round(sum(r["kwh"] for r in month if r["department_id"] == d.id and r["at"] >= week_start), 1),
+            }
+            for d in depts
+        ]
+        assets = (await session.execute(select(Asset).where(Asset.plant_id == plant_id).limit(60))).scalars().all()
+        asset_rows = [
+            {
+                "asset_id": str(a.id), "name": a.name,
+                "kwh": round(sum(r["kwh"] for r in month if r["asset_id"] == a.id and r["at"] >= today_start), 1),
+                "week_kwh": round(sum(r["kwh"] for r in month if r["asset_id"] == a.id and r["at"] >= week_start), 1),
+            }
+            for a in assets
+        ]
+        asset_rows.sort(key=lambda x: -x["week_kwh"])
+
+        by_day: dict[date, float] = defaultdict(float)
+        for r in month:
+            by_day[r["at"].astimezone(IST).date()] += r["kwh"]
+        history = [
+            {"reading_at": datetime.combine(day, datetime.min.time(), tzinfo=IST).isoformat(), "kwh": round(kwh, 1), "cost": round(kwh * rate, 2)}
+            for day, kwh in sorted(by_day.items(), reverse=True)[:30]
+        ]
+
         return {
             "plant_id": plant_id,
             "today_kwh": today_kwh,
-            "week_kwh": week_kwh,
-            "month_kwh": month_kwh,
-            "today_cost": round(today_kwh * cost_per_kwh, 2),
-            "peak_load_kw": float(peak_val) if peak_val is not None else None,
-            "avg_load_kw": float(avg_val) if avg_val is not None else None,
+            "week_kwh": total(month, week_start),
+            "month_kwh": total(month, today_start - timedelta(days=30)),
+            "today_cost": round(today_kwh * rate, 2),
+            "peak_load_kw": round(max(loads), 1) if loads else None,
+            "avg_load_kw": round(sum(loads) / len(loads), 1) if loads else None,
             "departments": dept_rows,
             "assets": asset_rows,
-            "history": [
-                {"reading_at": e.reading_at.isoformat(), "kwh": e.kwh, "cost": e.cost}
-                for e in hist.scalars()
-            ],
+            "history": history,
         }
-
-    async def _fallback_power(self, session: AsyncSession, plant_id: UUID) -> float:
-        r = await session.execute(
-            select(func.coalesce(func.sum(FactProcessRun.energy_kwh), 0))
-            .join(ProcessRun, FactProcessRun.run_id == ProcessRun.id)
-            .where(FactProcessRun.plant_id == plant_id)
-        )
-        from_params = await session.execute(
-            select(func.coalesce(func.sum(AssetLiveParameter.value), 0))
-            .join(Asset, AssetLiveParameter.asset_id == Asset.id)
-            .where(Asset.plant_id == plant_id, AssetLiveParameter.param_key == "power")
-        )
-        return float(r.scalar() or 0) + float(from_params.scalar() or 0)

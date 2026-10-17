@@ -1086,6 +1086,19 @@ class Demo:
             await self.call("hr", "POST", f"/workforce/payroll/runs/{run_id}/process")
         log.info("demo seed: headcount done (%s employees)", len(employees))
 
+    async def make_finance(self) -> None:
+        """Price every finished run with the current cost rules (so stock, labour and gases are included)."""
+        # Re-derive the analytics facts of finished runs (tap-to-tap, energy), then price them.
+        from app.api.v1.process_runs import run_service
+
+        async with async_session_factory() as session:
+            ids = (await session.execute(select(ProcessRun.id).where(ProcessRun.current_state.in_(["completed", "approved", "closed"])))).scalars().all()
+            for rid in ids:
+                await run_service.compute_analytics_facts(session, rid)
+            await session.commit()
+        done = await self.ok("ceo", "POST", "/finance/calculations/bulk-compute", json={"plant_id": self.plant_id})
+        log.info("demo seed: finance recomputed %s", done)
+
     async def make_work_orders(self) -> None:
         sms = self.me["hod_sms"]["department_id"]
         rolling = self.me["hod_rolling"]["department_id"]
@@ -1184,10 +1197,11 @@ class Demo:
         await self._phase("work_orders", self.make_work_orders)
         await self._phase("documents", self.make_documents)
         await self._phase("headcount", self.make_headcount)
+        await self._phase("finance", self.make_finance)
         await self._phase("finish", self._finish_phase)
 
 
-PHASES = ["runs", "workforce", "issues_safety", "messages", "work_orders", "documents", "headcount", "finish"]
+PHASES = ["runs", "workforce", "issues_safety", "messages", "work_orders", "documents", "headcount", "finance", "finish"]
 
 
 async def demo_seed_finished() -> bool:

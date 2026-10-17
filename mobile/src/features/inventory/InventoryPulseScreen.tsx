@@ -6,6 +6,7 @@ import {
   adjustInventory,
   fetchInventoryPulse,
   inventoryStatusTone,
+  receiveInventory,
   type InventoryItem,
 } from '@/src/api/inventoryPulse';
 import { fetchPlants } from '@/src/api/lookups';
@@ -30,6 +31,7 @@ export function InventoryPulseScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
+  const [mode, setMode] = useState<'count' | 'receive'>('count');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -37,6 +39,7 @@ export function InventoryPulseScreen() {
     quantity: '',
     quality_grade: '',
     location: '',
+    supplier: '',
   });
 
   useEffect(() => {
@@ -100,9 +103,10 @@ export function InventoryPulseScreen() {
     const item = items.find((i) => i.material_code === code);
     setForm({
       material_code: code,
-      quantity: item != null ? String(item.quantity) : '',
+      quantity: mode === 'receive' ? '' : item != null ? String(item.quantity) : '',
       quality_grade: item?.quality_grade ?? '',
       location: item?.location ?? '',
+      supplier: '',
     });
   };
 
@@ -112,6 +116,7 @@ export function InventoryPulseScreen() {
       quantity: String(item.quantity),
       quality_grade: item.quality_grade ?? '',
       location: item.location ?? '',
+      supplier: '',
     });
     setShowAdjust(true);
     setMessage(null);
@@ -125,23 +130,32 @@ export function InventoryPulseScreen() {
       setError('Select a material to adjust.');
       return;
     }
-    if (!Number.isFinite(qty) || qty < 0) {
-      setError('Enter a valid non-negative quantity.');
+    if (!Number.isFinite(qty) || qty < 0 || (mode === 'receive' && qty === 0)) {
+      setError('Enter a valid quantity.');
       return;
     }
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await adjustInventory(plantId, {
-        material_code: form.material_code.trim(),
-        quantity: qty,
-        quality_grade: form.quality_grade.trim() || undefined,
-        location: form.location.trim() || undefined,
-      });
+      const result =
+        mode === 'receive'
+          ? await receiveInventory(plantId, {
+              material_code: form.material_code.trim(),
+              quantity: qty,
+              supplier: form.supplier.trim() || undefined,
+            })
+          : await adjustInventory(plantId, {
+              material_code: form.material_code.trim(),
+              quantity: qty,
+              quality_grade: form.quality_grade.trim() || undefined,
+              location: form.location.trim() || undefined,
+            });
       await load(true);
       setMessage(
-        `Adjusted ${result.material_code} → ${result.quantity} (${result.status})`
+        mode === 'receive'
+          ? `Received into ${result.material_code}: now ${result.quantity} (${result.status})`
+          : `Counted ${result.material_code}: ${result.quantity} (${result.status})`
       );
       setShowAdjust(false);
     } catch (e) {
@@ -172,17 +186,28 @@ export function InventoryPulseScreen() {
 
       <View style={styles.actions}>
         <Button
-          title={showAdjust ? 'Hide adjust' : 'Adjust quantity'}
-          variant="secondary"
+          title="Receive stock"
+          variant={showAdjust && mode === 'receive' ? 'primary' : 'secondary'}
           size="sm"
           onPress={() => {
-            setShowAdjust((v) => !v);
+            setMode('receive');
+            setShowAdjust((v) => (mode === 'receive' ? !v : true));
+            setForm((f) => ({ ...f, quantity: '' }));
             setMessage(null);
             setError(null);
-            if (!showAdjust && form.material_code) {
-              const item = items.find((i) => i.material_code === form.material_code);
-              if (item) openAdjustFor(item);
-            }
+          }}
+        />
+        <Button
+          title="Stock count"
+          variant={showAdjust && mode === 'count' ? 'primary' : 'secondary'}
+          size="sm"
+          onPress={() => {
+            setMode('count');
+            setShowAdjust((v) => (mode === 'count' ? !v : true));
+            setMessage(null);
+            setError(null);
+            const item = items.find((i) => i.material_code === form.material_code);
+            if (item) openAdjustFor(item);
           }}
         />
       </View>
@@ -196,10 +221,11 @@ export function InventoryPulseScreen() {
 
       {showAdjust ? (
         <Card style={styles.formCard}>
-          <Text style={styles.formTitle}>Adjust inventory</Text>
+          <Text style={styles.formTitle}>{mode === 'receive' ? 'Receive stock' : 'Stock count'}</Text>
           <Text style={styles.hint}>
-            Sets the absolute on-hand quantity (not a delta). Optional grade and location update
-            the snapshot.
+            {mode === 'receive'
+              ? 'Goods received: the quantity is added to the stock.'
+              : 'Sets the on-hand quantity to what was counted. Runs also use stock, so it changes by itself as heats are finished.'}
           </Text>
           {materialOptions.length > 0 ? (
             <SelectSheet
@@ -217,23 +243,33 @@ export function InventoryPulseScreen() {
             />
           )}
           <TextField
-            label="New quantity"
+            label={mode === 'receive' ? 'Quantity received' : 'Counted quantity'}
             value={form.quantity}
             onChangeText={(quantity) => setForm((f) => ({ ...f, quantity }))}
             keyboardType="decimal-pad"
           />
-          <TextField
-            label="Quality grade (optional)"
-            value={form.quality_grade}
-            onChangeText={(quality_grade) => setForm((f) => ({ ...f, quality_grade }))}
-          />
-          <TextField
-            label="Location (optional)"
-            value={form.location}
-            onChangeText={(location) => setForm((f) => ({ ...f, location }))}
-          />
+          {mode === 'receive' ? (
+            <TextField
+              label="Supplier (optional)"
+              value={form.supplier}
+              onChangeText={(supplier) => setForm((f) => ({ ...f, supplier }))}
+            />
+          ) : (
+            <>
+              <TextField
+                label="Quality grade (optional)"
+                value={form.quality_grade}
+                onChangeText={(quality_grade) => setForm((f) => ({ ...f, quality_grade }))}
+              />
+              <TextField
+                label="Location (optional)"
+                value={form.location}
+                onChangeText={(location) => setForm((f) => ({ ...f, location }))}
+              />
+            </>
+          )}
           <Button
-            title={saving ? 'Saving…' : 'Save adjustment'}
+            title={saving ? 'Saving…' : mode === 'receive' ? 'Add to stock' : 'Save count'}
             disabled={saving}
             onPress={() => void onAdjust()}
           />
@@ -243,7 +279,7 @@ export function InventoryPulseScreen() {
       {items.length === 0 && !error ? (
         <EmptyState
           title="No inventory items."
-          description="Snapshots appear after seed or an adjust create."
+          description="Stock appears once materials are set up."
         />
       ) : (
         items.map((item) => (

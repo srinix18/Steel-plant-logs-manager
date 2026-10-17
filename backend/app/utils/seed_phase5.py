@@ -130,7 +130,9 @@ async def seed_phase5(session: AsyncSession) -> None:
                     )
                 )
 
-    await InventoryPulseService().refresh_snapshots(session, plant.id, org.id)
+    _inv = InventoryPulseService()
+    await _inv.ensure_items(session, plant.id)
+    await _inv.refresh_snapshots(session, plant.id, org.id)
 
     ceo = (await session.execute(select(User).where(User.email == "ceo@chandansteel.com"))).scalar_one_or_none()
     if ceo:

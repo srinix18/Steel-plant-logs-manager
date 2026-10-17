@@ -85,6 +85,18 @@ def _to_run_response(run: ProcessRun) -> ProcessRunResponse:
     )
 
 
+def _duration_text_to_minutes(value) -> float | None:
+    """Log sheets store a duration as text such as "1h 38m"; returns minutes, or None if it is not one."""
+    import re as _re
+
+    if value is None:
+        return None
+    m = _re.fullmatch(r"\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?\s*", str(value).strip().strip('"'))
+    if not m or not (m.group(1) or m.group(2)):
+        return None
+    return int(m.group(1) or 0) * 60 + int(m.group(2) or 0)
+
+
 class ProcessRunService:
     def __init__(self):
         self.workflow = WorkflowService()
@@ -423,7 +435,7 @@ class ProcessRunService:
         if run.started_at and run.completed_at:
             duration_min = (run.completed_at - run.started_at).total_seconds() / 60
 
-        energy = field_map.get("power_total")
+        energy = field_map.get("power_total") or field_map.get("power_consumption")
         charge_kg = None
         if "charge_mix" in section_map:
             charge_data = section_map["charge_mix"]
@@ -455,6 +467,7 @@ class ProcessRunService:
             session.add(fact)
 
         fact.duration_min = duration_min
+        fact.tap_to_tap_min = _duration_text_to_minutes(field_map.get("tap_to_tap_time"))
         fact.energy_kwh = _optional_float(energy)
         fact.charge_kg = charge_kg
         fact.alloy_kg = alloy_kg
